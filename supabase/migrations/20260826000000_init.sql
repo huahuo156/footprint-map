@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO profiles (id, nickname)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)));
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1), 'User ' || LEFT(NEW.id::text, 8)));
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -108,9 +108,9 @@ BEGIN
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
     IF OLD.target_type = 'checkin' THEN
-      UPDATE checkins SET likes_count = likes_count - 1 WHERE id = OLD.target_id;
+      UPDATE checkins SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = OLD.target_id;
     ELSIF OLD.target_type = 'guide' THEN
-      UPDATE guides SET likes_count = likes_count - 1 WHERE id = OLD.target_id;
+      UPDATE guides SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = OLD.target_id;
     END IF;
     RETURN OLD;
   END IF;
@@ -195,5 +195,4 @@ CREATE POLICY "guide_covers_delete" ON storage.objects
 -- pgvector index for similarity search
 -- =============================================
 CREATE INDEX idx_checkins_embedding ON checkins
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 10);
+  USING hnsw (embedding vector_cosine_ops);

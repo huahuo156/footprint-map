@@ -114,10 +114,10 @@ Replace the entire content of `src/index.css`:
 
 /* Province hover effect */
 .province-path {
-  transition: fill-color 0.2s, stroke-width 0.2s;
+  transition: fill 0.2s, stroke-width 0.2s;
 }
 .province-path:hover {
-  fill-color: #60a5fa;
+  fill: #60a5fa;
   stroke-width: 2;
 }
 
