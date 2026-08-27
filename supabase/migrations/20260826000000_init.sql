@@ -196,3 +196,34 @@ CREATE POLICY "guide_covers_delete" ON storage.objects
 -- =============================================
 CREATE INDEX idx_checkins_embedding ON checkins
   USING hnsw (embedding vector_cosine_ops);
+
+-- =============================================
+-- RPC function for vector similarity search
+-- =============================================
+CREATE OR REPLACE FUNCTION search_checkins(
+  query_embedding TEXT,
+  match_count INT DEFAULT 20
+)
+RETURNS TABLE (
+  id BIGINT,
+  image_url TEXT,
+  caption TEXT,
+  lat NUMERIC,
+  lng NUMERIC,
+  province TEXT,
+  created_at TIMESTAMPTZ,
+  similarity FLOAT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    c.id, c.image_url, c.caption, c.lat, c.lng, c.province, c.created_at,
+    (1 - (c.embedding <=> query_embedding::vector))::FLOAT AS similarity
+  FROM checkins c
+  WHERE c.embedding IS NOT NULL
+  ORDER BY c.embedding <=> query_embedding::vector
+  LIMIT match_count;
+END;
+$$;
