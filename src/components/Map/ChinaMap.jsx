@@ -9,6 +9,9 @@ import CheckinPopup from './CheckinPopup'
 import FootprintTrail from './FootprintTrail'
 import ChinaMask from './ChinaMask'
 import MapLayerControl, { getTileUrl } from './MapLayerControl'
+import MapViewSwitcher from './MapViewSwitcher'
+import { createLandmarkImageIcon, createCheckinImageIcon } from './ImageMarkerIcon'
+import { getLandmarkImage } from '../../data/landmarkImages'
 
 // ============================================================
 // 高德地图瓦片 — 标准路网
@@ -205,6 +208,7 @@ export default function ChinaMap() {
   const [hoveredProvince, setHoveredProvince] = useState(null)
   const [checkinPos, setCheckinPos] = useState(null)
   const [mapStyle, setMapStyle] = useState('standard')
+  const [viewMode, setViewMode] = useState('landmark') // 'landmark' | 'checkin'
 
   useEffect(() => {
     fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
@@ -338,44 +342,66 @@ export default function ChinaMap() {
           </>
         )}
 
-        {/* 景点标记（按类别区分颜色 + 图标） */}
-        {allMarkers.map((item) => {
-          const isHighlighted = hoveredItemId === `${item.type}-${item.id}`
-          const isSelected = selectedItemId === `${item.type}-${item.id}`
-          const highlight = isHighlighted || isSelected
+        {/* 根据视图模式显示不同的标记 */}
+        {viewMode === 'landmark' ? (
+          // 景点视图：显示景点图片标记
+          landmarks.map((lm) => {
+            const [gcjLng, gcjLat] = wgs84ToGcj02(lm.lng, lm.lat)
+            const isHighlighted = hoveredItemId === `landmark-${lm.id}`
+            const isSelected = selectedItemId === `landmark-${lm.id}`
+            const highlight = isHighlighted || isSelected
+            const imageUrl = getLandmarkImage(lm.name)
 
-          let icon
-          if (item.type === 'checkin') {
-            icon = highlight ? highlightedCheckinIcon : checkinIcon
-          } else {
-            const cat = item.category || '_default'
-            const cached = iconCache[cat]
-            icon = highlight ? cached.highlighted : cached.normal
-          }
-
-          return (
-            <Marker
-              key={`${item.type}-${item.id}`}
-              position={item.position}
-              icon={icon}
-            >
-              {item.type === 'checkin' ? (
-                <Popup maxWidth={280}><CheckinPopup checkin={item} /></Popup>
-              ) : (
-                <Popup>
-                  <div className="w-48">
-                    <div className="flex items-center gap-1.5">
-                      <span>{(CATEGORY_STYLES[item.category] || DEFAULT_CAT_STYLE).icon}</span>
-                      <h3 className="font-bold text-sm">{item.name}</h3>
+            return (
+              <Marker
+                key={`landmark-${lm.id}`}
+                position={[gcjLat, gcjLng]}
+                icon={createLandmarkImageIcon(imageUrl, lm.name, highlight)}
+              >
+                <Popup maxWidth={300}>
+                  <div className="w-72">
+                    <img
+                      src={imageUrl}
+                      alt={lm.name}
+                      className="w-full h-40 object-cover rounded-t-lg"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop'
+                      }}
+                    />
+                    <div className="p-3">
+                      <h3 className="font-bold text-base">{lm.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{lm.province} · {lm.city} · {lm.category}</p>
+                      <p className="text-sm text-gray-600 mt-2">{lm.description}</p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{item.province} · {item.city} · {item.category}</p>
-                    <p className="text-xs text-gray-600 mt-1">{item.description}</p>
                   </div>
                 </Popup>
-              )}
-            </Marker>
-          )
-        })}
+              </Marker>
+            )
+          })
+        ) : (
+          // 打卡视图：显示用户打卡照片标记
+          checkins.map((c) => {
+            const [gcjLng, gcjLat] = wgs84ToGcj02(c.lng, c.lat)
+            const isHighlighted = hoveredItemId === `checkin-${c.id}`
+            const isSelected = selectedItemId === `checkin-${c.id}`
+            const highlight = isHighlighted || isSelected
+            const imageUrl = c.image_url?.startsWith('http')
+              ? c.image_url
+              : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/checkin-images/${c.image_url}`
+
+            return (
+              <Marker
+                key={`checkin-${c.id}`}
+                position={[gcjLat, gcjLng]}
+                icon={createCheckinImageIcon(imageUrl, highlight)}
+              >
+                <Popup maxWidth={280}>
+                  <CheckinPopup checkin={c} />
+                </Popup>
+              </Marker>
+            )
+          })
+        )}
 
         {/* 景点名称标注（zoom >= 6 时显示） */}
         <LandmarkLabels landmarks={landmarks} />
@@ -388,6 +414,12 @@ export default function ChinaMap() {
         currentStyle={mapStyle}
         onStyleChange={setMapStyle}
         apiKey={GAODE_KEY}
+      />
+
+      {/* 视图切换控件 */}
+      <MapViewSwitcher
+        currentView={viewMode}
+        onViewChange={setViewMode}
       />
 
       {hoveredProvince && (
