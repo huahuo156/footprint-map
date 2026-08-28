@@ -8,6 +8,7 @@ import { wgs84ToGcj02, gcj02ToWgs84 } from '../../lib/coordTransform'
 import CheckinPopup from './CheckinPopup'
 import FootprintTrail from './FootprintTrail'
 import ChinaMask from './ChinaMask'
+import MapLayerControl, { getTileUrl } from './MapLayerControl'
 
 // ============================================================
 // 高德地图瓦片 — 标准路网
@@ -203,6 +204,7 @@ export default function ChinaMap() {
   const [checkins, setCheckins] = useState([])
   const [hoveredProvince, setHoveredProvince] = useState(null)
   const [checkinPos, setCheckinPos] = useState(null)
+  const [mapStyle, setMapStyle] = useState('standard')
 
   useEffect(() => {
     fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
@@ -316,9 +318,10 @@ export default function ChinaMap() {
       >
         <MapBridge />
 
-        {/* 全国模式：高德标准路网 */}
+        {/* 全国模式：高德地图瓦片（支持多种样式切换） */}
         <TileLayer
-          url={`https://wprd0{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7&key=${GAODE_KEY}`}
+          key={mapStyle}
+          url={getTileUrl(mapStyle, GAODE_KEY)}
           subdomains={['1', '2', '3', '4']}
           maxZoom={18}
           attribution='&copy; <a href="https://www.amap.com/">高德地图</a>'
@@ -379,6 +382,13 @@ export default function ChinaMap() {
 
         <FootprintTrail />
       </MapContainer>
+
+      {/* 图层切换控件 */}
+      <MapLayerControl
+        currentStyle={mapStyle}
+        onStyleChange={setMapStyle}
+        apiKey={GAODE_KEY}
+      />
 
       {hoveredProvince && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 px-3 py-1.5 rounded-lg shadow text-sm font-medium text-gray-700 z-[1000] pointer-events-none">

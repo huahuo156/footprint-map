@@ -8,6 +8,7 @@ import { wgs84ToGcj02 } from '../../lib/coordTransform'
 import CheckinPopup from './CheckinPopup'
 import FootprintTrail from './FootprintTrail'
 import ChinaMask from './ChinaMask'
+import MapLayerControl, { getTileUrl } from './MapLayerControl'
 import { ArrowLeft } from 'lucide-react'
 
 // 高德地图瓦片 — 标准路网
@@ -100,6 +101,7 @@ export default function ProvinceView() {
   const { hoveredItemId } = useMapContext()
   const [landmarks, setLandmarks] = useState([])
   const [checkins, setCheckins] = useState([])
+  const [mapStyle, setMapStyle] = useState('standard')
   const center = PROVINCE_CENTERS[name] || [35.86, 104.19]
   const gcjCenter = useMemo(() => {
     const [gcjLng, gcjLat] = wgs84ToGcj02(center[1], center[0])
@@ -131,9 +133,10 @@ export default function ProvinceView() {
       <MapContainer center={gcjCenter} zoom={7} className="w-full h-full" minZoom={4} maxZoom={18} maxBounds={[[2, 73], [55, 135]]} maxBoundsViscosity={1.0}>
         <MapBridge />
 
-        {/* 省份模式：高德标准路网 */}
+        {/* 省份模式：高德地图瓦片（支持多种样式切换） */}
         <TileLayer
-          url={`https://wprd0{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7&key=${GAODE_KEY}`}
+          key={mapStyle}
+          url={getTileUrl(mapStyle, GAODE_KEY)}
           subdomains={['1', '2', '3', '4']}
           maxZoom={18}
           attribution='&copy; <a href="https://www.amap.com/">高德地图</a>'
@@ -179,6 +182,13 @@ export default function ProvinceView() {
 
         <FootprintTrail />
       </MapContainer>
+
+      {/* 图层切换控件 */}
+      <MapLayerControl
+        currentStyle={mapStyle}
+        onStyleChange={setMapStyle}
+        apiKey={GAODE_KEY}
+      />
 
       <button
         onClick={() => navigate('/')}
