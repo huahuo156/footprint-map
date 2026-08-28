@@ -298,7 +298,7 @@ export default function ChinaMap() {
     <div className="w-full h-full relative">
       <MapContainer
         center={mapCenter}
-        zoom={4}
+        zoom={5}
         className="w-full h-full"
         minZoom={4}
         maxZoom={18}
