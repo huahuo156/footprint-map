@@ -1,188 +1,217 @@
 /**
  * 景点图片数据库
- * 使用高质量、真实的景点图片
- * 图片来源：Unsplash 高清图片
+ * 使用真实的景点图片，来源于 Wikimedia Commons、Flickr 等
+ * 数据来源：https://github.com/marksui/China-Travel-Map
  */
 
+// GitHub 仓库的基础 URL
+const GITHUB_BASE = 'https://raw.githubusercontent.com/marksui/China-Travel-Map/main/assets/images'
+
 // 景点图片映射（按景点名称）
-// 使用 Unsplash 的高质量图片，每张都是该景点的真实照片
+// 使用真实的景点照片，每张都是该景点的代表性图片
 export const LANDMARK_IMAGES = {
   // 北京
-  '故宫博物院': 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=300&fit=crop&q=80',
-  '长城·八达岭': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80',
-  '颐和园': 'https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=400&h=300&fit=crop&q=80',
-  '天坛公园': 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=400&h=300&fit=crop&q=80',
-
-  // 上海
-  '外滩': 'https://images.unsplash.com/photo-1537531383496-f4749b18f120?w=400&h=300&fit=crop&q=80',
-  '东方明珠': 'https://images.unsplash.com/photo-1474181628905-09e2806b4e4d?w=400&h=300&fit=crop&q=80',
-  '豫园': 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=300&fit=crop&q=80',
-
-  // 浙江
-  '西湖': 'https://images.unsplash.com/photo-1598887142487-3c854d51eabb?w=400&h=300&fit=crop&q=80',
-  '千岛湖': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80',
-
-  // 安徽
-  '黄山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '九华山': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop&q=80',
-
-  // 湖南
-  '张家界国家森林公园': 'https://images.unsplash.com/photo-1609756830178-2c2e19e568c3?w=400&h=300&fit=crop&q=80',
-  '凤凰古城': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '岳阳楼': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 陕西
-  '兵马俑': 'https://images.unsplash.com/photo-1599707367812-042f3b92b556?w=400&h=300&fit=crop&q=80',
-  '华山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '西安城墙': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 西藏
-  '布达拉宫': 'https://images.unsplash.com/photo-1569411032431-07598b0012c2?w=400&h=300&fit=crop&q=80',
-  '纳木错': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '大昭寺': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 云南
-  '丽江古城': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '玉龙雪山': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80',
-  '石林': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '大理古城': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-
-  // 四川
-  '九寨沟': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '峨眉山': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop&q=80',
-  '乐山大佛': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '都江堰': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 广西
-  '漓江': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80',
-  '德天瀑布': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '象鼻山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 海南
-  '三亚亚龙湾': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&q=80',
-  '南山文化旅游区': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '蜈支洲岛': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 山东
-  '泰山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '崂山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '蓬莱阁': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '栈桥': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 河南
-  '龙门石窟': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '少林寺': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '云台山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 山西
-  '平遥古城': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '云冈石窟': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '五台山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 福建
-  '鼓浪屿': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '武夷山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 江西
-  '三清山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '庐山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  '故宫博物院': `${GITHUB_BASE}/北京/故宫.jpg`,
+  '天坛公园': `${GITHUB_BASE}/北京/天坛.jpg`,
+  '颐和园': `${GITHUB_BASE}/北京/颐和园.jpg`,
+  '长城·八达岭': `${GITHUB_BASE}/北京/八达岭.jpg`,
+  '八达岭长城': `${GITHUB_BASE}/北京/八达岭.jpg`,
 
   // 天津
-  '五大道': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '古文化街': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '天津之眼': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-
-  // 重庆
-  '洪崖洞': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '磁器口古镇': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '长江索道': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
+  '古文化街': `${GITHUB_BASE}/天津/古文化街.jpg`,
+  '五大道': `${GITHUB_BASE}/天津/五大道.jpg`,
+  '天津之眼': `${GITHUB_BASE}/天津/天津之眼.jpg`,
 
   // 河北
-  '承德避暑山庄': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '山海关': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '白洋淀': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
+  '山海关': `${GITHUB_BASE}/河北/山海关.jpg`,
+  '白洋淀': `${GITHUB_BASE}/河北/白洋淀.jpg`,
+  '承德避暑山庄': `${GITHUB_BASE}/河北/避暑山庄.jpg`,
 
-  // 辽宁
-  '沈阳故宫': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '星海广场': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '本溪水洞': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-
-  // 吉林
-  '长白山天池': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '雾凇岛': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '净月潭': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 黑龙江
-  '太阳岛': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '五大连池': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '冰雪大世界': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 江苏
-  '拙政园': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '中山陵': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '夫子庙': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '瘦西湖': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '鼋头渚': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '周庄古镇': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-
-  // 湖北
-  '黄鹤楼': 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop&q=80',
-  '武当山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '神农架': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 贵州
-  '黄果树瀑布': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '荔波小七孔': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '梵净山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 甘肃
-  '莫高窟': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '月牙泉': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '嘉峪关': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-
-  // 青海
-  '青海湖': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '塔尔寺': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '茶卡盐湖': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 山西
+  '云冈石窟': `${GITHUB_BASE}/山西/云冈石窟.jpg`,
+  '五台山': `${GITHUB_BASE}/山西/五台山.jpg`,
+  '平遥古城': `${GITHUB_BASE}/山西/平遥古城.jpg`,
 
   // 内蒙古
-  '呼伦贝尔大草原': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '额济纳胡杨林': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  '呼伦贝尔大草原': `${GITHUB_BASE}/内蒙古/呼伦贝尔大草原.jpg`,
+  '额济纳胡杨林': `${GITHUB_BASE}/内蒙古/额济纳胡杨林.jpg`,
 
-  // 宁夏
-  '沙坡头': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '西夏王陵': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '镇北堡西部影城': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 辽宁
+  '沈阳故宫': `${GITHUB_BASE}/辽宁/沈阳故宫.jpg`,
+  '星海广场': `${GITHUB_BASE}/辽宁/星海广场.jpg`,
+  '本溪水洞': `${GITHUB_BASE}/辽宁/本溪水洞.jpg`,
 
-  // 新疆
-  '天山天池': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '喀纳斯湖': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '那拉提草原': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 吉林
+  '长白山天池': `${GITHUB_BASE}/吉林/长白山天池.jpg`,
+  '雾凇岛': `${GITHUB_BASE}/吉林/雾凇岛.jpg`,
+  '净月潭': `${GITHUB_BASE}/吉林/净月潭.jpg`,
 
-  // 台湾
-  '日月潭': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '阿里山': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '台北101': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 黑龙江
+  '太阳岛': `${GITHUB_BASE}/黑龙江/太阳岛.jpg`,
+  '五大连池': `${GITHUB_BASE}/黑龙江/五大连池.jpg`,
+  '冰雪大世界': `${GITHUB_BASE}/黑龙江/冰雪大世界.jpg`,
 
-  // 香港
-  '维多利亚港': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '太平山顶': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '香港迪士尼乐园': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 上海
+  '外滩': `${GITHUB_BASE}/上海/外滩.jpg`,
+  '东方明珠': `${GITHUB_BASE}/上海/东方明珠.jpg`,
+  '豫园': `${GITHUB_BASE}/上海/豫园.jpg`,
 
-  // 澳门
-  '大三巴牌坊': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '威尼斯人度假村': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  // 江苏
+  '拙政园': `${GITHUB_BASE}/江苏/拙政园.jpg`,
+  '中山陵': `${GITHUB_BASE}/江苏/中山陵.jpg`,
+  '夫子庙': `${GITHUB_BASE}/江苏/夫子庙.jpg`,
+  '瘦西湖': `${GITHUB_BASE}/江苏/瘦西湖.jpg`,
+  '鼋头渚': `${GITHUB_BASE}/江苏/鼋头渚.jpg`,
+  '周庄古镇': `${GITHUB_BASE}/江苏/周庄古镇.jpg`,
+
+  // 浙江
+  '西湖': `${GITHUB_BASE}/浙江/西湖.jpg`,
+  '千岛湖': `${GITHUB_BASE}/浙江/千岛湖.jpg`,
+  '乌镇': `${GITHUB_BASE}/浙江/乌镇.jpg`,
+
+  // 安徽
+  '黄山': `${GITHUB_BASE}/安徽/黄山.jpg`,
+  '九华山': `${GITHUB_BASE}/安徽/九华山.jpg`,
+  '西递宏村': `${GITHUB_BASE}/安徽/西递宏村.jpg`,
+
+  // 福建
+  '鼓浪屿': `${GITHUB_BASE}/福建/鼓浪屿.jpg`,
+  '武夷山': `${GITHUB_BASE}/福建/武夷山.jpg`,
+  '土楼': `${GITHUB_BASE}/福建/土楼.jpg`,
+
+  // 江西
+  '庐山': `${GITHUB_BASE}/江西/庐山.jpg`,
+  '三清山': `${GITHUB_BASE}/江西/三清山.jpg`,
+  '婺源': `${GITHUB_BASE}/江西/婺源.jpg`,
+
+  // 山东
+  '泰山': `${GITHUB_BASE}/山东/泰山.jpg`,
+  '崂山': `${GITHUB_BASE}/山东/崂山.jpg`,
+  '蓬莱阁': `${GITHUB_BASE}/山东/蓬莱阁.jpg`,
+  '栈桥': `${GITHUB_BASE}/山东/栈桥.jpg`,
+
+  // 河南
+  '龙门石窟': `${GITHUB_BASE}/河南/龙门石窟.jpg`,
+  '少林寺': `${GITHUB_BASE}/河南/少林寺.jpg`,
+  '云台山': `${GITHUB_BASE}/河南/云台山.jpg`,
+  '清明上河园': `${GITHUB_BASE}/河南/清明上河园.jpg`,
+
+  // 湖北
+  '黄鹤楼': `${GITHUB_BASE}/湖北/黄鹤楼.jpg`,
+  '武当山': `${GITHUB_BASE}/湖北/武当山.jpg`,
+  '神农架': `${GITHUB_BASE}/湖北/神农架.jpg`,
+  '三峡大坝': `${GITHUB_BASE}/湖北/三峡大坝.jpg`,
+
+  // 湖南
+  '张家界国家森林公园': `${GITHUB_BASE}/湖南/张家界.jpg`,
+  '凤凰古城': `${GITHUB_BASE}/湖南/凤凰古城.jpg`,
+  '岳阳楼': `${GITHUB_BASE}/湖南/岳阳楼.jpg`,
+  '衡山': `${GITHUB_BASE}/湖南/衡山.jpg`,
 
   // 广东
-  '广州塔': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '深圳世界之窗': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '开平碉楼': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '珠海渔女': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
-  '佛山祖庙': 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80',
+  '广州塔': `${GITHUB_BASE}/广东/广州塔.jpg`,
+  '深圳世界之窗': `${GITHUB_BASE}/广东/深圳世界之窗.jpg`,
+  '开平碉楼': `${GITHUB_BASE}/广东/开平碉楼.jpg`,
+  '珠海渔女': `${GITHUB_BASE}/广东/珠海渔女.jpg`,
+  '佛山祖庙': `${GITHUB_BASE}/广东/佛山祖庙.jpg`,
+
+  // 广西
+  '漓江': `${GITHUB_BASE}/广西/漓江.jpg`,
+  '德天瀑布': `${GITHUB_BASE}/广西/德天瀑布.jpg`,
+  '象鼻山': `${GITHUB_BASE}/广西/象鼻山.jpg`,
+  '北海银滩': `${GITHUB_BASE}/广西/北海银滩.jpg`,
+
+  // 海南
+  '三亚亚龙湾': `${GITHUB_BASE}/海南/三亚亚龙湾.jpg`,
+  '南山文化旅游区': `${GITHUB_BASE}/海南/南山文化旅游区.jpg`,
+  '蜈支洲岛': `${GITHUB_BASE}/海南/蜈支洲岛.jpg`,
+  '天涯海角': `${GITHUB_BASE}/海南/天涯海角.jpg`,
+
+  // 重庆
+  '洪崖洞': `${GITHUB_BASE}/重庆/洪崖洞.jpg`,
+  '磁器口古镇': `${GITHUB_BASE}/重庆/磁器口古镇.jpg`,
+  '长江索道': `${GITHUB_BASE}/重庆/长江索道.jpg`,
+  '大足石刻': `${GITHUB_BASE}/重庆/大足石刻.jpg`,
+
+  // 四川
+  '九寨沟': `${GITHUB_BASE}/四川/九寨沟.jpg`,
+  '峨眉山': `${GITHUB_BASE}/四川/峨眉山.jpg`,
+  '乐山大佛': `${GITHUB_BASE}/四川/乐山大佛.jpg`,
+  '都江堰': `${GITHUB_BASE}/四川/都江堰.jpg`,
+  '青城山': `${GITHUB_BASE}/四川/青城山.jpg`,
+  '稻城亚丁': `${GITHUB_BASE}/四川/稻城亚丁.jpg`,
+
+  // 贵州
+  '黄果树瀑布': `${GITHUB_BASE}/贵州/黄果树瀑布.jpg`,
+  '荔波小七孔': `${GITHUB_BASE}/贵州/荔波小七孔.jpg`,
+  '梵净山': `${GITHUB_BASE}/贵州/梵净山.jpg`,
+  '西江千户苗寨': `${GITHUB_BASE}/贵州/西江千户苗寨.jpg`,
+
+  // 云南
+  '丽江古城': `${GITHUB_BASE}/云南/丽江古城.jpg`,
+  '玉龙雪山': `${GITHUB_BASE}/云南/玉龙雪山.jpg`,
+  '石林': `${GITHUB_BASE}/云南/石林.jpg`,
+  '大理古城': `${GITHUB_BASE}/云南/大理古城.jpg`,
+  '西双版纳': `${GITHUB_BASE}/云南/西双版纳.jpg`,
+  '泸沽湖': `${GITHUB_BASE}/云南/泸沽湖.jpg`,
+
+  // 西藏
+  '布达拉宫': `${GITHUB_BASE}/西藏/布达拉宫.jpg`,
+  '纳木错': `${GITHUB_BASE}/西藏/纳木错.jpg`,
+  '大昭寺': `${GITHUB_BASE}/西藏/大昭寺.jpg`,
+  '珠穆朗玛峰': `${GITHUB_BASE}/西藏/珠穆朗玛峰.jpg`,
+
+  // 陕西
+  '兵马俑': `${GITHUB_BASE}/陕西/兵马俑.jpg`,
+  '华山': `${GITHUB_BASE}/陕西/华山.jpg`,
+  '西安城墙': `${GITHUB_BASE}/陕西/西安城墙.jpg`,
+  '大雁塔': `${GITHUB_BASE}/陕西/大雁塔.jpg`,
+  '华清宫': `${GITHUB_BASE}/陕西/华清宫.jpg`,
+
+  // 甘肃
+  '莫高窟': `${GITHUB_BASE}/甘肃/莫高窟.jpg`,
+  '月牙泉': `${GITHUB_BASE}/甘肃/月牙泉.jpg`,
+  '嘉峪关': `${GITHUB_BASE}/甘肃/嘉峪关.jpg`,
+  '张掖丹霞': `${GITHUB_BASE}/甘肃/张掖丹霞.jpg`,
+
+  // 青海
+  '青海湖': `${GITHUB_BASE}/青海/青海湖.jpg`,
+  '塔尔寺': `${GITHUB_BASE}/青海/塔尔寺.jpg`,
+  '茶卡盐湖': `${GITHUB_BASE}/青海/茶卡盐湖.jpg`,
+  '可可西里': `${GITHUB_BASE}/青海/可可西里.jpg`,
+
+  // 宁夏
+  '沙坡头': `${GITHUB_BASE}/宁夏/沙坡头.jpg`,
+  '西夏王陵': `${GITHUB_BASE}/宁夏/西夏王陵.jpg`,
+  '镇北堡西部影城': `${GITHUB_BASE}/宁夏/镇北堡西部影城.jpg`,
+
+  // 新疆
+  '天山天池': `${GITHUB_BASE}/新疆/天山天池.jpg`,
+  '喀纳斯湖': `${GITHUB_BASE}/新疆/喀纳斯湖.jpg`,
+  '那拉提草原': `${GITHUB_BASE}/新疆/那拉提草原.jpg`,
+  '吐鲁番葡萄沟': `${GITHUB_BASE}/新疆/吐鲁番葡萄沟.jpg`,
+  '赛里木湖': `${GITHUB_BASE}/新疆/赛里木湖.jpg`,
+
+  // 台湾
+  '日月潭': `${GITHUB_BASE}/台湾/日月潭.jpg`,
+  '阿里山': `${GITHUB_BASE}/台湾/阿里山.jpg`,
+  '台北101': `${GITHUB_BASE}/台湾/台北101.jpg`,
+  '太鲁阁': `${GITHUB_BASE}/台湾/太鲁阁.jpg`,
+
+  // 香港
+  '维多利亚港': `${GITHUB_BASE}/香港/维多利亚港.jpg`,
+  '太平山顶': `${GITHUB_BASE}/香港/太平山顶.jpg`,
+  '香港迪士尼乐园': `${GITHUB_BASE}/香港/香港迪士尼乐园.jpg`,
+  '海洋公园': `${GITHUB_BASE}/香港/海洋公园.jpg`,
+
+  // 澳门
+  '大三巴牌坊': `${GITHUB_BASE}/澳门/大三巴牌坊.jpg`,
+  '威尼斯人度假村': `${GITHUB_BASE}/澳门/威尼斯人度假村.jpg`,
+  '妈阁庙': `${GITHUB_BASE}/澳门/妈阁庙.jpg`,
 }
 
 // 默认图片（当景点没有对应图片时使用）
-export const DEFAULT_LANDMARK_IMAGE = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80'
+export const DEFAULT_LANDMARK_IMAGE = `${GITHUB_BASE}/default.jpg`
 
 // 获取景点图片
 export function getLandmarkImage(landmarkName) {
@@ -192,17 +221,23 @@ export function getLandmarkImage(landmarkName) {
 // 按类别获取景点图片（用于展示）
 export const CATEGORY_SHOWCASE_IMAGES = {
   '历史古迹': [
-    { name: '故宫博物院', image: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=300&fit=crop&q=80' },
-    { name: '长城', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80' },
-    { name: '兵马俑', image: 'https://images.unsplash.com/photo-1599707367812-042f3b92b556?w=400&h=300&fit=crop&q=80' },
+    { name: '故宫博物院', image: `${GITHUB_BASE}/北京/故宫.jpg` },
+    { name: '长城', image: `${GITHUB_BASE}/北京/八达岭.jpg` },
+    { name: '兵马俑', image: `${GITHUB_BASE}/陕西/兵马俑.jpg` },
   ],
   '自然风光': [
-    { name: '黄山', image: 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80' },
-    { name: '张家界', image: 'https://images.unsplash.com/photo-1609756830178-2c2e19e568c3?w=400&h=300&fit=crop&q=80' },
-    { name: '九寨沟', image: 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80' },
+    { name: '黄山', image: `${GITHUB_BASE}/安徽/黄山.jpg` },
+    { name: '张家界', image: `${GITHUB_BASE}/湖南/张家界.jpg` },
+    { name: '九寨沟', image: `${GITHUB_BASE}/四川/九寨沟.jpg` },
   ],
   '现代建筑': [
-    { name: '东方明珠', image: 'https://images.unsplash.com/photo-1474181628905-09e2806b4e4d?w=400&h=300&fit=crop&q=80' },
-    { name: '台北101', image: 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=400&h=300&fit=crop&q=80' },
+    { name: '东方明珠', image: `${GITHUB_BASE}/上海/东方明珠.jpg` },
+    { name: '台北101', image: `${GITHUB_BASE}/台湾/台北101.jpg` },
+    { name: '广州塔', image: `${GITHUB_BASE}/广东/广州塔.jpg` },
+  ],
+  '宗教圣地': [
+    { name: '布达拉宫', image: `${GITHUB_BASE}/西藏/布达拉宫.jpg` },
+    { name: '武当山', image: `${GITHUB_BASE}/湖北/武当山.jpg` },
+    { name: '五台山', image: `${GITHUB_BASE}/山西/五台山.jpg` },
   ],
 }
