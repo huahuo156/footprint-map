@@ -1,6 +1,6 @@
 import { useAuth } from './Auth/AuthProvider'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Plus, Map } from 'lucide-react'
+import { LogOut, Plus, Map, User } from 'lucide-react'
 
 export default function Navbar() {
   const { profile, signOut } = useAuth()
@@ -25,7 +25,17 @@ export default function Navbar() {
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">{profile?.nickname || '用户'}</span>
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-2 hover:bg-gray-100 rounded-lg px-2 py-1.5 transition-colors"
+          >
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <User className="w-5 h-5 text-gray-400" />
+            )}
+            <span className="text-sm text-gray-600">{profile?.nickname || '用户'}</span>
+          </button>
           <button onClick={signOut} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title="退出登录">
             <LogOut className="w-4 h-4" />
           </button>

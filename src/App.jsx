@@ -13,6 +13,7 @@ const Sidebar = lazy(() => import('./components/Sidebar/Sidebar'))
 const GuideEditor = lazy(() => import('./components/Guide/GuideEditor'))
 const GuideDetail = lazy(() => import('./components/Guide/GuideDetail'))
 const ConnectionLineOverlay = lazy(() => import('./components/Map/ConnectionLineOverlay'))
+const ProfileEditor = lazy(() => import('./components/Profile/ProfileEditor'))
 
 function LoadingScreen() {
   return (
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="/province/:name" element={<ProvinceLayout />} />
         <Route path="/guide/new" element={<GuideEditor />} />
         <Route path="/guide/:id" element={<GuideDetail />} />
+        <Route path="/profile" element={<ProfileEditor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
