@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import CheckinList from './CheckinList'
 import GuideList from './GuideList'
 import LandmarkList from './LandmarkList'
 import SearchPanel from './SearchPanel'
-import { Camera, BookOpen, Search, MapPin, PanelRight, X } from 'lucide-react'
+import { Camera, BookOpen, Search, MapPin, PanelRight, X, Mountain } from 'lucide-react'
 
 const BASE_TABS = [
   { key: 'checkins', label: '打卡', icon: Camera },
@@ -13,16 +13,29 @@ const BASE_TABS = [
 ]
 
 const LANDMARK_TAB = { key: 'landmarks', label: '景点', icon: MapPin }
+const LANDMARK_VIEW_TAB = { key: 'landmark-view', label: '景点地图', icon: Mountain }
 
 export default function Sidebar() {
   const { name: provinceName } = useParams()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('checkins')
   const [isOpen, setIsOpen] = useState(false)
 
-  const tabs = provinceName ? [...BASE_TABS, LANDMARK_TAB] : BASE_TABS
+  const tabs = provinceName
+    ? [...BASE_TABS, LANDMARK_TAB]
+    : [...BASE_TABS, LANDMARK_VIEW_TAB]
 
   // If on province page and still on a tab that doesn't exist, reset to checkins
   const effectiveTab = tabs.find(t => t.key === activeTab) ? activeTab : 'checkins'
+
+  // 处理景点地图标签点击
+  const handleTabClick = (tabKey) => {
+    if (tabKey === 'landmark-view') {
+      navigate('/landmarks')
+    } else {
+      setActiveTab(tabKey)
+    }
+  }
 
   return (
     <>
@@ -58,18 +71,18 @@ export default function Sidebar() {
           {/* 标签页 */}
           <div className="flex border-b border-gray-200">
             {tabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
-                  effectiveTab === tab.key
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
+          <button
+            key={tab.key}
+            onClick={() => handleTabClick(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
+              effectiveTab === tab.key
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
             ))}
           </div>
 

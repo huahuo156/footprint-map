@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 // 懒加载地图和攻略组件
 const ChinaMap = lazy(() => import('./components/Map/ChinaMap'))
 const ProvinceView = lazy(() => import('./components/Map/ProvinceView'))
+const LandmarkView = lazy(() => import('./components/Map/LandmarkView'))
 const Sidebar = lazy(() => import('./components/Sidebar/Sidebar'))
 const GuideEditor = lazy(() => import('./components/Guide/GuideEditor'))
 const GuideDetail = lazy(() => import('./components/Guide/GuideDetail'))
@@ -77,6 +78,21 @@ function ProvinceLayout() {
   )
 }
 
+function LandmarkLayout() {
+  return (
+    <MapProvider>
+      <div className="h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 relative overflow-hidden">
+          <Suspense fallback={<MapLoading />}>
+            <LandmarkView />
+          </Suspense>
+        </div>
+      </div>
+    </MapProvider>
+  )
+}
+
 export default function App() {
   const { user, loading } = useAuth()
 
@@ -88,6 +104,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<MapLayout />} />
         <Route path="/province/:name" element={<ProvinceLayout />} />
+        <Route path="/landmarks" element={<LandmarkLayout />} />
         <Route path="/guide/new" element={<GuideEditor />} />
         <Route path="/guide/:id" element={<GuideDetail />} />
         <Route path="/profile" element={<ProfileEditor />} />
