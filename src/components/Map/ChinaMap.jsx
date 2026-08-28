@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
@@ -10,6 +10,7 @@ import FootprintTrail from './FootprintTrail'
 import ChinaMask from './ChinaMask'
 import MapViewSwitcher from './MapViewSwitcher'
 import { createSimpleLandmarkIcon, createSimpleCheckinIcon } from './SimpleMarkerIcon'
+import { Search, MapPin, X, ChevronDown, ChevronUp } from 'lucide-react'
 
 // ============================================================
 // OpenStreetMap 瓦片
@@ -208,6 +209,17 @@ function ZoomTracker({ onZoomChange }) {
   return null
 }
 
+// 飞行到指定位置组件
+function FlyToLocation({ position, zoom }) {
+  const map = useMap()
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, zoom || 10, { duration: 1.5 })
+    }
+  }, [position, zoom, map])
+  return null
+}
+
 // ============================================================
 // 主组件
 // ============================================================
@@ -221,6 +233,12 @@ export default function ChinaMap() {
   const [checkinPos, setCheckinPos] = useState(null)
   const [viewMode, setViewMode] = useState('landmark') // 'landmark' | 'checkin'
   const [zoomLevel, setZoomLevel] = useState(5)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [showSearchPanel, setShowSearchPanel] = useState(false)
+  const [selectedLandmark, setSelectedLandmark] = useState(null)
+  const [flyToPosition, setFlyToPosition] = useState(null)
+  const searchInputRef = useRef(null)
 
   useEffect(() => {
     fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
@@ -294,22 +312,56 @@ export default function ChinaMap() {
     }
   }, [provinceCounts])
 
+  // 搜索功能
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query)
+    if (query.trim()) {
+      const results = landmarks.filter(lm =>
+        lm.name.toLowerCase().includes(query.toLowerCase()) ||
+        lm.province.toLowerCase().includes(query.toLowerCase()) ||
+        lm.city.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 20)
+      setSearchResults(results)
+      setShowSearchPanel(true)
+    } else {
+      setSearchResults([])
+      setShowSearchPanel(false)
+    }
+  }, [landmarks])
+
+  // 选择景点
+  const handleSelectLandmark = useCallback((landmark) => {
+    setSelectedLandmark(landmark)
+    const [gcjLng, gcjLat] = wgs84ToGcj02(landmark.lng, landmark.lat)
+    setFlyToPosition([gcjLat, gcjLng])
+    setShowSearchPanel(false)
+    setSearchQuery('')
+  }, [])
+
   // 根据缩放级别过滤显示的景点（逐步展开）
   const visibleLandmarks = useMemo(() => {
+    // 如果有搜索查询，显示搜索结果
+    if (searchQuery.trim() && searchResults.length > 0) {
+      return searchResults
+    }
+
+    // 根据缩放级别渐进式展开
     if (zoomLevel >= 10) {
       // 高缩放级别：显示所有景点
       return landmarks
     } else if (zoomLevel >= 8) {
-      // 中高缩放级别：显示 5A 景点
-      return landmarks.filter(lm => lm.category === '历史古迹' || lm.category === '自然风光')
+      // 中高缩放级别：显示5A和4A景点
+      return landmarks.filter(lm =>
+        lm.name.includes('5A') || lm.name.includes('4A') || lm.name.includes('国家')
+      )
     } else if (zoomLevel >= 6) {
-      // 中缩放级别：显示主要景点
-      return landmarks.filter(lm => lm.name.includes('5A') || lm.name.includes('国家'))
+      // 中缩放级别：显示主要景点（每3个显示1个）
+      return landmarks.filter((_, index) => index % 3 === 0)
     } else {
-      // 低缩放级别：只显示少量代表性景点
+      // 低缩放级别：只显示少量代表性景点（每10个显示1个）
       return landmarks.filter((_, index) => index % 10 === 0)
     }
-  }, [landmarks, zoomLevel])
+  }, [landmarks, zoomLevel, searchQuery, searchResults])
 
   const visibleCheckins = useMemo(() => {
     if (zoomLevel >= 8) {
@@ -387,15 +439,16 @@ export default function ChinaMap() {
         {viewMode === 'landmark' ? (
           // 景点视图：显示简洁的小圆点标记
           allMarkers.filter(m => m.type === 'landmark').map((lm) => {
-            const isHighlighted = hoveredItemId === `landmark-${lm.id}`
-            const isSelected = selectedItemId === `landmark-${lm.id}`
-            const highlight = isHighlighted || isSelected
+            const isHighlighted = hoveredItemId === `landmark-${lm.id}` || selectedLandmark?.id === lm.id
 
             return (
               <Marker
                 key={`landmark-${lm.id}`}
                 position={lm.position}
-                icon={createSimpleLandmarkIcon(lm.category, highlight)}
+                icon={createSimpleLandmarkIcon(lm.category, isHighlighted)}
+                eventHandlers={{
+                  click: () => handleSelectLandmark(lm),
+                }}
               >
                 <Popup maxWidth={280}>
                   <div className="w-64">
@@ -428,17 +481,136 @@ export default function ChinaMap() {
           })
         )}
 
+        {/* 飞行到指定位置 */}
+        {flyToPosition && <FlyToLocation position={flyToPosition} zoom={10} />}
+
         {/* 景点名称标注（zoom >= 6 时显示） */}
         <LandmarkLabels landmarks={landmarks} />
 
         <FootprintTrail />
       </MapContainer>
 
+      {/* 搜索框 */}
+      <div className="absolute top-4 left-4 z-[1000] w-72">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="搜索景点、省份或城市..."
+            className="w-full pl-10 pr-10 py-2.5 bg-white rounded-lg shadow-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setSearchResults([])
+                setShowSearchPanel(false)
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* 搜索结果面板 */}
+        {showSearchPanel && searchResults.length > 0 && (
+          <div className="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-y-auto">
+            <div className="p-2 text-xs text-gray-500 border-b">
+              找到 {searchResults.length} 个景点
+            </div>
+            {searchResults.map((lm) => (
+              <button
+                key={lm.id}
+                onClick={() => handleSelectLandmark(lm)}
+                className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
+              >
+                <div className="font-medium text-sm text-gray-900">{lm.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {lm.province} · {lm.city} · {lm.category}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 无搜索结果 */}
+        {showSearchPanel && searchQuery && searchResults.length === 0 && (
+          <div className="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 text-center">
+            <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">未找到匹配的景点</p>
+          </div>
+        )}
+      </div>
+
+      {/* 景点详情面板 */}
+      {selectedLandmark && (
+        <div className="absolute bottom-4 left-4 z-[1000] w-80">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            {/* 头部 */}
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-bold text-base text-gray-900">{selectedLandmark.name}</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedLandmark.province} · {selectedLandmark.city}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedLandmark(null)}
+                  className="p-1 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* 内容 */}
+            <div className="p-4">
+              {/* 类别标签 */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                  {selectedLandmark.category}
+                </span>
+              </div>
+
+              {/* 描述 */}
+              {selectedLandmark.description && (
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {selectedLandmark.description}
+                </p>
+              )}
+
+              {/* 坐标信息 */}
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <MapPin className="w-3 h-3" />
+                  <span>
+                    {selectedLandmark.lat.toFixed(4)}, {selectedLandmark.lng.toFixed(4)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 视图切换控件 */}
       <MapViewSwitcher
         currentView={viewMode}
         onViewChange={setViewMode}
       />
+
+      {/* 缩放级别提示 */}
+      <div className="absolute bottom-4 right-4 z-[1000]">
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow px-3 py-2 text-xs text-gray-600">
+          <div className="font-medium">显示 {visibleLandmarks.length} 个景点</div>
+          <div className="text-gray-400 mt-0.5">缩放级别: {zoomLevel}</div>
+        </div>
+      </div>
 
       {hoveredProvince && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 px-3 py-1.5 rounded-lg shadow text-sm font-medium text-gray-700 z-[1000] pointer-events-none">
