@@ -1,0 +1,15 @@
+- generic [ref=e4]:
+  - heading "足迹山河" [level=1] [ref=e5]
+  - paragraph [ref=e6]: 探索中国，留下足迹
+  - generic [ref=e7]:
+    - textbox "邮箱" [ref=e12]
+    - textbox "密码" [ref=e17]
+    - button "登录" [ref=e18]
+  - generic [ref=e22]:
+    - generic [ref=e23]: 或
+    - button "GitHub 登录" [ref=e28]
+    - button "Google 登录" [ref=e31]
+  - generic [ref=e37]:
+    - button "没有账号？注册" [ref=e38]
+    - text: "|"
+    - button "免密登录" [ref=e39]

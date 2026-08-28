@@ -7,6 +7,8 @@ import ProvinceView from './components/Map/ProvinceView'
 import Sidebar from './components/Sidebar/Sidebar'
 import GuideEditor from './components/Guide/GuideEditor'
 import GuideDetail from './components/Guide/GuideDetail'
+import ConnectionLineOverlay from './components/Map/ConnectionLineOverlay'
+import { MapProvider } from './contexts/MapContext'
 import { Loader2 } from 'lucide-react'
 
 function LoadingScreen() {
@@ -19,29 +21,35 @@ function LoadingScreen() {
 
 function MapLayout() {
   return (
-    <div className="h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 relative">
-          <ChinaMap />
+    <MapProvider>
+      <div className="h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 relative">
+            <ChinaMap />
+          </div>
+          <Sidebar />
         </div>
-        <Sidebar />
       </div>
-    </div>
+      <ConnectionLineOverlay />
+    </MapProvider>
   )
 }
 
 function ProvinceLayout() {
   return (
-    <div className="h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 relative">
-          <ProvinceView />
+    <MapProvider>
+      <div className="h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 relative">
+            <ProvinceView />
+          </div>
+          <Sidebar />
         </div>
-        <Sidebar />
       </div>
-    </div>
+      <ConnectionLineOverlay />
+    </MapProvider>
   )
 }
 

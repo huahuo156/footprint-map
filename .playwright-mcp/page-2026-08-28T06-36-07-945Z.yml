@@ -1,0 +1,203 @@
+- generic [ref=e6]:
+  - banner [ref=e7]:
+    - generic [ref=e8]: 足迹山河
+    - generic [ref=e12]:
+      - button "写攻略" [ref=e13]
+      - generic [ref=e15]:
+        - generic [ref=e16]: huahua
+        - button "退出登录" [ref=e17]
+  - generic [ref=e21]:
+    - generic [ref=e24]:
+      - generic:
+        - generic:
+          - img:
+            - generic:
+              - generic [ref=e25] [cursor=pointer]
+              - generic [ref=e26] [cursor=pointer]
+              - generic [ref=e27] [cursor=pointer]
+              - generic [ref=e28] [cursor=pointer]
+              - generic [ref=e29] [cursor=pointer]
+              - generic [ref=e30] [cursor=pointer]
+              - generic [ref=e31] [cursor=pointer]
+              - generic [ref=e32] [cursor=pointer]
+              - generic [ref=e33] [cursor=pointer]
+              - generic [ref=e34] [cursor=pointer]
+              - generic [ref=e35] [cursor=pointer]
+              - generic [ref=e36] [cursor=pointer]
+              - generic [ref=e37] [cursor=pointer]
+              - generic [ref=e38] [cursor=pointer]
+              - generic [ref=e39] [cursor=pointer]
+              - generic [ref=e40] [cursor=pointer]
+              - generic [ref=e41] [cursor=pointer]
+              - generic [ref=e42] [cursor=pointer]
+              - generic [ref=e43] [cursor=pointer]
+              - generic [ref=e44] [cursor=pointer]
+              - generic [ref=e45] [cursor=pointer]
+              - generic [ref=e46] [cursor=pointer]
+              - generic [ref=e47] [cursor=pointer]
+              - generic [ref=e48] [cursor=pointer]
+              - generic [ref=e49] [cursor=pointer]
+              - generic [ref=e50] [cursor=pointer]
+              - generic [ref=e51] [cursor=pointer]
+              - generic [ref=e52] [cursor=pointer]
+              - generic [ref=e53] [cursor=pointer]
+              - generic [ref=e54] [cursor=pointer]
+              - generic [ref=e55] [cursor=pointer]
+              - generic [ref=e56] [cursor=pointer]
+              - generic [ref=e57] [cursor=pointer]
+              - generic [ref=e58] [cursor=pointer]
+        - generic:
+          - button "北京"
+          - button "天津"
+          - button "河北"
+          - button "山西"
+          - button "内蒙古"
+          - button "辽宁"
+          - button "吉林"
+          - button "黑龙江"
+          - button "上海"
+          - button "江苏"
+          - button "浙江"
+          - button "安徽"
+          - button "福建"
+          - button "江西"
+          - button "山东"
+          - button "河南"
+          - button "湖北"
+          - button "湖南"
+          - button "广东"
+          - button "广西"
+          - button "海南"
+          - button "重庆"
+          - button "四川"
+          - button "贵州"
+          - button "云南"
+          - button "西藏"
+          - button "陕西"
+          - button "甘肃"
+          - button "青海"
+          - button "宁夏"
+          - button "新疆"
+          - button "台湾"
+          - button "香港"
+          - button "澳门"
+          - button
+          - button "🏔️" [ref=e59] [cursor=pointer]
+          - button "🏔️" [ref=e63] [cursor=pointer]
+          - button "🏢" [ref=e67] [cursor=pointer]
+          - button "🏯" [ref=e71] [cursor=pointer]
+          - button "🏯" [ref=e75] [cursor=pointer]
+          - button "🏯" [ref=e79] [cursor=pointer]
+          - button "🏔️" [ref=e83] [cursor=pointer]
+          - button "🏔️" [ref=e87] [cursor=pointer]
+          - button "🏯" [ref=e91] [cursor=pointer]
+          - button "🏔️" [ref=e95] [cursor=pointer]
+          - button "🛕" [ref=e99] [cursor=pointer]
+          - button "🏔️" [ref=e103] [cursor=pointer]
+          - button "🏯" [ref=e107] [cursor=pointer]
+          - button "🏮" [ref=e111] [cursor=pointer]
+          - button "🏯" [ref=e115] [cursor=pointer]
+          - button "🏢" [ref=e119] [cursor=pointer]
+          - button "🏔️" [ref=e123] [cursor=pointer]
+          - button "🏯" [ref=e127] [cursor=pointer]
+          - button "🏔️" [ref=e131] [cursor=pointer]
+          - button "🏔️" [ref=e135] [cursor=pointer]
+          - button "🛕" [ref=e139] [cursor=pointer]
+          - button "🏮" [ref=e143] [cursor=pointer]
+          - button "🏢" [ref=e147] [cursor=pointer]
+          - button "🏮" [ref=e151] [cursor=pointer]
+          - button "🏔️" [ref=e155] [cursor=pointer]
+          - button "🏔️" [ref=e159] [cursor=pointer]
+          - button "🏯" [ref=e163] [cursor=pointer]
+          - button "🛕" [ref=e167] [cursor=pointer]
+          - button "🏢" [ref=e171] [cursor=pointer]
+          - button "🏯" [ref=e175] [cursor=pointer]
+          - button "🛕" [ref=e179] [cursor=pointer]
+          - button "🏯" [ref=e183] [cursor=pointer]
+          - button "🏯" [ref=e187] [cursor=pointer]
+          - button "🏔️" [ref=e191] [cursor=pointer]
+          - button "🏢" [ref=e195] [cursor=pointer]
+          - button "🏔️" [ref=e199] [cursor=pointer]
+          - button "🏔️" [ref=e203] [cursor=pointer]
+          - button "🏮" [ref=e207] [cursor=pointer]
+          - button "🏢" [ref=e211] [cursor=pointer]
+          - button "🏯" [ref=e215] [cursor=pointer]
+          - button "🏯" [ref=e219] [cursor=pointer]
+          - button "🏯" [ref=e223] [cursor=pointer]
+          - button "🏔️" [ref=e227] [cursor=pointer]
+          - button "🏔️" [ref=e231] [cursor=pointer]
+          - button "🏯" [ref=e235] [cursor=pointer]
+          - button "🏯" [ref=e239] [cursor=pointer]
+          - button "🏢" [ref=e243] [cursor=pointer]
+          - button "🏔️" [ref=e247] [cursor=pointer]
+          - button "🏯" [ref=e251] [cursor=pointer]
+          - button "🏔️" [ref=e255] [cursor=pointer]
+          - button "🏔️" [ref=e259] [cursor=pointer]
+          - button "🏯" [ref=e263] [cursor=pointer]
+          - button "🏯" [ref=e267] [cursor=pointer]
+          - button "🏯" [ref=e271] [cursor=pointer]
+          - button "🏔️" [ref=e275] [cursor=pointer]
+          - button "🏢" [ref=e279] [cursor=pointer]
+          - button "🏔️" [ref=e283] [cursor=pointer]
+          - button "🏔️" [ref=e287] [cursor=pointer]
+          - button "🏯" [ref=e291] [cursor=pointer]
+          - button "🏔️" [ref=e295] [cursor=pointer]
+          - button "🏔️" [ref=e299] [cursor=pointer]
+          - button "🛕" [ref=e303] [cursor=pointer]
+          - button "🏯" [ref=e307] [cursor=pointer]
+          - button "🏔️" [ref=e311] [cursor=pointer]
+          - button "🏔️" [ref=e315] [cursor=pointer]
+          - button "🏮" [ref=e319] [cursor=pointer]
+          - button "🏢" [ref=e323] [cursor=pointer]
+          - button "🏔️" [ref=e327] [cursor=pointer]
+          - button "🏔️" [ref=e331] [cursor=pointer]
+          - button "🏢" [ref=e335] [cursor=pointer]
+          - button "🏔️" [ref=e339] [cursor=pointer]
+          - button "🏔️" [ref=e343] [cursor=pointer]
+          - button "🏔️" [ref=e347] [cursor=pointer]
+          - button "🏯" [ref=e351] [cursor=pointer]
+          - button "🏔️" [ref=e355] [cursor=pointer]
+          - button "🏔️" [ref=e359] [cursor=pointer]
+          - button "🏢" [ref=e363] [cursor=pointer]
+          - button "🏔️" [ref=e367] [cursor=pointer]
+          - button "🏔️" [ref=e371] [cursor=pointer]
+          - button "🏯" [ref=e375] [cursor=pointer]
+          - button "🏯" [ref=e379] [cursor=pointer]
+          - button "🏔️" [ref=e383] [cursor=pointer]
+          - button "🏯" [ref=e387] [cursor=pointer]
+          - button "🏯" [ref=e391] [cursor=pointer]
+          - button "🏔️" [ref=e395] [cursor=pointer]
+          - button "🏔️" [ref=e399] [cursor=pointer]
+          - button "🏯" [ref=e403] [cursor=pointer]
+          - button "🏔️" [ref=e407] [cursor=pointer]
+          - button "🏯" [ref=e411] [cursor=pointer]
+          - button "🏮" [ref=e415] [cursor=pointer]
+          - button "🏯" [ref=e419] [cursor=pointer]
+          - button "🏢" [ref=e423] [cursor=pointer]
+          - button "🏔️" [ref=e427] [cursor=pointer]
+          - button "🏔️" [ref=e431] [cursor=pointer]
+          - button "🏔️" [ref=e435] [cursor=pointer]
+          - button "🏔️" [ref=e439] [cursor=pointer]
+          - button "🏯" [ref=e443] [cursor=pointer]
+          - button "🏔️" [ref=e447] [cursor=pointer]
+          - button "🏢" [ref=e451] [cursor=pointer]
+          - button "🏔️" [ref=e455] [cursor=pointer]
+          - button "🏔️" [ref=e459] [cursor=pointer]
+          - button "🏯" [ref=e463] [cursor=pointer]
+          - button "🏔️" [ref=e467] [cursor=pointer]
+          - button "🏯" [ref=e471] [cursor=pointer]
+          - button "🏯" [ref=e475] [cursor=pointer]
+      - generic [ref=e479]:
+        - link "Leaflet" [ref=e480] [cursor=pointer]:
+          - /url: https://leafletjs.com
+        - text: "| ©"
+        - link "高德地图" [ref=e485] [cursor=pointer]:
+          - /url: https://www.amap.com/
+    - complementary [ref=e486]:
+      - generic [ref=e487]:
+        - button "打卡" [ref=e488]
+        - button "攻略" [ref=e492]
+        - button "搜索" [ref=e495]
+      - generic [ref=e500]:
+        - paragraph [ref=e504]: 还没有打卡记录
+        - paragraph [ref=e505]: 点击地图开始打卡吧！

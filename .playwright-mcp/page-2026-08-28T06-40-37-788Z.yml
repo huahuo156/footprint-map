@@ -1,0 +1,20 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - generic [ref=f3e5]: 足迹山河
+    - generic [ref=f3e9]:
+      - button "写攻略" [ref=f3e10]
+      - generic [ref=f3e12]:
+        - generic [ref=f3e13]: huahua
+        - button "退出登录" [ref=f3e14]
+  - generic [ref=f3e18]:
+    - generic [ref=f3e22]:
+      - link "Leaflet" [ref=f3e23] [cursor=pointer]:
+        - /url: https://leafletjs.com
+      - text: "| ©"
+      - link "高德地图" [ref=f3e28] [cursor=pointer]:
+        - /url: https://www.amap.com/
+    - complementary [ref=f3e29]:
+      - generic [ref=f3e30]:
+        - button "打卡" [ref=f3e31]
+        - button "攻略" [ref=f3e35]
+        - button "搜索" [ref=f3e38]

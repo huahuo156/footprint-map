@@ -34,8 +34,13 @@ export default function GuideList() {
 
   return (
     <div className="divide-y divide-gray-100">
-      {guides.map(guide => (
-        <div key={guide.id} onClick={() => navigate(`/guide/${guide.id}`)} className="p-3 hover:bg-gray-50 transition-colors cursor-pointer">
+      {guides.map((guide, index) => (
+        <div
+          key={guide.id}
+          onClick={() => navigate(`/guide/${guide.id}`)}
+          className="p-3 hover:bg-gray-50 transition-colors cursor-pointer list-item-animate"
+          style={{ animationDelay: `${index * 50}ms` }}
+        >
           {guide.cover_image_url && (
             <img src={getPublicUrl('guide-covers', guide.cover_image_url)} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
           )}

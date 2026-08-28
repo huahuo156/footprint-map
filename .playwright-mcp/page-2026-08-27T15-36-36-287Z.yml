@@ -1,0 +1,40 @@
+- generic [ref=f3e6]:
+  - banner [ref=f3e7]:
+    - generic [ref=f3e8]: 足迹山河
+    - generic [ref=f3e12]:
+      - button "写攻略" [ref=f3e13]
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]: testviewer
+        - button "退出登录" [ref=f3e17]
+  - generic [ref=f3e21]:
+    - generic [ref=f3e23]:
+      - generic [ref=f3e24]:
+        - generic:
+          - generic:
+            - button "🏯" [ref=f3e25] [cursor=pointer]
+            - button "🏯" [ref=f3e29] [cursor=pointer]
+            - button "🏯" [ref=f3e33] [cursor=pointer]
+            - button "🏯" [ref=f3e37] [cursor=pointer]
+        - generic:
+          - generic [ref=f3e41]:
+            - button "Zoom in" [ref=f3e42] [cursor=pointer]: +
+            - button "Zoom out" [ref=f3e43] [cursor=pointer]: −
+          - generic [ref=f3e44]:
+            - link "Leaflet" [ref=f3e45] [cursor=pointer]:
+              - /url: https://leafletjs.com
+            - text: "| ©"
+            - link "高德地图" [ref=f3e50] [cursor=pointer]:
+              - /url: https://www.amap.com/
+      - button "全国地图" [ref=f3e51]
+      - generic:
+        - heading "北京" [level=2]
+        - paragraph: 4 个景点 · 0 条打卡
+    - complementary [ref=f3e54]:
+      - generic [ref=f3e55]:
+        - button "打卡" [ref=f3e56]
+        - button "攻略" [ref=f3e60]
+        - button "搜索" [ref=f3e63]
+        - button "景点" [ref=f3e67]
+      - generic [ref=f3e72]:
+        - paragraph [ref=f3e76]: 还没有打卡记录
+        - paragraph [ref=f3e77]: 点击地图开始打卡吧！
