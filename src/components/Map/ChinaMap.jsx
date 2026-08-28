@@ -8,16 +8,13 @@ import { wgs84ToGcj02, gcj02ToWgs84 } from '../../lib/coordTransform'
 import CheckinPopup from './CheckinPopup'
 import FootprintTrail from './FootprintTrail'
 import ChinaMask from './ChinaMask'
-import MapLayerControl, { getTileUrl } from './MapLayerControl'
 import MapViewSwitcher from './MapViewSwitcher'
-import { createLandmarkImageIcon, createCheckinImageIcon } from './ImageMarkerIcon'
-import { getLandmarkImage } from '../../data/landmarkImages'
+import { createSimpleLandmarkIcon, createSimpleCheckinIcon } from './SimpleMarkerIcon'
 
 // ============================================================
-// 高德地图瓦片 — 标准路网
-// API Key: 免费注册 https://console.amap.com/
+// OpenStreetMap 瓦片
 // ============================================================
-const GAODE_KEY = '5868643b4d58fb0e3ddfb707a20ca11c'
+const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 // ---- 地标标记：按类别区分颜色 + emoji ----
 const CATEGORY_STYLES = {
@@ -196,6 +193,21 @@ function LandmarkLabels({ landmarks }) {
   ))
 }
 
+// 监听缩放级别变化的组件
+function ZoomTracker({ onZoomChange }) {
+  const map = useMap()
+
+  useEffect(() => {
+    const onZoomEnd = () => {
+      onZoomChange(map.getZoom())
+    }
+    map.on('zoomend', onZoomEnd)
+    return () => { map.off('zoomend', onZoomEnd) }
+  }, [map, onZoomChange])
+
+  return null
+}
+
 // ============================================================
 // 主组件
 // ============================================================
@@ -207,8 +219,8 @@ export default function ChinaMap() {
   const [checkins, setCheckins] = useState([])
   const [hoveredProvince, setHoveredProvince] = useState(null)
   const [checkinPos, setCheckinPos] = useState(null)
-  const [mapStyle, setMapStyle] = useState('standard')
   const [viewMode, setViewMode] = useState('landmark') // 'landmark' | 'checkin'
+  const [zoomLevel, setZoomLevel] = useState(5)
 
   useEffect(() => {
     fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
@@ -282,12 +294,39 @@ export default function ChinaMap() {
     }
   }, [provinceCounts])
 
+  // 根据缩放级别过滤显示的景点（逐步展开）
+  const visibleLandmarks = useMemo(() => {
+    if (zoomLevel >= 10) {
+      // 高缩放级别：显示所有景点
+      return landmarks
+    } else if (zoomLevel >= 8) {
+      // 中高缩放级别：显示 5A 景点
+      return landmarks.filter(lm => lm.category === '历史古迹' || lm.category === '自然风光')
+    } else if (zoomLevel >= 6) {
+      // 中缩放级别：显示主要景点
+      return landmarks.filter(lm => lm.name.includes('5A') || lm.name.includes('国家'))
+    } else {
+      // 低缩放级别：只显示少量代表性景点
+      return landmarks.filter((_, index) => index % 10 === 0)
+    }
+  }, [landmarks, zoomLevel])
+
+  const visibleCheckins = useMemo(() => {
+    if (zoomLevel >= 8) {
+      return checkins
+    } else if (zoomLevel >= 6) {
+      return checkins.filter((_, index) => index % 3 === 0)
+    } else {
+      return checkins.filter((_, index) => index % 10 === 0)
+    }
+  }, [checkins, zoomLevel])
+
   const allMarkers = [
-    ...landmarks.map(lm => {
+    ...visibleLandmarks.map(lm => {
       const [gcjLng, gcjLat] = wgs84ToGcj02(lm.lng, lm.lat)
       return { ...lm, type: 'landmark', position: [gcjLat, gcjLng] }
     }),
-    ...checkins.map(c => {
+    ...visibleCheckins.map(c => {
       const [gcjLng, gcjLat] = wgs84ToGcj02(c.lng, c.lat)
       return { ...c, type: 'checkin', position: [gcjLat, gcjLng] }
     }),
@@ -322,13 +361,15 @@ export default function ChinaMap() {
       >
         <MapBridge />
 
-        {/* 全国模式：高德地图瓦片（支持多种样式切换） */}
+        {/* 缩放级别跟踪 */}
+        <ZoomTracker onZoomChange={setZoomLevel} />
+
+        {/* OpenStreetMap 瓦片 */}
         <TileLayer
-          key={mapStyle}
-          url={getTileUrl(mapStyle, GAODE_KEY)}
-          subdomains={['1', '2', '3', '4']}
-          maxZoom={18}
-          attribution='&copy; <a href="https://www.amap.com/">高德地图</a>'
+          url={OSM_TILE_URL}
+          subdomains="abc"
+          maxZoom={19}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
         {/* 中国范围遮罩：遮住境外区域，仅保留中国领土 */}
@@ -344,56 +385,40 @@ export default function ChinaMap() {
 
         {/* 根据视图模式显示不同的标记 */}
         {viewMode === 'landmark' ? (
-          // 景点视图：显示景点图片标记
-          landmarks.map((lm) => {
-            const [gcjLng, gcjLat] = wgs84ToGcj02(lm.lng, lm.lat)
+          // 景点视图：显示简洁的小圆点标记
+          allMarkers.filter(m => m.type === 'landmark').map((lm) => {
             const isHighlighted = hoveredItemId === `landmark-${lm.id}`
             const isSelected = selectedItemId === `landmark-${lm.id}`
             const highlight = isHighlighted || isSelected
-            const imageUrl = getLandmarkImage(lm.name)
 
             return (
               <Marker
                 key={`landmark-${lm.id}`}
-                position={[gcjLat, gcjLng]}
-                icon={createLandmarkImageIcon(imageUrl, lm.name, highlight)}
+                position={lm.position}
+                icon={createSimpleLandmarkIcon(lm.category, highlight)}
               >
-                <Popup maxWidth={300}>
-                  <div className="w-72">
-                    <img
-                      src={imageUrl}
-                      alt={lm.name}
-                      className="w-full h-40 object-cover rounded-t-lg"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop'
-                      }}
-                    />
-                    <div className="p-3">
-                      <h3 className="font-bold text-base">{lm.name}</h3>
-                      <p className="text-xs text-gray-500 mt-1">{lm.province} · {lm.city} · {lm.category}</p>
-                      <p className="text-sm text-gray-600 mt-2">{lm.description}</p>
-                    </div>
+                <Popup maxWidth={280}>
+                  <div className="w-64">
+                    <h3 className="font-bold text-sm">{lm.name}</h3>
+                    <p className="text-xs text-gray-500 mt-1">{lm.province} · {lm.city} · {lm.category}</p>
+                    <p className="text-xs text-gray-600 mt-2">{lm.description}</p>
                   </div>
                 </Popup>
               </Marker>
             )
           })
         ) : (
-          // 打卡视图：显示用户打卡照片标记
-          checkins.map((c) => {
-            const [gcjLng, gcjLat] = wgs84ToGcj02(c.lng, c.lat)
+          // 打卡视图：显示简洁的小圆点标记
+          allMarkers.filter(m => m.type === 'checkin').map((c) => {
             const isHighlighted = hoveredItemId === `checkin-${c.id}`
             const isSelected = selectedItemId === `checkin-${c.id}`
             const highlight = isHighlighted || isSelected
-            const imageUrl = c.image_url?.startsWith('http')
-              ? c.image_url
-              : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/checkin-images/${c.image_url}`
 
             return (
               <Marker
                 key={`checkin-${c.id}`}
-                position={[gcjLat, gcjLng]}
-                icon={createCheckinImageIcon(imageUrl, highlight)}
+                position={c.position}
+                icon={createSimpleCheckinIcon(highlight)}
               >
                 <Popup maxWidth={280}>
                   <CheckinPopup checkin={c} />
@@ -408,13 +433,6 @@ export default function ChinaMap() {
 
         <FootprintTrail />
       </MapContainer>
-
-      {/* 图层切换控件 */}
-      <MapLayerControl
-        currentStyle={mapStyle}
-        onStyleChange={setMapStyle}
-        apiKey={GAODE_KEY}
-      />
 
       {/* 视图切换控件 */}
       <MapViewSwitcher
