@@ -24,10 +24,8 @@ function MapLayout() {
     <MapProvider>
       <div className="h-screen flex flex-col">
         <Navbar />
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 relative">
-            <ChinaMap />
-          </div>
+        <div className="flex-1 relative overflow-hidden">
+          <ChinaMap />
           <Sidebar />
         </div>
       </div>
@@ -41,10 +39,8 @@ function ProvinceLayout() {
     <MapProvider>
       <div className="h-screen flex flex-col">
         <Navbar />
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 relative">
-            <ProvinceView />
-          </div>
+        <div className="flex-1 relative overflow-hidden">
+          <ProvinceView />
           <Sidebar />
         </div>
       </div>
