@@ -29,7 +29,7 @@ export default function Sidebar() {
       {/* 切换按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute top-4 right-20 z-[1000] bg-white hover:bg-gray-50 shadow-lg rounded-lg p-2 flex items-center gap-2 text-sm font-medium text-gray-700 transition-all"
+        className="absolute top-16 right-4 z-[1000] bg-white hover:bg-gray-50 shadow-lg rounded-lg p-2 flex items-center gap-2 text-sm font-medium text-gray-700 transition-all"
       >
         <PanelRight className="w-5 h-5" />
         <span className="hidden sm:inline">内容</span>
