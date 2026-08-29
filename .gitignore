@@ -21,3 +21,9 @@ npm-debug.log*
 .idea
 .DS_Store
 *.sw?
+
+# Playwright 渲染产物（本地调试快照，不入库）
+.playwright-mcp
+
+# 本地规划文件
+.zcode

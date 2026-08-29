@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+@import "leaflet.markercluster/dist/MarkerCluster.css";
+@import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 /* Leaflet CSS is imported in components that use it */
 
@@ -99,4 +101,97 @@
 }
 .connection-endpoint {
   animation: endpoint-pulse 1.2s ease-in-out infinite;
+}
+
+/* ========== 景点视图：图钉标记 ========== */
+
+/* 图钉外层：中性定位，内部 div 负责旋转 */
+.lm-pin-shell {
+  background: transparent;
+  border: none;
+}
+
+/* 水滴形图钉：旋转 -45° 使其一角朝下 */
+.lm-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 2.5px solid #fff;
+  border-radius: 50% 50% 50% 7px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+/* 徽章文本反向旋转，保持水平 */
+.lm-pin-badge {
+  transform: rotate(45deg);
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* ========== 景点视图：聚合圆点 ========== */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: rgba(59, 130, 246, 0.28);
+}
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: rgba(59, 130, 246, 0.9);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ========== 景点视图：右侧简介面板 ========== */
+.landmark-detail-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  width: 22rem;
+  max-width: 90vw;
+  background: #fff;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  animation: detail-slide-in 0.3s ease-out both;
+  overflow: hidden;
+}
+
+@keyframes detail-slide-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.landmark-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.landmark-detail-image {
+  height: 13rem;
+  flex-shrink: 0;
+  background: #f3f4f6;
+}
+.landmark-detail-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.landmark-detail-body {
+  padding: 1.25rem 1.25rem 1rem;
+}
+
+@media (max-width: 640px) {
+  .landmark-detail-panel {
+    width: 100%;
+  }
 }

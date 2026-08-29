@@ -7,7 +7,6 @@ import { MapProvider } from './contexts/MapContext'
 import { Loader2 } from 'lucide-react'
 
 // 懒加载地图和攻略组件
-const ChinaMap = lazy(() => import('./components/Map/ChinaMap'))
 const ProvinceView = lazy(() => import('./components/Map/ProvinceView'))
 const LandmarkView = lazy(() => import('./components/Map/LandmarkView'))
 const Sidebar = lazy(() => import('./components/Sidebar/Sidebar'))
@@ -36,23 +35,17 @@ function MapLoading() {
   )
 }
 
-function MapLayout() {
+function LandmarkLayout() {
   return (
     <MapProvider>
       <div className="h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 relative overflow-hidden">
           <Suspense fallback={<MapLoading />}>
-            <ChinaMap />
-          </Suspense>
-          <Suspense fallback={null}>
-            <Sidebar />
+            <LandmarkView />
           </Suspense>
         </div>
       </div>
-      <Suspense fallback={null}>
-        <ConnectionLineOverlay />
-      </Suspense>
     </MapProvider>
   )
 }
@@ -78,21 +71,6 @@ function ProvinceLayout() {
   )
 }
 
-function LandmarkLayout() {
-  return (
-    <MapProvider>
-      <div className="h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 relative overflow-hidden">
-          <Suspense fallback={<MapLoading />}>
-            <LandmarkView />
-          </Suspense>
-        </div>
-      </div>
-    </MapProvider>
-  )
-}
-
 export default function App() {
   const { user, loading } = useAuth()
 
@@ -102,9 +80,9 @@ export default function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/" element={<MapLayout />} />
+        <Route path="/" element={<LandmarkLayout />} />
         <Route path="/province/:name" element={<ProvinceLayout />} />
-        <Route path="/landmarks" element={<LandmarkLayout />} />
+        <Route path="/landmarks" element={<Navigate to="/" replace />} />
         <Route path="/guide/new" element={<GuideEditor />} />
         <Route path="/guide/:id" element={<GuideDetail />} />
         <Route path="/profile" element={<ProfileEditor />} />
