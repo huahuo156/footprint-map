@@ -3,8 +3,6 @@
 @import "leaflet.markercluster/dist/MarkerCluster.css";
 @import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
-/* Leaflet CSS is imported in components that use it */
-
 /* Custom map styles */
 .leaflet-container {
   width: 100%;
@@ -13,41 +11,6 @@
   background: #d4dcc8;
 }
 
-/* Province tooltip on hover */
-.province-tooltip {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 6px !important;
-  padding: 4px 10px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #1f2937 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-}
-.province-tooltip::before {
-  border-top-color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Province hover effect */
-.province-path {
-  transition: fill 0.2s, stroke-width 0.2s;
-}
-.province-path:hover {
-  fill: #60a5fa;
-  stroke-width: 2;
-}
-
-/* Scrollbar styling */
-.sidebar-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-
-/* ========== Animations ========== */
-
 /* Marker pulse for highlighted/selected items */
 @keyframes marker-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--marker-glow, rgba(59,130,246,0.4)); }
@@ -55,52 +18,6 @@
 }
 .marker-pulse {
   animation: marker-pulse 1.5s ease-in-out infinite;
-}
-
-/* Landmark label fade-in at zoom threshold */
-@keyframes label-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Marker pop-in entrance */
-@keyframes marker-pop-in {
-  0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.marker-animate {
-  animation: marker-pop-in 0.3s ease-out both;
-}
-
-/* List item staggered fade-in */
-@keyframes fade-slide-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.list-item-animate {
-  animation: fade-slide-in 0.3s ease-out both;
-}
-
-/* Connection line dash animation */
-@keyframes dash-flow {
-  to { stroke-dashoffset: -20; }
-}
-.connection-line {
-  stroke: #3b82f6;
-  stroke-width: 2;
-  stroke-dasharray: 8 4;
-  animation: dash-flow 0.6s linear infinite;
-  fill: none;
-}
-
-/* Connection endpoint glow pulse */
-@keyframes endpoint-pulse {
-  0%, 100% { r: 4; opacity: 1; }
-  50% { r: 6; opacity: 0.7; }
-}
-.connection-endpoint {
-  animation: endpoint-pulse 1.2s ease-in-out infinite;
 }
 
 /* ========== 景点视图：图钉标记 ========== */

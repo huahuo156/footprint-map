@@ -1,12 +1,10 @@
-import { useEffect, useState, useRef } from 'react'
-import { Polyline, useMap } from 'react-leaflet'
+import { useEffect, useState } from 'react'
+import { Polyline } from 'react-leaflet'
 import { fetchMyCheckins } from '../../lib/api'
 import { wgs84ToGcj02 } from '../../lib/coordTransform'
 
 export default function FootprintTrail() {
-  const map = useMap()
   const [positions, setPositions] = useState([])
-  const trailRef = useRef(null)
 
   useEffect(() => {
     fetchMyCheckins().then(checkins => {

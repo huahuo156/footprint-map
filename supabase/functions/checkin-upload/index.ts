@@ -23,7 +23,7 @@ serve(async (req) => {
       })
     }
 
-    const { checkin_id, image_url } = await req.json()
+    const { checkin_id } = await req.json()
 
     // TODO: Generate CLIP embedding (replace with actual CLIP model)
     const embedding = Array.from({ length: 768 }, () => Math.random() * 2 - 1)

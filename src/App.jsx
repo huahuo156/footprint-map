@@ -7,12 +7,9 @@ import { MapProvider } from './contexts/MapContext'
 import { Loader2 } from 'lucide-react'
 
 // 懒加载地图和攻略组件
-const ProvinceView = lazy(() => import('./components/Map/ProvinceView'))
-const LandmarkView = lazy(() => import('./components/Map/LandmarkView'))
-const Sidebar = lazy(() => import('./components/Sidebar/Sidebar'))
+const HomeMap = lazy(() => import('./components/Map/HomeMap'))
 const GuideEditor = lazy(() => import('./components/Guide/GuideEditor'))
 const GuideDetail = lazy(() => import('./components/Guide/GuideDetail'))
-const ConnectionLineOverlay = lazy(() => import('./components/Map/ConnectionLineOverlay'))
 const ProfileEditor = lazy(() => import('./components/Profile/ProfileEditor'))
 
 function LoadingScreen() {
@@ -35,38 +32,18 @@ function MapLoading() {
   )
 }
 
-function LandmarkLayout() {
+// 首页：单一地图 + 足迹/景点双视图（HomeMap 内部切换）
+function HomeLayout() {
   return (
     <MapProvider>
       <div className="h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 relative overflow-hidden">
           <Suspense fallback={<MapLoading />}>
-            <LandmarkView />
+            <HomeMap />
           </Suspense>
         </div>
       </div>
-    </MapProvider>
-  )
-}
-
-function ProvinceLayout() {
-  return (
-    <MapProvider>
-      <div className="h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 relative overflow-hidden">
-          <Suspense fallback={<MapLoading />}>
-            <ProvinceView />
-          </Suspense>
-          <Suspense fallback={null}>
-            <Sidebar />
-          </Suspense>
-        </div>
-      </div>
-      <Suspense fallback={null}>
-        <ConnectionLineOverlay />
-      </Suspense>
     </MapProvider>
   )
 }
@@ -80,8 +57,9 @@ export default function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/" element={<LandmarkLayout />} />
-        <Route path="/province/:name" element={<ProvinceLayout />} />
+        <Route path="/" element={<HomeLayout />} />
+        {/* 省份放大视图已舍弃，旧入口统一回首页 */}
+        <Route path="/province/*" element={<Navigate to="/" replace />} />
         <Route path="/landmarks" element={<Navigate to="/" replace />} />
         <Route path="/guide/new" element={<GuideEditor />} />
         <Route path="/guide/:id" element={<GuideDetail />} />

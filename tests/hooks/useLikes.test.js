@@ -40,7 +40,7 @@ describe('useLikes', () => {
   it('should check if user has liked on mount', async () => {
     checkLiked.mockResolvedValue(true)
 
-    const { result } = renderHook(() => useLikes(1, 'checkin', 0))
+    renderHook(() => useLikes(1, 'checkin', 0))
 
     // Wait for the effect to run
     await vi.waitFor(() => {
