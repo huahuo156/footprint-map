@@ -57,6 +57,23 @@ function FlyToLocation({ position, zoom }) {
   return null
 }
 
+// 点击地图打卡（仅足迹视图启用）：直接绑定 leaflet map 的 click 事件，
+// 避免 MapContainer eventHandlers 在某些渲染下不触发的问题。
+function ClickToCheckin({ enabled, onClick }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!enabled) return undefined
+    const handler = (e) => {
+      const t = e.originalEvent.target
+      if (t?.closest?.('.leaflet-marker-icon, .leaflet-control, .leaflet-popup')) return
+      onClick(e.latlng)
+    }
+    map.on('click', handler)
+    return () => map.off('click', handler)
+  }, [map, enabled, onClick])
+  return null
+}
+
 // 归一化搜索文本（去空白、转小写）
 function normalize(text) {
   return String(text || '').trim().toLowerCase()
@@ -179,6 +196,12 @@ export default function HomeMap() {
     setFlyToPosition(null)
   }, [])
 
+  // 地图点击打卡：得到 GCJ-02 坐标，存库前转回 WGS-84
+  const handleMapCheckinClick = useCallback((latlng) => {
+    const [wgsLng, wgsLat] = gcj02ToWgs84(latlng.lng, latlng.lat)
+    setCheckinPos({ lat: wgsLat, lng: wgsLng })
+  }, [])
+
   const handleSearch = useCallback((value) => {
     setSearchQuery(value)
     setActiveIndex(-1)
@@ -226,20 +249,9 @@ export default function HomeMap() {
         maxBounds={[[2, 73], [55, 135]]}
         maxBoundsViscosity={1.0}
         zoomControl={false}
-        eventHandlers={{
-          click: (e) => {
-            // 点击打卡仅在足迹视图生效
-            if (view !== 'footprint') return
-            if (e.originalEvent.target.classList?.contains('leaflet-container') ||
-                e.originalEvent.target.classList?.contains('leaflet-tile')) {
-              // 地图点击得到 GCJ-02 坐标；存库前转回 WGS-84
-              const [wgsLng, wgsLat] = gcj02ToWgs84(e.latlng.lng, e.latlng.lat)
-              setCheckinPos({ lat: wgsLat, lng: wgsLng })
-            }
-          },
-        }}
       >
         <MapBridge />
+        <ClickToCheckin enabled={view === 'footprint'} onClick={handleMapCheckinClick} />
 
         <TileLayer
           url={OSM_TILE_URL}
