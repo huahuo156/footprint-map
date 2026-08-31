@@ -112,3 +112,27 @@
     width: 100%;
   }
 }
+
+/* ========== 足迹视图：右侧图片相册侧边栏 ========== */
+.checkin-album-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1100;
+  width: 20rem;
+  max-width: 88vw;
+  background: #fff;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  animation: detail-slide-in 0.3s ease-out both;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .checkin-album-panel {
+    width: 100%;
+  }
+}
