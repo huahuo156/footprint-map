@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { fetchLandmarks, fetchMyCheckins } from '../../lib/api'
-import { MapBridge, useMapContext } from '../../contexts/MapContext'
+import { MapBridge } from '../../contexts/MapContext'
 import { wgs84ToGcj02, gcj02ToWgs84 } from '../../lib/coordTransform'
 import ChinaMask from './ChinaMask'
 import MapViewSwitcher from './MapViewSwitcher'
@@ -70,10 +70,10 @@ function createCheckinClusterIcon(cluster) {
   const count = cluster.getChildCount()
   const size = count < 10 ? 32 : count < 50 ? 40 : 48
   return L.divIcon({
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;
+    html: `<div class="checkin-cluster" style="width:${size}px;height:${size}px;border-radius:50%;
       background:rgba(22,163,74,.92);color:#fff;font-weight:700;font-size:12px;
       display:flex;align-items:center;justify-content:center;
-      border:2.5px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3)">${count}</div>`,
+      border:2.5px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3);cursor:pointer">${count}</div>`,
     className: '',
     iconSize: [size, size],
   })
@@ -94,102 +94,9 @@ function FlyToLocation({ position, zoom }) {
 // 足迹聚合交互
 // ------------------------------------------------------------
 
-// 贪心网格模拟（近似 leaflet.markercluster 的聚合规则）：
-// 在指定 zoom 下逐点并入最近的簇（屏幕距离 ≤ maxRadius），
-// 返回"单例标记数 / 总簇数"，用于估算要展开到哪一级才能让多数 pin 变成 1。
-function simulateSingletonRatio(points, zoom, maxRadius) {
-  const px = points.map(p => L.point(map2px(p, zoom)))
-  const clusters = [] // { center: L.Point, size }
-  for (const p of px) {
-    let best = null
-    let bestDist = Infinity
-    for (const c of clusters) {
-      const d = p.distanceTo(c.center)
-      if (d <= maxRadius && d < bestDist) { bestDist = d; best = c }
-    }
-    if (best) {
-      best.center = L.point(
-        (best.center.x * best.size + p.x) / (best.size + 1),
-        (best.center.y * best.size + p.y) / (best.size + 1),
-      )
-      best.size += 1
-    } else {
-      clusters.push({ center: p, size: 1 })
-    }
-  }
-  const singletons = clusters.filter(c => c.size === 1).length
-  return { singletons, total: clusters.length }
-}
-
-function map2px(latlng, zoom) {
-  const point = L.CRS.Earth.project(latlng)
-  const scale = 0.5 / Math.pow(2, zoom)
-  return [point.x / scale, point.y / scale]
-}
-
-// 把 cluster 展开到"多数单例"：搜索第一个满足 单例占比≥80%（或已是最高分裂级）
-// 的 zoom，再 +1 留安全余量，然后 flyToBounds。
-function expandClusterToSingletons(cluster, map) {
-  const maxZoom = map.getMaxZoom()
-  const zoomCap = Math.min(cluster.__group?.options?.disableClusteringAtZoom ?? maxZoom, maxZoom)
-  const startZoom = map.getZoom()
-
-  if (cluster.getChildCount() === 1) {
-    map.fitBounds(cluster.getBounds(), { maxZoom: Math.min(zoomCap + 2, maxZoom), padding: [80, 80] })
-    return
-  }
-
-  const points = cluster.getAllChildMarkers().map(m => m.getLatLng())
-  let target = null
-  for (let z = startZoom + 1; z <= zoomCap; z++) {
-    const { singletons, total } = simulateSingletonRatio(points, z, 50)
-    if (singletons / total >= 0.8) {
-      target = Math.min(z + 1, zoomCap)
-      break
-    }
-  }
-  if (target === null) target = zoomCap
-  map.flyToBounds(cluster.getBounds(), { maxZoom: target, padding: [60, 60], duration: 0.8 })
-}
-
-// 监听 clusterclick：数字>1 → 渐进展开；数字=1 → 交给对应 marker 的 click（打开相册）。
-// 同时替代 zoomToBoundsOnClick（需置 false），并阻止点击穿透触发"地图打卡"。
-function ExpandOnClusterClick({ onSuppressMapClick }) {
-  const map = useMap()
-  useEffect(() => {
-    const handler = (e) => {
-      const cluster = e.layer
-      if (!cluster || typeof cluster.getChildCount !== 'function') return
-      onSuppressMapClick()
-      expandClusterToSingletons(cluster, map)
-    }
-    map.on('clusterclick', handler)
-    return () => map.off('clusterclick', handler)
-  }, [map, onSuppressMapClick])
-  return null
-}
-
-// 同坐标挤着多个"值=1 的 pin"（disableClusteringAtZoom 之下）：
-// 点击时先就地放大两级，让它们裂开；到达最高聚类级仍在一起才作为"同点"处理。
-function ZoomAtSamePoint({ center, zoomCap, onDone }) {
-  const map = useMap()
-  useEffect(() => {
-    const current = map.getZoom()
-    const done = () => onDone?.()
-    map.once('zoomend', done)
-    if (current < zoomCap) {
-      map.setView(center, Math.min(current + 2, zoomCap), { duration: 0.5 })
-    } else {
-      map.off('zoomend', done)
-      onDone?.()
-    }
-    return () => map.off('zoomend', done)
-  }, [map, center, zoomCap, onDone])
-  return null
-}
-
 // 点击地图打卡（仅足迹视图启用）：直接绑定 leaflet map 的 click 事件，
 // 避免 MapContainer eventHandlers 在某些渲染下不触发的问题。
+// 守卫：点在 marker/cluster/控件/popup 上的 click 不算"点空白打卡"。
 function ClickToCheckin({ enabled, onClick }) {
   const map = useMap()
   useEffect(() => {
@@ -231,7 +138,7 @@ function searchScore(landmark, query) {
 
 // ============================================================
 // 首页：同一张地图，两个视图（足迹 / 景点）干净分离
-//   · 足迹视图：聚合打卡点（点气泡渐进展开至多数为 1；点单 pin 打开右侧图片相册）
+//   · 足迹视图：聚合打卡点（点气泡渐进展开至全部为 1；点单 pin 打开右侧图片相册）
 //     + 点击地图空白打卡 + 统计概览
 //   · 景点视图：景点聚合图钉 + 搜索联想 + 右侧简介面板
 // ============================================================
@@ -251,11 +158,7 @@ export default function HomeMap() {
   const [footprintLayerVersion, setFootprintLayerVersion] = useState(0)
   // 相册侧边栏：pin 值=1 且被点击时打开，展示该位置的全部打卡图片
   const [albumIds, setAlbumIds] = useState(null)
-  // 同坐标多单点点击 → 就地放大请求（带 tick 以便连点重置）
-  const [samePointZoom, setSamePointZoom] = useState(null)
-  const clickSuppressRef = useRef(0)
   const searchInputRef = useRef(null)
-  const { mapRef } = useMapContext()
 
   // 同坐标叠放的打卡（zoom 到底仍挤在一起的"值=1 pin 组"）
   const samePointGroups = useMemo(() => {
@@ -277,16 +180,9 @@ export default function HomeMap() {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   }, [albumIds, myCheckins])
 
-  // 打开相册（点击单 pin 或最高聚类级仍同坐标的多 pin）
+  // 打开相册（点击单 pin，或同坐标叠放的多个 pin 归为同一相册）
   const openAlbum = useCallback((ids) => {
     setAlbumIds(ids)
-    clickSuppressRef.current = Date.now()
-  }, [])
-
-  // 点击聚合气泡展开时，抑制穿透到地图的 click 触发打卡表单；同时收起相册
-  const suppressMapClick = useCallback(() => {
-    clickSuppressRef.current = Date.now()
-    setAlbumIds(null)
   }, [])
 
   // 切换视图时重挂载聚合层（足迹/景点各一份），清除 leaflet.markercluster 内部缓存；
@@ -371,9 +267,8 @@ export default function HomeMap() {
   }, [])
 
   // 地图点击打卡：得到 GCJ-02 坐标，存库前转回 WGS-84。
-  // 聚合气泡/单 pin 点击后短暂抑制，避免事件穿透误触发打卡表单。
+  // （点空白才触发；点 marker/cluster/控件由 ClickToCheckin 的 closest 守卫排除）
   const handleMapCheckinClick = useCallback((latlng) => {
-    if (Date.now() - clickSuppressRef.current < 300) return
     const [wgsLng, wgsLat] = gcj02ToWgs84(latlng.lng, latlng.lat)
     setCheckinPos({ lat: wgsLat, lng: wgsLng })
   }, [])
@@ -442,12 +337,13 @@ export default function HomeMap() {
         {/* ============ 足迹视图：我的打卡（聚合，渐进展开） ============ */}
         {view === 'footprint' && (
           <>
-            <ExpandOnClusterClick onSuppressMapClick={suppressMapClick} />
             <MarkerClusterGroup
               key={`checkin-cluster-${footprintLayerVersion}`}
               maxClusterRadius={50}
               disableClusteringAtZoom={11}
               showCoverageOnHover={false}
+              zoomToBoundsOnClick
+              spiderfyOnMaxZoom={false}
               iconCreateFunction={createCheckinClusterIcon}
             >
               {myCheckinMarkers.map((c) => (
@@ -457,32 +353,15 @@ export default function HomeMap() {
                   icon={createCheckinPinIcon(albumIds?.includes(c.id) ?? false)}
                   eventHandlers={{
                     click: () => {
-                      // 同坐标叠放的多个"单点"：先就地放大；已到最高聚类级仍同坐标 → 作为同点相册
+                      // 点独立 pin：打开该坐标的相册（同坐标多次打卡归入同一相册）
                       const key = `${Number(c.lat).toFixed(4)},${Number(c.lng).toFixed(4)}`
                       const group = samePointGroups.get(key)
-                      if (group && group.length > 1) {
-                        if (mapRef.current && mapRef.current.getZoom() < 11) {
-                          setSamePointZoom({ center: c.position, zoomCap: 11, tick: Date.now() })
-                          suppressMapClick()
-                        } else {
-                          openAlbum(group)
-                        }
-                        return
-                      }
-                      openAlbum([c.id])
+                      openAlbum(group && group.length > 1 ? group : [c.id])
                     },
                   }}
                 />
               ))}
             </MarkerClusterGroup>
-            {samePointZoom && (
-              <ZoomAtSamePoint
-                key={`same-pt-${samePointZoom.center.join(',')}-${samePointZoom.tick}`}
-                center={samePointZoom.center}
-                zoomCap={samePointZoom.zoomCap}
-                onDone={() => setSamePointZoom(null)}
-              />
-            )}
           </>
         )}
 

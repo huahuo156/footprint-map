@@ -12,7 +12,7 @@ const createMarkerClusterGroup = (props, context) => {
   const clusterGroup = new L.MarkerClusterGroup({
     // 关闭聚合圆圈的覆盖范围提示，避免 hover 时出现大半圆干扰
     showCoverageOnHover: false,
-    // 点击聚合圆放大到其覆盖范围（可被 clusterclick 自定义处理取代）
+    // 点击聚合圆放大到其覆盖范围
     zoomToBoundsOnClick: true,
     // 聚合半径（像素）
     maxClusterRadius: 46,
