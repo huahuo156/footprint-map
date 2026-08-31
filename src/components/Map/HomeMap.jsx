@@ -12,7 +12,6 @@ import { parseRating, ratingMeta, categoryColor } from '../../data/rating'
 import CheckinPopup from './CheckinPopup'
 import FootprintTrail from './FootprintTrail'
 import CheckinForm from '../CheckinForm'
-import { createSimpleCheckinIcon } from './SimpleMarkerIcon'
 import { Search, X, MapPin, Camera } from 'lucide-react'
 
 // ============================================================
@@ -43,6 +42,40 @@ function createPinIcon(landmark, highlighted = false) {
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -size / 2],
+  })
+}
+
+// 打卡图钉标记（与景点图钉同款水滴造型，绿色系 + 相机字形）
+function createCheckinPinIcon(highlighted = false) {
+  const color = '#16a34a'
+  const size = highlighted ? 36 : 30
+  const scale = highlighted ? 'scale(1.16)' : 'scale(1)'
+
+  return L.divIcon({
+    className: 'lm-pin-shell',
+    html: `<div class="lm-pin" style="
+      width:${size}px;height:${size}px;
+      background:${color};color:#ffffff;
+      ${highlighted ? `box-shadow:0 0 0 7px ${color}30, 0 4px 11px rgba(0,0,0,.3);` : 'box-shadow:0 2px 7px rgba(0,0,0,.28);'}
+      transform:rotate(-45deg) ${scale};
+    "><span class="lm-pin-badge">📷</span></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  })
+}
+
+// 足迹聚合气泡：绿色系，与打卡 pin 同色、和景点蓝色区分
+function createCheckinClusterIcon(cluster) {
+  const count = cluster.getChildCount()
+  const size = count < 10 ? 32 : count < 50 ? 40 : 48
+  return L.divIcon({
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;
+      background:rgba(22,163,74,.92);color:#fff;font-weight:700;font-size:12px;
+      display:flex;align-items:center;justify-content:center;
+      border:2.5px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3)">${count}</div>`,
+    className: '',
+    iconSize: [size, size],
   })
 }
 
@@ -116,11 +149,14 @@ export default function HomeMap() {
   const [selectedLandmark, setSelectedLandmark] = useState(null)
   const [flyToPosition, setFlyToPosition] = useState(null)
   const [landmarkLayerVersion, setLandmarkLayerVersion] = useState(0)
+  const [footprintLayerVersion, setFootprintLayerVersion] = useState(0)
+  const [selectedCheckinId, setSelectedCheckinId] = useState(null)
   const searchInputRef = useRef(null)
 
-  // 切换视图时重挂载景点聚合层，清除 leaflet.markercluster 内部缓存
+  // 切换视图时重挂载聚合层（足迹/景点各一份），清除 leaflet.markercluster 内部缓存
   useEffect(() => {
     if (view === 'landmark') setLandmarkLayerVersion(v => v + 1)
+    if (view === 'footprint') setFootprintLayerVersion(v => v + 1)
   }, [view])
 
   // 加载景点与我的打卡
@@ -263,20 +299,32 @@ export default function HomeMap() {
         {/* 中国范围遮罩：遮住境外区域，仅保留中国领土 */}
         <ChinaMask />
 
-        {/* ============ 足迹视图：我的打卡 + 时间线 ============ */}
+        {/* ============ 足迹视图：我的打卡（聚合，城市级强制展开） ============ */}
         {view === 'footprint' && (
           <>
-            {myCheckinMarkers.map((c) => (
-              <Marker
-                key={`checkin-${c.id}`}
-                position={c.position}
-                icon={createSimpleCheckinIcon(false)}
-              >
-                <Popup maxWidth={280}>
-                  <CheckinPopup checkin={c} />
-                </Popup>
-              </Marker>
-            ))}
+            <MarkerClusterGroup
+              key={`checkin-cluster-${footprintLayerVersion}`}
+              maxClusterRadius={50}
+              disableClusteringAtZoom={11}
+              showCoverageOnHover={false}
+              zoomToBoundsOnClick
+              iconCreateFunction={createCheckinClusterIcon}
+            >
+              {myCheckinMarkers.map((c) => (
+                <Marker
+                  key={`checkin-${c.id}`}
+                  position={c.position}
+                  icon={createCheckinPinIcon(selectedCheckinId === c.id)}
+                  eventHandlers={{
+                    click: () => setSelectedCheckinId(c.id),
+                  }}
+                >
+                  <Popup maxWidth={280}>
+                    <CheckinPopup checkin={c} />
+                  </Popup>
+                </Marker>
+              ))}
+            </MarkerClusterGroup>
             <FootprintTrail />
           </>
         )}

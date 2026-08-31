@@ -27,6 +27,18 @@ const updateMarkerClusterGroup = (instance, props, prevProps) => {
   if (props.maxClusterRadius !== prevProps.maxClusterRadius) {
     instance.options.maxClusterRadius = props.maxClusterRadius
   }
+  if (props.disableClusteringAtZoom !== prevProps.disableClusteringAtZoom) {
+    instance.options.disableClusteringAtZoom = props.disableClusteringAtZoom
+  }
+  if (props.iconCreateFunction !== prevProps.iconCreateFunction) {
+    instance.options.iconCreateFunction = props.iconCreateFunction
+  }
+  if (props.showCoverageOnHover !== prevProps.showCoverageOnHover) {
+    instance.options.showCoverageOnHover = props.showCoverageOnHover
+  }
+  if (props.zoomToBoundsOnClick !== prevProps.zoomToBoundsOnClick) {
+    instance.options.zoomToBoundsOnClick = props.zoomToBoundsOnClick
+  }
 }
 
 export const MarkerClusterGroup = createLayerComponent(
