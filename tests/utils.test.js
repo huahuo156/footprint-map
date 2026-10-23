@@ -55,9 +55,12 @@ describe('truncate', () => {
 })
 
 describe('getPublicUrl', () => {
-  it('constructs correct Supabase storage URL', () => {
+  it('constructs local upload URL', () => {
     const url = getPublicUrl('checkin-images', 'abc/photo.jpg')
-    expect(url).toContain('/storage/v1/object/public/checkin-images/abc/photo.jpg')
+    expect(url).toBe('/uploads/abc/photo.jpg')
+  })
+  it('preserves API image paths', () => {
+    expect(getPublicUrl('checkin-images', '/uploads/photo.jpg')).toBe('/uploads/photo.jpg')
   })
 })
 

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
 import { checkLiked, toggleLike } from '../lib/api'
 
 export function useLikes(targetId, targetType, initialCount = 0) {
@@ -8,23 +7,11 @@ export function useLikes(targetId, targetType, initialCount = 0) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    checkLiked(targetId, targetType).then(setLiked).catch(() => {})
-  }, [targetId, targetType])
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`likes-${targetType}-${targetId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'likes',
-        filter: `target_id=eq.${targetId}`,
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') setCount(prev => prev + 1)
-        else if (payload.eventType === 'DELETE') setCount(prev => Math.max(0, prev - 1))
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    let active = true
+    setCount(initialCount)
+    setLiked(false)
+    checkLiked(targetId, targetType).then(value => { if (active) setLiked(value) }).catch(() => {})
+    return () => { active = false }
   }, [targetId, targetType])
 
   const handleToggle = useCallback(async () => {
@@ -33,6 +20,7 @@ export function useLikes(targetId, targetType, initialCount = 0) {
     try {
       const newLiked = await toggleLike(targetId, targetType)
       setLiked(newLiked)
+      setCount(newLiked ? 1 : 0)
     } catch (err) {
       console.error('Like toggle failed:', err)
     } finally {

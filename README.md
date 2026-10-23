@@ -1,16 +1,87 @@
-# React + Vite
+# 拾途 · 私人旅行手帐
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+画布支持主题手帐本：点击「创建手札」设置名称和封面，手札本身可以在画布上拖动。手札默认在最顶层全屏打开，从右上角「添加与整理」使用原来的添加窗口直接导入。内页与画布共用照片组件、评语、文字、贴纸和编辑器。
 
-Currently, two official plugins are available:
+每页提供 1200 × 1600 的排版空间，自动避让已有内容，支持放大查看。拖动页角或使用方向键翻页，底部只显示页码；「＋ → 整理内页」可以调整顺序或删除纸页。删除纸页、解除手札会把内容还给画布，不删除照片和文字。新增数据库表在启动时自动创建，既有记录保留。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+手札正文前有一张扉页，沿用名称与封面寄语；未写寄语时自然留白，不占用正文页码。再次打开会接着上次阅读的位置。正文上沿有一条细书签：轻点夹住当前页，再点取下；翻到别页后点击书签会回到夹住的位置。书签随手札保存，调整内页顺序后仍指向原页。
 
-## React Compiler
+封面默认字样为 MEMO，可以在「名称与封面」改为任意文字或留空隐藏。封面支持 6 张本地内置摄影、自定义上传、纯色、纯文字，名称和寄语会同步预览。上传封面独立保存，不会加入内页照片；内置摄影的作者与来源见 public/notebook-covers/Attribution.md。折叠色块展开时会自动避让同级色块，整组照片一起移动并保存。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+直接打开即可使用，无需注册或登录。React + Vite 前端，Node.js + Express 后端，Docker MySQL 8.4 保存手帐，上传照片保存在本地 `uploads/`。
 
-## Expanding the Oxlint configuration
+桌面首页是可以拖动、缩放的自由画布：远处看旅程照片组，点击或靠近后展开照片和文字，单击照片查看大图。拖动照片松手后会避让其他照片和旅程名称，位置保存到 MySQL；视角单独保存在当前浏览器。桌面不再使用时间轴或全国地图。
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+桌面照片按原图比例自适应宽高，完整显示横图、竖图和小图。点「多选内容」框选照片后，使用「添加色块分组」设置组名和颜色；拖动色块标题可以移动整组，刷新后保留。色块随组内照片的位置和尺寸自动包围，点击「编辑」可改名、换色或解除分组；解除分组保留照片。每张照片同时属于一个色块分组，分组与旅程信息独立。
+
+手机首页按日期展示照片和文字，用不同地点的浅色块区分内容，只记录日期，没有小时网格，也不加载 3D 场景。可以只写一句话，也可以一次添加最多 20 张照片，每张不超过 10MB，支持 JPG / PNG / WebP。
+
+添加时先放照片，再自由添加日期、地点、旅程、描述、心情和标题组件。组件可以移除、拖动或用上下按钮调整顺序；不需要填写任何组件也能保存。同一次上传的多张照片自动同步组件内容、增删和顺序，后续追加的照片也会带上已编辑的内容。保存后可分别编辑每张照片，也可用「也给其他照片加上」补齐相同组件，其他照片已有的内容会保留。照片也可以拖入或粘贴，滤镜和焦点仍按每张照片单独调整，收在「调整照片」里。
+
+没有旅程的照片直接散放在画布上；没有日期组件的记录按留下当天进入手机日记，照片详情不额外显示日期。只写文字时，添加描述组件即可。删除单张照片会保留同批的其他照片。
+
+先导入、后整理：在「留下一刻 → 照片」点击「批量导入，稍后整理」，一次可选 1 至 500 张照片。程序每 20 张保存一批，显示进度，照片先按不重叠的位置放到画布；中断后保留已完成的批次，可重试剩余照片。普通添加编辑窗口仍为每页最多 20 张。
+
+桌面点「多选内容」后，照片、文字和贴纸均可点击、Shift 点选或拖动空白框选，按住空格拖动可继续漫游。点「编辑照片信息」即可跨上传批次统一修改所选照片的日期、地点、旅程、描述、心情或标题；只覆盖主动添加的项目，没添加的保留原值，添加后留空表示移除该项。点「删除选中内容」可混合删除照片、文字和贴纸，确认框会分别列出数量，未选内容保留。支持 Ctrl / Command + A 全选（最多 500 项）、Escape 退出。拖动排好的照片和批量编辑的照片使用绝对画布坐标，修改日期或旅程不会重排这些照片。
+
+照片、文字与贴纸统一从「留下一刻」进入，在添加窗口顶部切换，切换时保留本次尚未保存的草稿。文字以带底色的便笺显示，深色模式也与画布区分；贴纸提供 12 款小花、叶子、咖啡、飞机等简单图案。可以选择颜色、大小和角度，拖动摆放，单击再次编辑或删除；无需照片、地点或旅程。标注独立保存到 MySQL 的 `journal_marks`，手机端按留下当天展示，也能添加和编辑。
+
+西湖是目前支持的专属 3D 景点，从包含西湖记录的旅程进入。场景只显示这段旅程中关联西湖的照片，实际湖岸、高程和渲染代码均在点击后加载。照片固定在侧栏，有具体位置时通过编号与场景对应，不会盖住地图。其他景点保留照片浏览。
+
+未关联旅程的西湖照片也可以从照片详情进入场景，此时只展示未归入旅程的西湖照片。
+
+空手帐可以点「看看示例手帐」体验设计。示例有明确标记，与个人记录分开，不会写入 MySQL；照片和场景数据已随项目保存，可离线展示。
+
+## 本地开发
+
+需要 Node.js 24+ 和已启动的 Docker Desktop（Linux 容器）。
+
+1. 安装依赖：npm install
+2. 首次使用复制配置：Copy-Item .env.example .env，设置 MYSQL_PASSWORD 和 MYSQL_ROOT_PASSWORD；已有 .env 时保留配置。
+3. 启动数据库：npm run db:up
+4. 启动前后端：npm run dev
+5. 打开 Vite 输出的地址，通常为 http://localhost:5173。
+
+`npm run dev` 同时启动 API（127.0.0.1:3001）和 Vite；Vite 代理 `/api` 与 `/uploads`。数据库默认绑定 127.0.0.1:3307。API 启动时创建缺失的数据表，并导入景点基础资料，之后不会覆盖已有手帐。
+
+Docker Hub 下载失败时，将 .env 中 MYSQL_IMAGE 设置为 public.ecr.aws/docker/library/mysql:8.4，再运行 npm run db:up。本次环境已使用此镜像成功下载 MySQL。
+
+## 常用命令
+
+- npm run dev:api / npm run dev:web：分别启动后端或前端。
+- npm run db:down：停止 MySQL，保留数据。
+- npm run build，然后 npm start：API 同时提供构建后的页面，访问 http://127.0.0.1:3001。
+- npm test：前端单元测试。
+- npm run test:api：真实 MySQL 集成测试，请指定独立测试库（MYSQL_PORT=3308，MYSQL_DATABASE 名称包含 test）后运行；包含封面上传及旧表迁移测试，会重建测试库中的手帐表。
+- npm run lint：静态检查。
+- npm run test:e2e：构建正式页面后，用真实 MySQL 和 Edge / Chromium 验证上传、编辑、位置保存、手机布局、3D、删除及示例隔离。Windows 使用已安装的 Edge；其他平台首次运行需 `npx playwright install chromium`。验收数据会自动清理。
+
+## 在手机上使用
+
+手机与电脑连接同一局域网。在 `.env` 中设置 `API_HOST=0.0.0.0`，运行 `npm run build` 后 `npm start`，手机访问 `http://电脑的局域网IP:3001`。默认仍只监听本机；手机页面与电脑使用同一份 MySQL 数据和照片。
+
+手机浏览器的自动定位需要安全上下文，普通局域网 HTTP 不一定允许定位；地点可以直接填写。通过 HTTPS 部署或在本机开发时可使用浏览器定位。
+
+## 数据和调试
+
+旅程、手帐、照片元数据分别保存在 `journal_trips`、`journal_entries`、`journal_photos`。照片顺序、裁剪焦点、滤镜、具体位置和画布坐标会保存。组件及排列顺序保存为 MySQL JSON，每张照片有独立的组件数组；未选择旅程和心情时不会自动赋值。留下当天使用 MySQL DATE，避免时区换日。启动时自动迁移已有表，旧记录的内容会保留，并可在编辑时转换为组件。
+
+旧 `checkins` 会在首次升级时按省份导入手帐，导入标记保存在 `journal_migrations`，重复启动不重复导入，也不删除旧记录。系统无需账号或个人资料；头像入口、资料编辑页面和相关接口已移除，旧版攻略仍可访问，旧资料地址会返回首页。
+
+MySQL 数据保存在 Compose 的 `mysql_data` 持久卷，图片保存在 `uploads/`，备份时需同时保存二者。`docker compose down` 不删除数据；带 `-v` 会删除数据库卷。不要在已有数据库卷上随意修改 `.env` 中的数据库用户名或密码，容器初始化变量仅在空卷首次启动时生效。
+
+手帐接口：`GET /api/journal`，`POST /api/journal/trips`，`POST / PUT / DELETE /api/journal/entries/:id`（创建时不带 id），`DELETE /api/journal/photos/:id`，`PATCH /api/journal/layout`。上传和手帐写入在同一事务流程中处理，失败会清理本次临时照片；删除照片或记录会清理不再被引用的上传图片。
+
+文字和贴纸接口：`POST /api/journal/marks`，`PUT / DELETE /api/journal/marks/:id`；查询结果在 `GET /api/journal` 的 `marks` 数组中，拖动位置沿用 `PATCH /api/journal/layout` 的 `kind: "mark"`。
+
+批量修改接口：`PATCH /api/journal/photos/components`，传入 `photo_ids`、待修改的 `components` 和可选的世界坐标 `positions`。跨记录修改在同一个 MySQL 事务中完成，目标不存在或参数无效时全部回滚；不修改未选照片、裁剪和滤镜。
+
+批量删除接口：`DELETE /api/journal/photos`，传入 `photo_ids`（最多 500 个）。同一事务中删除所选照片及因照片删空的记录，保留有其他照片的记录，成功后清理不再引用的上传文件；任一目标不存在时全部回滚。
+
+混合删除接口：`DELETE /api/journal/items`，传入 `items: [{ id, kind }]`，`kind` 支持 `photo`、`mark`（文字纸卡或贴纸）和 `entry`（纯文字记录），共最多 500 项。混合删除也在同一事务中处理，目标不存在则全部回滚。含照片的记录不能通过 `entry` 整条删除，以免误删未选照片。
+
+可用任意 MySQL 客户端连接 127.0.0.1:3307，数据库和凭据见 .env。健康检查：GET /api/health。后端仅监听本机地址，适合本地个人使用。
+
+原 Supabase 的登录、OAuth、存储及边缘函数已移除。现有 Supabase 数据不会自动导入 MySQL。
+
+景点数据沿用原项目的数据集，来源：https://github.com/marksui/China-Travel-Map，保存在 `server/landmarks.sql`。示例照片来源见 `public/journal-demo/ATTRIBUTION.md`，西湖场景数据来源见 `public/scenes/ATTRIBUTION.md`。

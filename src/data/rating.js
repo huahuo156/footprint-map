@@ -1,5 +1,5 @@
 // 景点评级与类别工具：从数据库字段推导徽章、元信息与颜色。
-// 数据来源：supabase/migrations/20260828000000_replace_landmarks.sql，
+// 数据来源：server/landmarks.sql，
 // description 形如「国家5A景区，2020年评定」。
 
 export const CATEGORY_COLORS = {

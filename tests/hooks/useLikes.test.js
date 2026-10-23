@@ -2,18 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLikes } from '../../src/hooks/useLikes'
 
-// Mock supabase
-vi.mock('../../src/lib/supabase', () => ({
-  supabase: {
-    channel: vi.fn(() => ({
-      on: vi.fn(() => ({
-        subscribe: vi.fn(),
-      })),
-    })),
-    removeChannel: vi.fn(),
-  },
-}))
-
 // Mock api
 vi.mock('../../src/lib/api', () => ({
   checkLiked: vi.fn(),
@@ -60,6 +48,7 @@ describe('useLikes', () => {
 
     expect(toggleLike).toHaveBeenCalledWith(1, 'checkin')
     expect(result.current.liked).toBe(true)
+    expect(result.current.count).toBe(1)
   })
 
   it('should handle toggle error gracefully', async () => {

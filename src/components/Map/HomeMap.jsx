@@ -79,12 +79,14 @@ function createCheckinClusterIcon(cluster) {
   })
 }
 
-// 飞行到指定位置组件
+// 飞行到指定位置组件：只居中、只在需要时放大，绝不缩小到当前 zoom 以下
+// （否则会把已放大的地图缩回并触发周围标记重新聚合）
 function FlyToLocation({ position, zoom }) {
   const map = useMap()
   useEffect(() => {
     if (position) {
-      map.flyTo(position, zoom || 10, { duration: 1.5 })
+      const target = Math.max(map.getZoom(), zoom || 10)
+      map.flyTo(position, target, { duration: 1.5 })
     }
   }, [position, zoom, map])
   return null
@@ -251,11 +253,16 @@ export default function HomeMap() {
     }
   }, [myCheckins, landmarkById])
 
-  // 选择景点：打开简介 + 飞行定位
-  const handleSelectLandmark = useCallback((landmark) => {
+  // 选择景点：打开简介面板。
+  // recenter=true（搜索/定位/同地区跳转）→ 把景点居中（但绝不缩小）；
+  // recenter=false（直接点击地图上的 pin）→ 只开面板，不移动地图，
+  // 避免点击高缩放下的独立 pin 时把地图缩回并触发周围 pin 重新聚合。
+  const handleSelectLandmark = useCallback((landmark, { recenter = true } = {}) => {
     setSelectedLandmark(landmark)
-    const [gcjLng, gcjLat] = wgs84ToGcj02(landmark.lng, landmark.lat)
-    setFlyToPosition([gcjLat, gcjLng])
+    if (recenter) {
+      const [gcjLng, gcjLat] = wgs84ToGcj02(landmark.lng, landmark.lat)
+      setFlyToPosition([gcjLat, gcjLng])
+    }
     setSearchOpen(false)
     setSearchQuery('')
     setActiveIndex(-1)
@@ -383,7 +390,7 @@ export default function HomeMap() {
                   position={[gcjLat, gcjLng]}
                   icon={createPinIcon(lm, isHighlighted)}
                   eventHandlers={{
-                    click: () => handleSelectLandmark(lm),
+                    click: () => handleSelectLandmark(lm, { recenter: false }),
                   }}
                 />
               )
