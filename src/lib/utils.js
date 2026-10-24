@@ -36,11 +36,12 @@ export function truncate(text, maxLength = 100) {
 }
 
 /**
- * Get Supabase public URL for a storage object
+ * Resolve a local uploaded image URL
  */
-export function getPublicUrl(bucket, path) {
-  const baseUrl = import.meta.env.VITE_SUPABASE_URL
-  return `${baseUrl}/storage/v1/object/public/${bucket}/${path}`
+export function getPublicUrl(_bucket, path) {
+  if (!path) return ''
+  if (path.startsWith('/') || /^https?:\/\//.test(path)) return path
+  return `/uploads/${path}`
 }
 
 /**

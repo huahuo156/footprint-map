@@ -46,7 +46,6 @@ export default function GuideDetail() {
         )}
         <h1 className="text-3xl font-bold text-gray-900 mb-4">{guide.title}</h1>
         <div className="flex items-center gap-4 text-sm text-gray-500 mb-6">
-          <span>{guide.profiles?.nickname || '匿名'}</span>
           <span>{timeAgo(guide.created_at)}</span>
           {guide.province && (
             <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{guide.province}</span>

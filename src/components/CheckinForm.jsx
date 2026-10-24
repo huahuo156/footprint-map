@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../lib/supabase'
-import { randomFilename } from '../lib/utils'
+import { uploadImage, createCheckin } from '../lib/api'
 import { Upload, MapPin, X, Loader2 } from 'lucide-react'
 
 export default function CheckinForm({ lat, lng, province, landmarkId, onClose, onSuccess }) {
@@ -29,29 +28,14 @@ export default function CheckinForm({ lat, lng, province, landmarkId, onClose, o
     setLoading(true)
     setError('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('请先登录')
-
-      const filename = randomFilename(file.name)
-      const filePath = `${user.id}/${filename}`
-      const { error: uploadError } = await supabase.storage.from('checkin-images').upload(filePath, file)
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage.from('checkin-images').getPublicUrl(filePath)
-
-      const { data: checkin, error: insertError } = await supabase
-        .from('checkins')
-        .insert({
-          user_id: user.id,
-          landmark_id: landmarkId || null,
-          lat, lng,
-          image_url: publicUrl,
-          caption: caption || null,
-          province: province || null,
-        })
-        .select()
-        .single()
-      if (insertError) throw insertError
+      const imageUrl = await uploadImage(file)
+      const checkin = await createCheckin({
+        landmark_id: landmarkId || null,
+        lat, lng,
+        image_url: imageUrl,
+        caption: caption || null,
+        province: province || null,
+      })
 
       onSuccess?.(checkin)
     } catch (err) {
