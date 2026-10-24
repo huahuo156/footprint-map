@@ -24,6 +24,13 @@ npm-debug.log*
 
 # Playwright 渲染产物（本地调试快照，不入库）
 .playwright-mcp
+test-results
+
+# 构建与发布产物
+releases
+
+# 用户上传图片
+uploads
 
 # 本地规划文件
 .zcode
