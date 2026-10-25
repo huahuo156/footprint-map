@@ -43,7 +43,7 @@ test('reader fills the window, names actions and fits bare image frames without 
   await page.screenshot({path:'test-results/notebook-layout-dark.png'})
   await expect(page.getByRole('button',{name:'从画布挑选内容'})).toHaveCount(0)
   const colors=await reader.locator('.nb-heading-actions>.j-button,.nb-heading-actions summary').evaluateAll(buttons=>buttons.map(button=>getComputedStyle(button).backgroundColor))
-  expect(new Set(colors).size).toBe(3)
+  expect(new Set(colors).size).toBe(colors.length)
   expect(colors).not.toContain('rgba(0, 0, 0, 0)')
 })
 

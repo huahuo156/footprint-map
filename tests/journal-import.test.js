@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { importPhotoFiles } from '../src/journal/importPhotos'
+import { readPhotoExif } from '../src/lib/exif'
+vi.mock('../src/lib/exif', async importOriginal => ({ ...(await importOriginal()), readPhotoExif: vi.fn(async () => null) }))
+vi.mock('../src/lib/api', () => ({ fetchLandmarks: async () => [{ id: 7, name: '西湖', lat: 30.25, lng: 120.15 }], saveJournalEntry: vi.fn() }))
 
 const files = count => Array.from({ length: count }, (_, index) => new File(['photo'], `photo-${index}.png`, { type: 'image/png' }))
 const positions = count => Array.from({ length: count }, (_, index) => ({ x: index * 300, y: -40 }))
@@ -7,6 +10,25 @@ const names = body => body.getAll('images').map(file => file.name)
 const invalid = indices => Object.assign(new Error('invalid images'), { status: 400, code: 'INVALID_IMAGES', invalidFiles: indices.map(index => ({ index, reason: '无法识别图片格式' })) })
 
 describe('bulk photo import recovery', () => {
+  it('imports 500 photos with their individual EXIF without reading every file at once', async () => {
+    let active = 0, peak = 0
+    readPhotoExif.mockImplementation(async file => {
+      active++; peak = Math.max(peak, active)
+      await new Promise(resolve => setTimeout(resolve, 0))
+      active--
+      return { date: file.name === 'photo-0.png' ? '2024-05-01' : '2024-05-02', lat: 30.25, lng: 120.15 }
+    })
+    const save = vi.fn(async () => ({}))
+    try {
+      const result = await importPhotoFiles(files(500), positions(500), vi.fn(), save)
+      expect(result.importedCount).toBe(500)
+      expect(peak).toBeLessThanOrEqual(20)
+      expect(save.mock.calls).toHaveLength(25)
+      const photos = save.mock.calls.flatMap(([, body]) => JSON.parse(body.get('data')).photos)
+      expect(photos[0].components).toEqual([{ type: 'date', value: '2024-05-01' }, { type: 'place', value: { name: '西湖', landmark_id: 7, lat: 30.25, lng: 120.15, spot_key: '' } }])
+      expect(photos[499].components[0].value).toBe('2024-05-02')
+    } finally { readPhotoExif.mockReset().mockResolvedValue(null) }
+  })
   it('skips rejected files across chunks and preserves the original layout for each valid file', async () => {
     const input = files(23), progress = vi.fn(), save = vi.fn()
       .mockRejectedValueOnce(invalid([1, 18]))

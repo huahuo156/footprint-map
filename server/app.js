@@ -7,6 +7,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pool } from './db.js'
 import { createJournalRouter } from './journal.js'
+import { backupRoutes } from './backup.js'
 
 export const uploadDirectory = fileURLToPath(new URL('../uploads/', import.meta.url))
 mkdirSync(uploadDirectory, { recursive: true })
@@ -23,7 +24,9 @@ export const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '2mb' }))
 app.use('/uploads', express.static(uploadDirectory, { dotfiles: 'deny' }))
-app.use('/api/journal', createJournalRouter(uploadDirectory))
+const journalRouter = createJournalRouter(uploadDirectory)
+backupRoutes(journalRouter, uploadDirectory)
+app.use('/api/journal', journalRouter)
 
 function badRequest(message) {
   return Object.assign(new Error(message), { status: 400 })
@@ -149,6 +152,7 @@ app.use((req, res, next) => {
   res.sendFile(path.join(distDirectory, 'index.html'))
 })
 app.use((error, _req, res, _next) => {
+  if (res.headersSent) return _next(error)
   const status = error instanceof multer.MulterError || error.code === 'ER_NO_REFERENCED_ROW_2' ? 400 : error.status || 500
   if (status >= 500) console.error(error)
   res.status(status).json({ error: status >= 500 ? '数据库或服务异常，请查看后端日志' : error.message, ...(error.code === 'INVALID_IMAGES' ? { code: error.code, invalidFiles: error.invalidFiles } : {}) })

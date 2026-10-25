@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import EntryEditor from '../src/journal/EntryEditor'
+import { readPhotoExif } from '../src/lib/exif'
 
 vi.mock('../src/journal/Modal', () => ({ default: ({ children }) => <div role="dialog">{children}</div> }))
 vi.mock('../src/journal/JournalImage', () => ({ default: ({ src, alt }) => <img src={src} alt={alt} /> }))
 vi.mock('../src/lib/api', () => ({ fetchLandmarks: vi.fn(async () => []) }))
+vi.mock('../src/lib/exif', async importOriginal => ({ ...(await importOriginal()), readPhotoExif: vi.fn(async () => null) }))
 
 beforeEach(() => {
+  readPhotoExif.mockReset().mockResolvedValue(null)
   vi.stubGlobal('URL', class extends URL {
     static createObjectURL() { return 'blob:photo-' + crypto.randomUUID() }
     static revokeObjectURL() {}
@@ -23,12 +26,31 @@ function setup(entry) {
   return { onSave, onCreateTrip }
 }
 async function save(onSave, editing = false) {
+  await waitFor(() => expect(screen.getByRole('button', { name: editing ? '保存修改' : '留下', exact: true })).toBeEnabled())
   click(editing ? '保存修改' : '留下')
   await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1))
   return JSON.parse(onSave.mock.calls[0][1].get('data'))
 }
 
 describe('upload batch metadata synchronization', () => {
+  it('keeps each photo capture date and GPS when another component is edited or reordered', async () => {
+    readPhotoExif.mockResolvedValueOnce({ date: '2024-05-01', lat: 30, lng: 120 })
+      .mockResolvedValueOnce({ date: '2024-05-02', lat: 31, lng: 121 })
+      .mockResolvedValueOnce({ date: '2024-05-03', lat: 32, lng: 122 })
+    const { onSave } = setup()
+    upload(2)
+    await waitFor(() => expect(screen.getByLabelText('发生在')).toHaveValue('2024-05-01'))
+    click('添加描述'); fill('想记住的事情', '共同描述')
+    click('描述上移')
+    click('选择第 2 张照片')
+    expect(screen.getByLabelText('发生在')).toHaveValue('2024-05-02')
+    upload(1)
+    await waitFor(() => expect(screen.getByLabelText('发生在')).toHaveValue('2024-05-03'))
+    const data = await save(onSave)
+    expect(data.photos.map(p => p.components.find(c => c.type === 'date').value)).toEqual(['2024-05-01', '2024-05-02', '2024-05-03'])
+    expect(data.photos.map(p => p.components.find(c => c.type === 'place').value.lat)).toEqual([30, 31, 32])
+    expect(data.photos.every(p => p.components.some(c => c.type === 'description' && c.value === '共同描述'))).toBe(true)
+  })
   it('inherits text before upload and synchronizes changes, order, removal and appended photos', async () => {
     const { onSave, onCreateTrip } = setup()
     click('添加描述'); fill('想记住的事情', '上传前的描述')

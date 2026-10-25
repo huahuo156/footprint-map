@@ -35,7 +35,7 @@ function date(value) {
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) throw invalid('日期不存在')
   return value
 }
-function components(value) {
+export function components(value) {
   if (value == null) return null
   if (!Array.isArray(value) || value.length > componentTypes.length) throw invalid('添加的内容组件无效')
   const used = new Set()

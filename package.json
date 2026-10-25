@@ -16,7 +16,7 @@
     "db:up": "docker compose up -d --wait mysql",
     "db:up:autodl": "bash scripts/db-up-autodl.sh",
     "db:down": "docker compose stop mysql",
-    "test:api": "node --test --test-concurrency=1 server/api.test.js server/journal.test.js server/notebooks.test.js server/notebook-covers.test.js",
+    "test:api": "node --test --test-concurrency=1 server/api.test.js server/journal.test.js server/notebooks.test.js server/notebook-covers.test.js server/backup.test.js",
     "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {

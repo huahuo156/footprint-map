@@ -413,3 +413,9 @@ body { margin: 0; background: var(--j-bg); color: var(--j-ink); }
 .j-import-report li { margin: 10px 0; overflow-wrap: anywhere; }
 .j-import-report li span { display: block; margin-top: 4px; color: var(--j-muted); }
 @media(max-width: 767px){.j-quick-import{flex-direction:column;align-items:stretch;gap:5px}.j-quick-import .j-button{justify-content:flex-start}.j-batch-preview img{width:35px;height:35px}}
+.j-backup { max-width: 430px; }
+.j-backup-section { padding: 14px; margin-bottom: 14px; background: var(--j-soft); border-radius: 12px; }
+.j-backup-section:last-of-type { margin-bottom: 0; }
+.j-backup-section h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 8px; font-size: 14px; }
+.j-backup-section h3 svg { width: 16px; height: 16px; color: var(--j-accent); }
+.j-backup-section p { margin: 0 0 12px; color: var(--j-muted); font-size: 12px; line-height: 1.6; }

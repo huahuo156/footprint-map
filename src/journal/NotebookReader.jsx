@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Maximize2, Minus, Plus, X, ZoomIn } from 'lucide-react'
+import { Maximize2, Minus, Plus, Printer, X, ZoomIn } from 'lucide-react'
+import NotebookPrint from './NotebookPrint'
 import CanvasItem from './CanvasItem'
 import { findPagePosition, pageItems, PAGE_WIDTH, PAGE_HEIGHT } from './notebooks'
 import { createPaperTurn } from './paperTurn'
@@ -10,6 +11,7 @@ export default function NotebookReader({ book, data, onOpen, onClose, onAdd, onM
   const leaves = useMemo(() => [{ id:book.id+'-inside-cover',front:'blank' }, { id:book.id+'-flyleaf',front:'title' }, ...pages], [book.id,pages])
   const [spread, setSpread] = useState(() => { const index=pages.findIndex(p=>p.id===book.last_read_page_id); return index<0?0:2+Math.floor(index/2)*2 }), [active, setActive] = useState(book.last_read_page_id), [zoom, setZoom] = useState(1), [manage, setManage] = useState(false)
   const [imageSizes, setImageSizes] = useState({}), [size, setSize] = useState({ width: 650, height: 550 }), [turn, setTurn] = useState(null), [busy, setBusy] = useState(false)
+  const [printing, setPrinting] = useState(false)
   const area = useRef(null), bookNode = useRef(null), paperNodes = useRef(new Map()), drag = useRef(null), turning = useRef(null), raf = useRef(null), pendingCommit = useRef(null)
   const validSpread = Math.min(spread, Math.max(0, Math.floor((leaves.length - 1) / 2) * 2)), onFlyleaf = validSpread === 0
   const currentPage = active && leaves.slice(validSpread, validSpread + 2).some(p => !p.front && p.id === active) ? active : onFlyleaf ? pages[0]?.id : leaves[validSpread + 1]?.id || leaves[validSpread]?.id
@@ -158,6 +160,7 @@ export default function NotebookReader({ book, data, onOpen, onClose, onAdd, onM
   const visibleLeft = turn?.direction < 0 ? turn.destination : validSpread, visibleRight = turn?.direction > 0 ? turn.destination + 1 : validSpread + 1
   return <section className='nb-reader' aria-label={book.name + '，翻页手帐'}>
     <header className="nb-heading"><span>{book.name}</span><div className="nb-heading-actions">
+      <button type="button" className="j-button" disabled={busy} onClick={() => setPrinting(true)} title="打印留念册 / 保存为 PDF"><Printer /><span>导出 PDF</span></button>
       <button className="j-button" title={zoom === 1 ? '放大纸页' : '恢复完整手札'} aria-label={zoom === 1 ? '放大纸页' : '恢复完整手札'} disabled={busy} onClick={() => setZoom(zoom === 1 ? 2 : 1)}>{zoom === 1 ? <ZoomIn /> : <Maximize2 />}<span>{zoom === 1 ? '放大' : '适合窗口'}</span></button>
       {!readOnly && <details className="nb-menu"><summary aria-label="手札工具" title="添加内容、整理内页、修改名称与封面"><Plus /><span>添加与整理</span></summary><div><button disabled={busy} onClick={addContent}>添加照片、文字或贴纸</button><button disabled={busy} onClick={addPaper}>添加纸页</button><button disabled={busy} onClick={() => setManage(!manage)}>整理内页</button><button disabled={busy} onClick={event => { event.currentTarget.closest('details').open = false; onEditBook?.() }}>名称与封面</button></div></details>}
       <button className="j-button" title="合上手札（Esc）" aria-label="合上手札" disabled={busy} onClick={onClose}><X /><span>合上</span></button></div></header>
@@ -171,5 +174,6 @@ export default function NotebookReader({ book, data, onOpen, onClose, onAdd, onM
       </div>
     </div>
     <footer className="nb-page-count" aria-label="手帐页码">{onFlyleaf ? '扉页' : `${validSpread - 1}–${Math.min(validSpread, pages.length)}`} / {pages.length}</footer>
+    {printing && <NotebookPrint book={book} data={data} onClose={() => setPrinting(false)} />}
   </section>
 }

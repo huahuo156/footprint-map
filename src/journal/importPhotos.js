@@ -1,4 +1,5 @@
-import { saveJournalEntry } from '../lib/api'
+import { fetchLandmarks, saveJournalEntry } from '../lib/api'
+import { exifComponents, readPhotoExif } from '../lib/exif'
 
 export async function readPhotoDimensions(files) {
   const sizes = []
@@ -22,20 +23,26 @@ export async function readPhotoDimensions(files) {
 export async function importPhotoFiles(files, positions, onProgress, save = saveJournalEntry) {
   const rejectedFiles = [], pending = []
   let importedCount = 0
-  files.forEach((file, index) => {
+  for (const [index, file] of files.entries()) {
     const reason = file.size > 10 * 1024 * 1024 ? '超过 10MB，请压缩后重新选择。'
       : !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ? '暂不支持此格式，请转换为 JPG、PNG 或 WebP。'
         : !file.size ? '文件为空，请重新选择。' : ''
     if (reason) rejectedFiles.push({ name: file.name, reason })
     else pending.push({ file, position: positions[index] })
-  })
+  }
+  let landmarks
   const progress = () => onProgress({ completed: importedCount + rejectedFiles.length, total: files.length })
   progress()
   try {
     while (pending.length) {
       const chunk = pending.slice(0, 20), body = new FormData()
+      // Read only this upload batch: 500 photos must not allocate 500 EXIF buffers together.
+      const unread = chunk.filter(item => item.components === undefined)
+      const exifs = await Promise.all(unread.map(({ file }) => readPhotoExif(file).catch(() => null)))
+      if (exifs.some(exif => exif?.lat != null)) landmarks ??= await fetchLandmarks().catch(() => [])
+      unread.forEach((item, index) => { item.components = exifComponents(exifs[index], landmarks || []) })
       chunk.forEach(({ file }) => body.append('images', file))
-      body.append('data', JSON.stringify({ components: [], photos: chunk.map(({ position }, index) => ({ upload_index: index, components: [], canvas_x: position.x, canvas_y: position.y })) }))
+      body.append('data', JSON.stringify({ components: [], photos: chunk.map(({ position, components }, index) => ({ upload_index: index, components, canvas_x: position.x, canvas_y: position.y })) }))
       try {
         await save(null, body)
         pending.splice(0, chunk.length); importedCount += chunk.length

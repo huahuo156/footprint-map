@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronUp, Copy, GripVertical, Heart, ImagePlus, LocateFixed, MapPin, Plus, Route, Text, Type, X } from 'lucide-react'
 import { fetchLandmarks } from '../lib/api'
+import { exifComponents, readPhotoExif } from '../lib/exif'
 import Modal from './Modal'
 import JournalImage from './JournalImage'
 import { imageFilter, localDate, PALETTES, SPOTS } from './model'
@@ -16,10 +17,11 @@ export default function EntryEditor({ entry, preset, initialPhotoId, trips, onCl
   const [photos, setPhotos] = useState(() => (entry?.photos || []).map(photo => ({ ...photo, preview: photo.url, key: photo.id, components: photoComponents(photo, entry) })))
   const [selected, setSelected] = useState(Math.max(0, entry?.photos?.findIndex(photo => photo.id === initialPhotoId) ?? 0))
   const [landmarks, setLandmarks] = useState([]), [busy, setBusy] = useState(false), [locating, setLocating] = useState(false), [error, setError] = useState(''), [focusType, setFocusType] = useState(null), [hint, setHint] = useState('')
-  const previews = useRef([]), fileInput = useRef(null), blocks = useRef(new Map()), mounted = useRef(true), createdTrips = useRef(new Map())
+  const [readingExif, setReadingExif] = useState(0)
+  const previews = useRef([]), fileInput = useRef(null), blocks = useRef(new Map()), mounted = useRef(true), createdTrips = useRef(new Map()), exifLandmarks = useRef(null)
   const active = photos[selected], parts = active?.components || notes, targetKey = active?.key || '__note__'
   const batchSize = photos.filter(photo => photo.file).length
-  useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
+  useEffect(() => { onBusyChange?.(busy || readingExif > 0) }, [busy, readingExif, onBusyChange])
   useEffect(() => { const blobs = previews.current; mounted.current = true; return () => { mounted.current = false; blobs.forEach(url => URL.revokeObjectURL(url)) } }, [])
   const needsPlaces = parts.some(part => part.type === 'place')
   useEffect(() => {
@@ -29,25 +31,49 @@ export default function EntryEditor({ entry, preset, initialPhotoId, trips, onCl
     return () => { current = false }
   }, [needsPlaces])
   useEffect(() => { if (focusType) { blocks.current.get(focusType)?.querySelector('input,textarea,select')?.focus(); setFocusType(null) } }, [focusType])
-  function updateFor(key, updater) {
+  function updateFor(key, updater, editedType) {
     if (key === '__note__') setNotes(updater)
     else setPhotos(previous => {
       const source = previous.find(photo => photo.key === key)
       if (!source) return previous
-      const components = updater(source.components)
-      return previous.map(photo => photo.key === key || (source.file && photo.file) ? { ...photo, components: structuredClone(components) } : photo)
+      return previous.map(photo => photo.key === key || (source.file && photo.file) ? {
+        ...photo, components: updater(photo.components),
+        exifTypes: (photo.exifTypes || []).filter(type => type !== editedType),
+        touchedTypes: editedType ? [...new Set([...(photo.touchedTypes || []), editedType])] : photo.touchedTypes,
+      } : photo)
     })
   }
-  function update(type, value, extra = {}) { updateFor(targetKey, list => list.map(part => part.type === type ? { ...part, value, ...extra } : part)) }
-  function add(type) { updateFor(targetKey, list => list.some(part => part.type === type) ? list : [...list, fresh(type)]); setFocusType(type); setHint('') }
-  function remove(type) { updateFor(targetKey, list => list.filter(part => part.type !== type)); setHint('') }
+  function update(type, value, extra = {}) { updateFor(targetKey, list => list.some(part => part.type === type) ? list.map(part => part.type === type ? { ...part, value, ...extra } : part) : [...list, { type, value, ...extra }], type) }
+  function add(type) { updateFor(targetKey, list => list.some(part => part.type === type) ? list : [...list, fresh(type)], type); setFocusType(type); setHint('') }
+  function remove(type) { updateFor(targetKey, list => list.filter(part => part.type !== type), type); setHint('') }
   function reorder(type, destination) { updateFor(targetKey, list => { const from = list.findIndex(part => part.type === type), to = Math.max(0, Math.min(list.length - 1, destination)); if (from < 0 || from === to) return list; const next = [...list], [part] = next.splice(from, 1); next.splice(to, 0, part); return next }) }
   function addFiles(files) {
     if (photos.length + files.length > 20) { setError('一次最多留下 20 张照片。'); return }
     if (files.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024)) { setError('请选择 10MB 以内的 JPG、PNG 或 WebP 照片。'); return }
-    const components = photos.find(photo => photo.file)?.components ?? parts
+    const template = photos.find(photo => photo.file)
+    const components = template ? template.components.filter(part => !template.exifTypes?.includes(part.type)) : parts
     const added = files.map(file => { const preview = URL.createObjectURL(file); previews.current.push(preview); return { key: crypto.randomUUID(), file, preview, crop_x: 50, image_filter: 'original', components: structuredClone(components) } })
     setSelected(photos.length); setPhotos(previous => [...previous, ...added]); setError('')
+    setReadingExif(count => count + 1)
+    autoFillExif(added).catch(() => {}).finally(() => { if (mounted.current) setReadingExif(count => count - 1) })
+  }
+  // 从 EXIF 预填拍摄日期和坐标；只补缺失的组件，用户已写的内容不动。
+  async function autoFillExif(added) {
+    const found = []
+    for (const photo of added) {
+      const exif = await readPhotoExif(photo.file).catch(() => null)
+      if (!mounted.current) return
+      if (exif?.date || exif?.lat != null) found.push([photo.key, exif])
+    }
+    if (!found.length) return
+    if (found.some(([, exif]) => exif.lat != null) && !exifLandmarks.current) exifLandmarks.current = await fetchLandmarks().catch(() => [])
+    if (!mounted.current) return
+    setPhotos(previous => previous.map(photo => {
+      const hit = found.find(([key]) => key === photo.key)
+      if (!hit) return photo
+      const additions = exifComponents(hit[1], exifLandmarks.current || []).filter(extra => !photo.components.some(part => part.type === extra.type) && !photo.touchedTypes?.includes(extra.type))
+      return additions.length ? { ...photo, components: [...photo.components, ...additions], exifTypes: additions.map(part => part.type) } : photo
+    }))
   }
   function dropPhoto(index) { if (photos.length === 1) setNotes(structuredClone(photos[0].components)); setPhotos(previous => previous.filter((_, i) => i !== index)); setSelected(0) }
   function changePhoto(field, value) { setPhotos(previous => previous.map((photo, index) => index === selected ? { ...photo, [field]: value } : photo)) }
@@ -124,7 +150,7 @@ export default function EntryEditor({ entry, preset, initialPhotoId, trips, onCl
         {hint && <p className="j-composer-hint" role="status">{hint}</p>}
       </section></div>
       {error && <p className="j-error" role="alert">{error}</p>}
-      <footer className="j-editor-footer"><span>{batchCount ? '只修改选中的照片。' : `${photos.length ? photos.length + ' 张照片，' : ''}先留下，以后再慢慢加。`}</span><div><button type="button" className="j-button" onClick={onClose}>取消</button><button className="j-button j-primary" type="submit" disabled={batchCount ? !notes.length : !photos.length && !notes.some(hasComponentContent)}><Check />{busy ? '正在保存…' : batchCount ? `同步到 ${batchCount} 张照片` : entry ? '保存修改' : '留下'}</button></div></footer>
+      <footer className="j-editor-footer"><span role="status">{readingExif ? '正在读取照片日期与位置…' : batchCount ? '只修改选中的照片。' : `${photos.length ? photos.length + ' 张照片，' : ''}先留下，以后再慢慢加。`}</span><div><button type="button" className="j-button" onClick={onClose}>取消</button><button className="j-button j-primary" type="submit" disabled={readingExif > 0 || (batchCount ? !notes.length : !photos.length && !notes.some(hasComponentContent))}><Check />{busy ? '正在保存…' : batchCount ? `同步到 ${batchCount} 张照片` : entry ? '保存修改' : '留下'}</button></div></footer>
     </fieldset></form>
   return embedded ? content : <Modal title={entry ? '给这一刻添点内容' : '留下一刻'} onClose={onClose} className="j-entry-editor j-composer" busy={busy}>{content}</Modal>
 }
