@@ -7,11 +7,15 @@ import { pipeline } from 'node:stream/promises'
 import { open, readFile, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pool } from './db.js'
+import { currentUserId } from './auth.js'
+import { assertOwnedAsset, registerAsset, normalizeImageBuffer } from './assets.js'
 import { components as parseComponents } from './journal.js'
 import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
 import { readZip, zipChunks } from './zip.js'
 import { expandCanvasGroups } from '../shared/journal-groups.js'
 
+let restoring = false
+const MAX_BACKUP_BYTES = 64 * 1024 * 1024
 const BACKUP_FORMAT = 'shitu-journal-backup'
 const colors = ['sage', 'sand', 'sky', 'rose', 'lavender']
 const filters = ['original', 'film', 'mono']
@@ -77,20 +81,20 @@ export function backupRoutes(router, uploadDirectory) {
     try {
       await connection.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
       await connection.query('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY')
-      const query = sql => connection.query(sql).then(([rows]) => rows)
+      const query = sql => connection.query(sql, [currentUserId()]).then(([rows]) => rows)
       snapshot = await Promise.all([
-        query('SELECT * FROM journal_trips ORDER BY created_at,id'),
-        query("SELECT *, DATE_FORMAT(entry_date,'%Y-%m-%d') AS entry_date, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_entries ORDER BY created_at,id"),
-        query('SELECT * FROM journal_photos ORDER BY entry_id,sort_order,id'),
-        query("SELECT *, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_marks ORDER BY created_at,id"),
-        query('SELECT * FROM journal_canvas_groups ORDER BY created_at,id'),
-        query('SELECT photo_id,group_id FROM journal_canvas_group_photos ORDER BY photo_id'),
-        query('SELECT child_id,parent_id FROM journal_canvas_group_children ORDER BY child_id'),
-        query('SELECT * FROM journal_notebooks ORDER BY created_at,id'),
-        query('SELECT * FROM journal_notebook_pages ORDER BY notebook_id,sort_order,id'),
-        query('SELECT * FROM journal_notebook_photo_items ORDER BY id'),
-        query('SELECT * FROM journal_notebook_mark_items ORDER BY id'),
-        query('SELECT * FROM journal_notebook_entry_items ORDER BY id'),
+        query('SELECT * FROM journal_trips WHERE owner_id=? ORDER BY created_at,id'),
+        query("SELECT *, DATE_FORMAT(entry_date,'%Y-%m-%d') AS entry_date, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_entries WHERE owner_id=? ORDER BY created_at,id"),
+        query('SELECT p.* FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE e.owner_id=? ORDER BY p.entry_id,p.sort_order,p.id'),
+        query("SELECT *, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_marks WHERE owner_id=? ORDER BY created_at,id"),
+        query('SELECT * FROM journal_canvas_groups WHERE owner_id=? ORDER BY created_at,id'),
+        query('SELECT m.photo_id,m.group_id FROM journal_canvas_group_photos m JOIN journal_canvas_groups g ON g.id=m.group_id JOIN journal_photos p ON p.id=m.photo_id JOIN journal_entries e ON e.id=p.entry_id WHERE g.owner_id=? AND e.owner_id=g.owner_id ORDER BY m.photo_id'),
+        query('SELECT c.child_id,c.parent_id FROM journal_canvas_group_children c JOIN journal_canvas_groups p ON p.id=c.parent_id JOIN journal_canvas_groups g ON g.id=c.child_id WHERE p.owner_id=? AND g.owner_id=p.owner_id ORDER BY c.child_id'),
+        query('SELECT * FROM journal_notebooks WHERE owner_id=? ORDER BY created_at,id'),
+        query('SELECT p.* FROM journal_notebook_pages p JOIN journal_notebooks b ON b.id=p.notebook_id WHERE b.owner_id=? ORDER BY p.notebook_id,p.sort_order,p.id'),
+        query('SELECT i.* FROM journal_notebook_photo_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id JOIN journal_photos s ON s.id=i.id JOIN journal_entries e ON e.id=s.entry_id WHERE b.owner_id=? AND e.owner_id=b.owner_id ORDER BY i.id'),
+        query('SELECT i.* FROM journal_notebook_mark_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id JOIN journal_marks s ON s.id=i.id  WHERE b.owner_id=? AND s.owner_id=b.owner_id ORDER BY i.id'),
+        query('SELECT i.* FROM journal_notebook_entry_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id JOIN journal_entries s ON s.id=i.id  WHERE b.owner_id=? AND s.owner_id=b.owner_id ORDER BY i.id'),
       ])
       await connection.commit()
     } catch (error) { await connection.rollback(); throw error }
@@ -108,6 +112,7 @@ export function backupRoutes(router, uploadDirectory) {
     const photoEntries = [], missing = []
     let totalBytes = 0
     for (const basename of referenced) {
+      await assertOwnedAsset('/uploads/' + basename)
       const target = path.join(uploadDirectory, basename)
       const info = await stat(target).catch(error => { if (error.code !== 'ENOENT') throw error; return null })
       if (info?.isFile()) { photoEntries.push({ name: 'photos/' + basename, path: target }); totalBytes += info.size }
@@ -123,7 +128,7 @@ export function backupRoutes(router, uploadDirectory) {
     const entries2 = [{ name: 'backup.json', data: Buffer.from(JSON.stringify(manifest)) }, ...photoEntries]
     // A successful export must fit the same limits as restore, including ZIP headers.
     const zipOverhead = 22 + entries2.reduce((size, entry) => size + 76 + Buffer.byteLength(entry.name) * 2, 0)
-    if (totalBytes + entries2[0].data.length + zipOverhead > 1024 * 1024 * 1024) throw Object.assign(new Error('备份超过 1GB，无法导出为可还原的 ZIP。请使用数据库卷和 uploads 目录做完整备份。'), { status: 413 })
+    if (totalBytes + entries2[0].data.length + zipOverhead > MAX_BACKUP_BYTES) throw Object.assign(new Error('备份超过 64MiB，无法导出为可还原的 ZIP。请使用数据库卷和 uploads 目录做完整备份。'), { status: 413 })
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="shitu-backup-${today()}.zip"`)
     res.setHeader('X-Backup-Missing-Files', missing.length)
@@ -132,13 +137,16 @@ export function backupRoutes(router, uploadDirectory) {
 
   const restoreUpload = multer({
     storage: multer.diskStorage({ destination: uploadDirectory, filename: (_req, file, cb) => cb(null, 'restore-' + randomUUID() + '.zip') }),
-    limits: { fileSize: 1024 * 1024 * 1024, files: 1 },
+    limits: { fileSize: MAX_BACKUP_BYTES, files: 1 },
     fileFilter: (_req, file, cb) => cb(/\.zip$/i.test(file.originalname) || ['application/zip', 'application/x-zip-compressed'].includes(file.mimetype) ? null : invalid('请选择 .zip 备份文件'), true),
   })
-  router.post('/restore', restoreUpload.single('backup'), async (req, res) => {
-    if (!req.file) throw invalid('请选择备份压缩包')
+  router.post('/restore', async (req, res) => {
+    if (restoring) throw Object.assign(new Error('Restore already running'), {status:429})
+    restoring = true
     try {
-      const files = readZip(await readFile(req.file.path))
+      await new Promise((resolve, reject) => restoreUpload.single('backup')(req, res, error => error ? reject(error) : resolve()))
+      if (!req.file) throw invalid('请选择备份压缩包')
+      const files = readZip(await readFile(req.file.path), { maxBytes: MAX_BACKUP_BYTES })
       let manifest
       try { manifest = JSON.parse(files.get('backup.json')?.toString('utf8') ?? 'null') } catch { throw invalid('备份清单无法读取') }
       if (manifest?.format !== BACKUP_FORMAT || manifest?.version !== 1 || !manifest.data || typeof manifest.data !== 'object') throw invalid('这不是拾途导出的手帐备份')
@@ -146,7 +154,8 @@ export function backupRoutes(router, uploadDirectory) {
       await applyRestore(plan, uploadDirectory)
       res.json({ restored: { trips: plan.trips.length, entries: plan.entries.length, photos: plan.photos.length, marks: plan.marks.length, canvas_groups: plan.groups.length, notebooks: plan.notebooks.length } })
     } finally {
-      await unlink(req.file.path).catch(() => {})
+      if (req.file) await unlink(req.file.path).catch(() => {})
+      restoring = false
     }
   })
 }
@@ -231,7 +240,12 @@ async function buildRestorePlan(data, files) {
   catch { throw invalid('备份里的色块分组存在循环') }
 
   const pageRows = pages.map(page => [pageMap.get(uuid(page.id)), mapped(notebookMap, page.notebook_id, '手帐页'), Number.isSafeInteger(page.sort_order) ? page.sort_order : 0])
-  const optionalPage = value => value == null ? null : pageMap.get(uuid(value)) ?? null
+  const optionalPage = (value, bookId) => {
+    if (value == null) return null
+    const page = pages.find(page => page.id === uuid(value))
+    if (!page || page.notebook_id !== bookId) throw invalid('Reading page belongs to another notebook')
+    return mapped(pageMap, value, 'reading page')
+  }
   const notebookRows = notebooks.map(book => {
     let coverUrl = null
     const coverMode = ['photo', 'solid', 'text'].includes(book.cover_mode) ? book.cover_mode : 'solid'
@@ -251,7 +265,7 @@ async function buildRestorePlan(data, files) {
       typeof book.cover_text === 'string' && book.cover_text.trim() ? book.cover_text.trim().slice(0, 500) : '',
       coverUrl ? coverMode : coverMode === 'photo' ? 'solid' : coverMode,
       /^#[\da-f]{6}$/i.test(book.cover_color || '') ? book.cover_color : '#e3e9dd',
-      optionalPage(book.bookmark_page_id), optionalPage(book.last_read_page_id),
+      optionalPage(book.bookmark_page_id, book.id), optionalPage(book.last_read_page_id, book.id),
       coordinate(book.canvas_x) ?? 0, coordinate(book.canvas_y) ?? 0, rotation(book.rotation),
       timestamp(book.created_at),
     ]
@@ -270,6 +284,10 @@ async function applyRestore(plan, uploadDirectory) {
   let connection
   try {
     for (const file of plan.fileWrites) {
+      const mime = {'.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp'}[path.extname(file.filename)]
+      const normalized = await normalizeImageBuffer(file.data, mime)
+      if (normalized.extension !== path.extname(file.filename)) throw invalid('Image format mismatch')
+      file.data = normalized.data; file.mimetype = normalized.mime
       const handle = await open(path.join(uploadDirectory, file.filename), 'wx')
       created.push(file.filename)
       try { await handle.writeFile(file.data) } finally { await handle.close() }
@@ -281,14 +299,15 @@ async function applyRestore(plan, uploadDirectory) {
   try {
     connection = await pool.getConnection()
     await connection.beginTransaction()
-    await bulkInsert(connection, 'journal_trips', ['id', 'name', 'region', 'color', 'canvas_x', 'canvas_y', 'created_at'], plan.trips)
-    await bulkInsert(connection, 'journal_entries', ['id', 'trip_id', 'entry_date', 'captured_on', 'components', 'title', 'caption', 'place_name', 'landmark_id', 'lat', 'lng', 'spot_key', 'mood', 'canvas_x', 'canvas_y', 'rotation', 'created_at', 'updated_at'], plan.entries)
+    for (const file of plan.fileWrites) await registerAsset({filename:file.filename,path:path.join(uploadDirectory,file.filename),size:file.data.length,mimetype:file.mimetype}, connection)
+    await bulkInsert(connection, 'journal_trips', ['owner_id', 'id', 'name', 'region', 'color', 'canvas_x', 'canvas_y', 'created_at'], plan.trips.map(row => [currentUserId(), ...row]))
+    await bulkInsert(connection, 'journal_entries', ['owner_id', 'id', 'trip_id', 'entry_date', 'captured_on', 'components', 'title', 'caption', 'place_name', 'landmark_id', 'lat', 'lng', 'spot_key', 'mood', 'canvas_x', 'canvas_y', 'rotation', 'created_at', 'updated_at'], plan.entries.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_photos', ['id', 'entry_id', 'url', 'crop_x', 'image_filter', 'components', 'canvas_x', 'canvas_y', 'canvas_absolute', 'rotation', 'sort_order'], plan.photos)
-    await bulkInsert(connection, 'journal_marks', ['id', 'kind', 'text', 'sticker', 'color', 'size', 'canvas_x', 'canvas_y', 'rotation', 'captured_on', 'created_at'], plan.marks)
-    await bulkInsert(connection, 'journal_canvas_groups', ['id', 'name', 'color', 'collapsed', 'created_at'], plan.groups)
+    await bulkInsert(connection, 'journal_marks', ['owner_id', 'id', 'kind', 'text', 'sticker', 'color', 'size', 'canvas_x', 'canvas_y', 'rotation', 'captured_on', 'created_at'], plan.marks.map(row => [currentUserId(), ...row]))
+    await bulkInsert(connection, 'journal_canvas_groups', ['owner_id', 'id', 'name', 'color', 'collapsed', 'created_at'], plan.groups.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_canvas_group_photos', ['photo_id', 'group_id'], plan.groupPhotos)
     await bulkInsert(connection, 'journal_canvas_group_children', ['child_id', 'parent_id'], plan.groupChildren)
-    await bulkInsert(connection, 'journal_notebooks', ['id', 'name', 'cover_url', 'cover_label', 'cover_text', 'cover_mode', 'cover_color', 'bookmark_page_id', 'last_read_page_id', 'canvas_x', 'canvas_y', 'rotation', 'created_at'], plan.notebooks)
+    await bulkInsert(connection, 'journal_notebooks', ['owner_id', 'id', 'name', 'cover_url', 'cover_label', 'cover_text', 'cover_mode', 'cover_color', 'bookmark_page_id', 'last_read_page_id', 'canvas_x', 'canvas_y', 'rotation', 'created_at'], plan.notebooks.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_notebook_pages', ['id', 'notebook_id', 'sort_order'], plan.pages)
     for (const [kind, rows] of Object.entries(plan.itemRows)) await bulkInsert(connection, `journal_notebook_${kind}_items`, ['id', 'page_id', 'x', 'y', 'rotation'], rows)
     await connection.commit()

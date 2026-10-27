@@ -41,7 +41,7 @@ describe('planning group expansion', () => {
 
   it('includes nested group header padding when detecting collisions', () => {
     const groups = [{ id: 'a', photo_ids: [], collapsed: true }, { id: 'nested', parent_id: 'a', photo_ids: ['p'] }, { id: 'b', photo_ids: ['q'] }]
-    const items = [photo('p', 0), photo('q', 0, -240)]
+    const items = [photo('p', 0), photo('q', 0, -210)]
     const positions = planGroupExpansion('a', groups, items)
     expect(positions).toHaveLength(1)
     const layout = expanded('a', groups, items, positions)
@@ -70,8 +70,8 @@ describe('planning group expansion', () => {
 
   it('moves touching bounds to leave a margin and keeps already separated bounds still', () => {
     const groups = [{ id: 'a', photo_ids: ['p'], collapsed: true }, { id: 'b', photo_ids: ['q'] }]
-    expect(planGroupExpansion('a', groups, [photo('p', 0), photo('q', 320)])).toHaveLength(1)
-    expect(planGroupExpansion('a', groups, [photo('p', 0), photo('q', 338)])).toEqual([])
+    expect(planGroupExpansion('a', groups, [photo('p', 0), photo('q', 280)])).toHaveLength(1)
+    expect(planGroupExpansion('a', groups, [photo('p', 0), photo('q', 298)])).toEqual([])
   })
 
   it('avoids unrelated visible cards even without a sibling group', () => {

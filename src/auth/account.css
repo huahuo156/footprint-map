@@ -1,0 +1,52 @@
+.j-account-screen { display:flex; min-height:100dvh; align-items:center; justify-content:center; padding:24px; }
+.j-account-card { width:min(100%,420px); padding:32px; border:1px solid var(--j-line); border-radius:var(--j-radius-lg); background:var(--j-paper); box-shadow:0 8px 28px var(--j-shadow); }
+.j-account-brand { color:var(--j-accent); letter-spacing:2px; font-size:13px; }
+.j-account-card h1 { margin:24px 0 12px; font-family:Georgia,"Songti SC",serif; font-size:28px; line-height:1.3; font-weight:400; }
+.j-account-card p { color:var(--j-muted); line-height:1.8; }
+.j-account-card form,.j-account-form { display:grid; gap:16px; }
+.j-account-card label,.j-account-form label { display:grid; gap:8px; font-size:14px; }
+.j-account-card input,.j-account-form input { min-height:44px; width:100%; box-sizing:border-box; border:1px solid var(--j-line); border-radius:var(--j-radius); background:var(--j-bg); color:var(--j-ink); padding:10px; }
+.j-account-card nav { display:flex; gap:12px; margin-top:16px; }
+.j-account-card button,.j-account-modal button { min-height:44px; }
+.j-account-modal { width:440px; }
+.j-account-modal .journal-modal-surface { padding:28px; border-radius:18px; }
+.j-account-modal .journal-modal-heading { margin-bottom:4px; gap:16px; }
+.j-account-modal .journal-modal-heading h2 { font:600 22px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; letter-spacing:.5px; }
+.j-account-modal .journal-modal-heading .j-icon-button { min-height:36px; width:36px; padding:8px; border-radius:50%; color:var(--j-muted); }
+.j-account-intro { margin:0 0 24px; color:var(--j-muted); font-size:12px; line-height:1.7; }
+.j-account-profile { display:flex; align-items:center; gap:15px; padding:18px; border:1px solid var(--j-line); border-radius:12px; background:color-mix(in srgb,var(--j-soft) 45%,var(--j-paper)); }
+.j-account-avatar { flex:0 0 48px; height:48px; display:grid; place-items:center; border:1px solid color-mix(in srgb,var(--j-accent) 25%,var(--j-line)); border-radius:50%; background:var(--j-soft); color:var(--j-accent); font:400 25px/1 Georgia,serif; }
+.j-account-identity { min-width:0; }
+.j-account-caption { color:var(--j-muted); font-size:11px; letter-spacing:1px; }
+.j-account-identity p { margin:3px 0 7px; font-size:15px; font-weight:600; overflow-wrap:anywhere; line-height:1.5; }
+.j-account-badge { display:inline-flex; align-items:center; gap:4px; color:var(--j-muted); font-size:11px; line-height:1.5; }
+.j-account-badge.is-verified { color:var(--j-accent); }
+.j-account-modal .j-account-badge svg { width:13px; height:13px; }
+.j-account-verification { margin:12px 0 0; font-size:12px; color:var(--j-muted); }
+.j-account-verification p { margin:0; }
+.j-account-verification .j-button { color:var(--j-accent); padding-left:0; font-size:12px; }
+.j-account-form { gap:16px; margin:24px 0 0; padding:0; }
+.j-account-section-heading { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+.j-account-section-heading>svg { color:var(--j-accent); }
+.j-account-section-heading h3 { margin:0; font-size:14px; font-weight:600; }
+.j-account-section-heading>span { margin-left:auto; color:var(--j-muted); font-size:11px; }
+.j-account-form label { gap:7px; font-size:12px; font-weight:500; }
+.j-account-form input { height:44px; border-radius:8px; padding:10px 12px; font-family:inherit; font-size:14px; font-weight:400; line-height:1.5; transition:border-color .15s,box-shadow .15s; }
+.j-account-form input::placeholder { color:var(--j-muted); opacity:.65; font-size:12px; }
+.j-account-form input:focus { border-color:var(--j-accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--j-accent) 10%,transparent); outline:none; }
+.j-account-hint { margin:-8px 0 0; font-size:11px; line-height:1.7; color:var(--j-muted); }
+.j-account-modal .j-account-save { width:100%; justify-content:center; gap:10px; min-height:44px; border-radius:8px; font-size:13px; font-weight:600; transition:filter .15s; }
+.j-account-modal .j-account-save:hover { filter:brightness(.94); }
+.j-account-relogin { display:flex; align-items:center; justify-content:center; gap:5px; margin:-5px 0 0; font-size:11px; color:var(--j-muted); line-height:1.6; }
+.j-account-modal .j-account-relogin svg { width:13px; height:13px; }
+.j-account-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:24px; padding-top:14px; border-top:1px solid var(--j-line); }
+.j-account-footer>span { color:var(--j-muted); font-size:10px; letter-spacing:1px; }
+.j-account-modal .j-account-logout { color:var(--j-danger); min-height:40px; font-size:12px; padding:8px; border-radius:8px; }
+.j-account-modal .j-account-logout svg { width:14px; height:14px; }
+.j-account-modal .j-error,.j-account-message { padding:10px 12px; border-radius:8px; background:var(--j-bg); font-size:12px; line-height:1.7; }
+@media(max-width:480px) {
+  .j-account-modal { width:calc(100vw - 28px); max-width:calc(100vw - 28px); }
+  .j-account-modal .journal-modal-surface { padding:22px 20px; border-radius:16px; }
+  .j-account-profile { padding:14px; gap:12px; }
+  .j-account-intro { margin-bottom:20px; }
+}

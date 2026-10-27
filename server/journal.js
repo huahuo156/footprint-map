@@ -1,9 +1,11 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { randomUUID } from 'node:crypto'
-import { open, rename, unlink } from 'node:fs/promises'
+import { rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pool } from './db.js'
+import { currentUserId } from './auth.js'
+import { normalizeImage, registerAsset, assertOwnedAsset } from './assets.js'
 import { notebookRoutes, readNotebooks, transaction, requirePage, placeItem } from './notebooks.js'
 import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
 import { legacyComponents, patchComponents } from '../shared/journal-components.js'
@@ -50,40 +52,28 @@ export function components(value) {
     if (component.type === 'mood' && content != null && content !== '' && !['平静', '开心', '惊喜'].includes(content)) throw invalid('心情无效')
     if (component.type === 'place') {
       if (!content || typeof content !== 'object' || Array.isArray(content)) throw invalid('地点组件无效')
-      content = { name: text(content.name, 255), landmark_id: content.landmark_id == null ? null : number(content.landmark_id, 1, 2147483647), lat: content.lat == null ? null : number(content.lat, -90, 90), lng: content.lng == null ? null : number(content.lng, -180, 180), spot_key: text(content.spot_key, 40) }
+      content = { name: text(content.name, 255), landmark_id: content.landmark_id == null ? null : number(content.landmark_id, 1, 2147483647), lat: content.lat == null ? null : number(content.lat, -90, 90), lng: content.lng == null ? null : number(content.lng, -180, 180), spot_key: text(content.spot_key, 40), ...(content.address != null ? { address: text(content.address, 512) } : {}), ...(content.provider === 'amap' ? { provider: 'amap', poi_id: text(content.poi_id, 128) } : {}) }
       if ((content.lat == null) !== (content.lng == null) || (content.landmark_id != null && !Number.isInteger(content.landmark_id))) throw invalid('地点坐标或编号无效')
     }
     return { type: component.type, value: content || null }
   })
 }
 async function journal() {
-  const [trips] = await pool.query('SELECT id,name,region,color,canvas_x,canvas_y FROM journal_trips ORDER BY created_at,id')
-  const [entries] = await pool.query("SELECT *, DATE_FORMAT(entry_date,'%Y-%m-%d') AS entry_date, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_entries ORDER BY entry_date DESC,created_at DESC,id")
-  const [photos] = await pool.query('SELECT * FROM journal_photos ORDER BY sort_order,id')
+  const [trips] = await pool.query('SELECT id,name,region,color,canvas_x,canvas_y FROM journal_trips WHERE owner_id=? ORDER BY created_at,id', [currentUserId()])
+  const [entries] = await pool.query("SELECT *, DATE_FORMAT(entry_date,'%Y-%m-%d') AS entry_date, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_entries WHERE owner_id=? ORDER BY entry_date DESC,created_at DESC,id", [currentUserId()])
+  const [photos] = await pool.query('SELECT * FROM journal_photos WHERE EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?) ORDER BY sort_order,id', [currentUserId()])
   const grouped = new Map()
   for (const photo of photos) {
     if (!grouped.has(photo.entry_id)) grouped.set(photo.entry_id, [])
     grouped.get(photo.entry_id).push(photo)
   }
-  const [marks] = await pool.query("SELECT *, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_marks ORDER BY created_at,id")
-  const [canvasGroups] = await pool.query('SELECT * FROM journal_canvas_groups ORDER BY created_at,id')
-  const [members] = await pool.query('SELECT photo_id,group_id FROM journal_canvas_group_photos ORDER BY photo_id')
-  const [children] = await pool.query('SELECT child_id,parent_id FROM journal_canvas_group_children')
+  const [marks] = await pool.query("SELECT *, DATE_FORMAT(captured_on,'%Y-%m-%d') AS captured_on FROM journal_marks WHERE owner_id=? ORDER BY created_at,id", [currentUserId()])
+  const [canvasGroups] = await pool.query('SELECT * FROM journal_canvas_groups WHERE owner_id=? ORDER BY created_at,id', [currentUserId()])
+  const [members] = await pool.query('SELECT photo_id,group_id FROM journal_canvas_group_photos WHERE EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_photos.group_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE p.id=journal_canvas_group_photos.photo_id AND e.owner_id=g.owner_id)) ORDER BY photo_id', [currentUserId()])
+  const [children] = await pool.query('SELECT child_id,parent_id FROM journal_canvas_group_children WHERE EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_children.parent_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups c WHERE c.id=journal_canvas_group_children.child_id AND c.owner_id=g.owner_id))', [currentUserId()])
   const parents = new Map(children.map(child => [child.child_id, child.parent_id]))
   return { ...await readNotebooks(), trips, entries: entries.map(entry => ({ ...entry, photos: grouped.get(entry.id) || [] })), marks, canvas_groups: expandCanvasGroups(canvasGroups.map(group => ({ ...group, parent_id: parents.get(group.id), photo_ids: members.filter(member => member.group_id === group.id).map(member => member.photo_id) }))) }
 }
-async function imageType(file) {
-  const handle = await open(file.path, 'r')
-  try {
-    const buffer = Buffer.alloc(16)
-    await handle.read(buffer, 0, 16, 0)
-    if (buffer.subarray(0, 3).equals(Buffer.from([255, 216, 255]))) return 'image/jpeg'
-    if (buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'image/png'
-    if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'image/webp'
-    return null
-  } finally { await handle.close() }
-}
-
 async function changeCanvasGroups(change) {
   const connection = await pool.getConnection()
   let locked = false
@@ -92,9 +82,9 @@ async function changeCanvasGroups(change) {
     if (!lock.acquired) throw invalid('色块正在更新，请稍后重试')
     locked = true
     await connection.beginTransaction()
-    const [groups] = await connection.query('SELECT * FROM journal_canvas_groups ORDER BY id FOR UPDATE')
-    const [members] = await connection.query('SELECT photo_id,group_id FROM journal_canvas_group_photos FOR UPDATE')
-    const [children] = await connection.query('SELECT child_id,parent_id FROM journal_canvas_group_children FOR UPDATE')
+    const [groups] = await connection.query('SELECT * FROM journal_canvas_groups WHERE owner_id=? ORDER BY id FOR UPDATE', [currentUserId()])
+    const [members] = await connection.query('SELECT photo_id,group_id FROM journal_canvas_group_photos WHERE EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_photos.group_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE p.id=journal_canvas_group_photos.photo_id AND e.owner_id=g.owner_id)) FOR UPDATE', [currentUserId()])
+    const [children] = await connection.query('SELECT child_id,parent_id FROM journal_canvas_group_children WHERE EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_children.parent_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups c WHERE c.id=journal_canvas_group_children.child_id AND c.owner_id=g.owner_id)) FOR UPDATE', [currentUserId()])
     const parents = new Map(children.map(child => [child.child_id, child.parent_id]))
     const expanded = expandCanvasGroups(groups.map(group => ({ ...group, parent_id: parents.get(group.id), photo_ids: members.filter(member => member.group_id === group.id).map(member => member.photo_id) })))
     const result = await change(connection, expanded)
@@ -117,8 +107,14 @@ export function createJournalRouter(uploadDirectory) {
   })
   async function removeUnused(url) {
     if (!/^\/uploads\/[\w-]+\.(jpg|png|webp)$/.test(url)) return
-    const [[row]] = await pool.query(`SELECT (SELECT COUNT(*) FROM journal_photos WHERE url=?) + (SELECT COUNT(*) FROM checkins WHERE image_url=?) + (SELECT COUNT(*) FROM guides WHERE cover_image_url=?) + (SELECT COUNT(*) FROM journal_notebooks WHERE cover_url=?) AS total`, [url, url, url, url])
-    if (!Number(row.total)) await unlink(path.join(uploadDirectory, path.basename(url))).catch(() => {})
+    await transaction(async connection => {
+      await assertOwnedAsset(url, connection)
+      const [[row]] = await connection.query('SELECT (SELECT COUNT(*) FROM journal_photos WHERE url=?) + (SELECT COUNT(*) FROM journal_notebooks WHERE cover_url=?) AS total', [url, url])
+      if (!Number(row.total)) {
+        await unlink(path.join(uploadDirectory, path.basename(url))).catch(() => {})
+        await connection.execute('DELETE FROM assets WHERE storage_key=? AND owner_id=?', [path.basename(url), currentUserId()])
+      }
+    }, true)
   }
   router.get('/', async (_req, res) => res.json(await journal()))
   router.post('/groups', async (req, res) => {
@@ -136,14 +132,14 @@ export function createJournalRouter(uploadDirectory) {
       if (roots.some(group => group.photo_ids.some(photoId => !used.has(photoId)))) throw invalid('请选中完整色块后再分组，已有分组可能发生变化，请刷新后重试')
       const grouped = new Set(roots.flatMap(group => group.photo_ids))
       for (const position of [...positions].sort((a, b) => a.id.localeCompare(b.id))) {
-        const [[photo]] = await connection.execute('SELECT id FROM journal_photos WHERE id=? FOR UPDATE', [position.id])
+        const [[photo]] = await connection.execute('SELECT id FROM journal_photos WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?) FOR UPDATE', [position.id, currentUserId()])
         if (!photo) throw missing('有照片已被删除，请重新选择')
       }
-      await connection.execute('INSERT INTO journal_canvas_groups (id,name,color) VALUES (?,?,?)', [groupId, name, color])
+      await connection.execute('INSERT INTO journal_canvas_groups (owner_id,id,name,color) VALUES (?,?,?,?)', [currentUserId(), groupId, name, color])
       for (const root of roots) await connection.execute('INSERT INTO journal_canvas_group_children (child_id,parent_id) VALUES (?,?)', [root.id, groupId])
       for (const position of positions) {
         if (!grouped.has(position.id)) await connection.execute('INSERT INTO journal_canvas_group_photos (photo_id,group_id) VALUES (?,?)', [position.id, groupId])
-        await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=?', [position.x, position.y, position.rotation ?? 0, position.id])
+        await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [position.x, position.y, position.rotation ?? 0, position.id, currentUserId()])
       }
       return { id: groupId, name, color, parent_id: null, child_group_ids: roots.map(group => group.id), direct_photo_ids: positions.filter(position => !grouped.has(position.id)).map(position => position.id), photo_ids: positions.map(position => position.id) }
     })
@@ -171,9 +167,9 @@ export function createJournalRouter(uploadDirectory) {
           if (!position || !group.photo_ids.includes(id(position.id))) throw invalid('照片不属于这个色块')
           number(position.x, -1e7, 1e7); number(position.y, -1e7, 1e7); number(position.rotation ?? 0, -20, 20)
         }
-        for (const position of positions) await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=?', [position.x, position.y, position.rotation ?? 0, position.id])
+        for (const position of positions) await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [position.x, position.y, position.rotation ?? 0, position.id, currentUserId()])
       }
-      await connection.execute(`UPDATE journal_canvas_groups SET ${Object.keys(changes).map(key => `${key}=?`).join(',')} WHERE id=?`, [...Object.values(changes), groupId])
+      await connection.execute(`UPDATE journal_canvas_groups SET ${Object.keys(changes).map(key => `${key}=?`).join(',')} WHERE id=? AND owner_id=?`, [...Object.values(changes), groupId, currentUserId()])
     })
     res.json({ id: groupId, ...changes })
   })
@@ -183,10 +179,10 @@ export function createJournalRouter(uploadDirectory) {
       const group = groups.find(group => group.id === groupId)
       if (!group) throw missing('这个色块已不存在')
       if (group.parent_id) {
-        await connection.execute('UPDATE journal_canvas_group_children SET parent_id=? WHERE parent_id=?', [group.parent_id, groupId])
-        await connection.execute('UPDATE journal_canvas_group_photos SET group_id=? WHERE group_id=?', [group.parent_id, groupId])
+        await connection.execute('UPDATE journal_canvas_group_children SET parent_id=? WHERE parent_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_children.parent_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups c WHERE c.id=journal_canvas_group_children.child_id AND c.owner_id=g.owner_id))', [group.parent_id, groupId, currentUserId()])
+        await connection.execute('UPDATE journal_canvas_group_photos SET group_id=? WHERE group_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_photos.group_id AND g.owner_id=? AND EXISTS (SELECT 1 FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE p.id=journal_canvas_group_photos.photo_id AND e.owner_id=g.owner_id))', [group.parent_id, groupId, currentUserId()])
       }
-      await connection.execute('DELETE FROM journal_canvas_groups WHERE id=?', [groupId])
+      await connection.execute('DELETE FROM journal_canvas_groups WHERE id=? AND owner_id=?', [groupId, currentUserId()])
     })
     res.json({ deleted: groupId })
   })
@@ -205,19 +201,19 @@ export function createJournalRouter(uploadDirectory) {
     const connection = await pool.getConnection(), placeholders = ids.map(() => '?').join(',')
     try {
       await connection.beginTransaction()
-      const [parents] = await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders})`, ids)
-      if (parents.length) await connection.query(`SELECT id FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) ORDER BY id FOR UPDATE`, parents.map(row => row.entry_id))
-      const [photos] = await connection.query(`SELECT p.*,e.components AS entry_components,e.trip_id,e.title,e.caption,e.place_name,e.landmark_id,e.lat,e.lng,e.spot_key,e.mood,DATE_FORMAT(e.entry_date,'%Y-%m-%d') AS entry_date FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE p.id IN (${placeholders}) ORDER BY p.id FOR UPDATE`, ids)
+      const [parents] = await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)`, [...(ids), currentUserId()])
+      if (parents.length) await connection.query(`SELECT id FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) AND owner_id=? ORDER BY id FOR UPDATE`, [...(parents.map(row => row.entry_id)), currentUserId()])
+      const [photos] = await connection.query(`SELECT p.*,e.components AS entry_components,e.trip_id,e.title,e.caption,e.place_name,e.landmark_id,e.lat,e.lng,e.spot_key,e.mood,DATE_FORMAT(e.entry_date,'%Y-%m-%d') AS entry_date FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE p.id IN (${placeholders}) AND e.owner_id=? ORDER BY p.id FOR UPDATE`, [...(ids), currentUserId()])
       if (photos.length !== ids.length) throw missing('有照片已被删除，请刷新后重新选择')
       for (const part of updates.filter(part => part.type === 'trip' && part.value)) {
-        const [[trip]] = await connection.execute('SELECT id FROM journal_trips WHERE id=?', [part.value])
+        const [[trip]] = await connection.execute('SELECT id FROM journal_trips WHERE id=? AND owner_id=?', [part.value, currentUserId()])
         if (!trip) throw invalid('这段旅程已不存在')
       }
       for (const photo of photos) {
         const original = photo.components ?? photo.entry_components ?? legacyComponents(photo)
-        await connection.execute('UPDATE journal_photos SET components=? WHERE id=?', [JSON.stringify(patchComponents(original, updates)), photo.id])
+        await connection.execute('UPDATE journal_photos SET components=? WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [JSON.stringify(patchComponents(original, updates)), photo.id, currentUserId()])
         const position = layout.get(photo.id)
-        if (position) await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=?', [position.x, position.y, position.rotation, photo.id])
+        if (position) await connection.execute('UPDATE journal_photos SET canvas_x=?,canvas_y=?,rotation=?,canvas_absolute=TRUE WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [position.x, position.y, position.rotation, photo.id, currentUserId()])
       }
       await connection.commit()
       res.json({ saved: photos.length })
@@ -232,13 +228,13 @@ export function createJournalRouter(uploadDirectory) {
     const rotation = number(data.rotation ?? 0, -20, 20)
     const markId = req.params.id ? id(req.params.id) : randomUUID()
     if (req.params.id) {
-      const [result] = await pool.execute('UPDATE journal_marks SET kind=?,text=?,sticker=?,color=?,size=?,rotation=? WHERE id=?', [kind, content, sticker, color, size, rotation, markId])
+      const [result] = await pool.execute('UPDATE journal_marks SET kind=?,text=?,sticker=?,color=?,size=?,rotation=? WHERE id=? AND owner_id=?', [kind, content, sticker, color, size, rotation, markId, currentUserId()])
       if (!result.affectedRows) throw missing('这张标注已经不存在了')
     } else {
       const x = number(data.canvas_x ?? 0, -1e7, 1e7), y = number(data.canvas_y ?? 0, -1e7, 1e7)
       await transaction(async connection => {
         if (data.notebook_page_id != null) await requirePage(connection, data.notebook_page_id)
-        await connection.execute('INSERT INTO journal_marks (id,kind,text,sticker,color,size,canvas_x,canvas_y,rotation,captured_on) VALUES (?,?,?,?,?,?,?,?,?,?)', [markId, kind, content, sticker, color, size, x, y, rotation, today()])
+        await connection.execute('INSERT INTO journal_marks (owner_id,id,kind,text,sticker,color,size,canvas_x,canvas_y,rotation,captured_on) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [currentUserId(), markId, kind, content, sticker, color, size, x, y, rotation, today()])
         if (data.notebook_page_id != null) await placeItem(connection, data.notebook_page_id, {kind:'mark',id:markId,x:data.canvas_x??600,y:data.canvas_y??800,rotation})
       })
     }
@@ -247,7 +243,7 @@ export function createJournalRouter(uploadDirectory) {
   router.post('/marks', saveMark)
   router.put('/marks/:id', saveMark)
   router.delete('/marks/:id', async (req, res) => {
-    const markId = id(req.params.id), [result] = await pool.execute('DELETE FROM journal_marks WHERE id=?', [markId])
+    const markId = id(req.params.id), [result] = await pool.execute('DELETE FROM journal_marks WHERE id=? AND owner_id=?', [markId, currentUserId()])
     if (!result.affectedRows) throw missing('这张标注已经不存在了')
     res.json({ deleted: markId })
   })
@@ -256,15 +252,15 @@ export function createJournalRouter(uploadDirectory) {
     const color = req.body.color || 'sage'
     if (!colors.includes(color)) throw invalid('请选择有效的旅程颜色')
     const tripId = randomUUID()
-    const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM journal_trips')
-    await pool.execute('INSERT INTO journal_trips (id,name,region,color,canvas_x,canvas_y) VALUES (?,?,?,?,?,?)', [tripId, name, region, color, total % 3 * 800, Math.floor(total / 3) * 900 + (total % 2 ? -90 : 30)])
-    const [[trip]] = await pool.execute('SELECT * FROM journal_trips WHERE id=?', [tripId])
+    const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM journal_trips WHERE owner_id=?', [currentUserId()])
+    await pool.execute('INSERT INTO journal_trips (owner_id,id,name,region,color,canvas_x,canvas_y) VALUES (?,?,?,?,?,?,?)', [currentUserId(), tripId, name, region, color, total % 3 * 800, Math.floor(total / 3) * 900 + (total % 2 ? -90 : 30)])
+    const [[trip]] = await pool.execute('SELECT * FROM journal_trips WHERE id=? AND owner_id=?', [tripId, currentUserId()])
     res.status(201).json(trip)
   })
   router.patch('/trips/:id', async (req, res) => {
     const tripId = id(req.params.id), name = text(req.body.name, 120, true), region = text(req.body.region, 120), color = req.body.color || 'sage'
     if (!colors.includes(color)) throw invalid('请选择有效的旅程颜色')
-    const [result] = await pool.execute('UPDATE journal_trips SET name=?,region=?,color=? WHERE id=?', [name, region, color, tripId])
+    const [result] = await pool.execute('UPDATE journal_trips SET name=?,region=?,color=? WHERE id=? AND owner_id=?', [name, region, color, tripId, currentUserId()])
     if (!result.affectedRows) throw missing('这段旅程不存在')
     res.json({ id: tripId, name, region, color })
   })
@@ -290,7 +286,7 @@ export function createJournalRouter(uploadDirectory) {
         if (!photo || typeof photo !== 'object' || Array.isArray(photo)) throw invalid('照片信息无效')
         photoComponents.push(components(photo.components))
       }
-      const detectedTypes = await Promise.all(files.map(imageType))
+      const detectedTypes = await Promise.all(files.map(async file => { try { await normalizeImage(file); return file.mimetype } catch { return null } }))
       const invalidFiles = detectedTypes.flatMap((type, index) => type ? [] : [{ index, reason: '未识别为 JPG、PNG 或 WebP 照片，请转换格式或检查文件是否完整。' }])
       if (invalidFiles.length) throw Object.assign(invalid('有文件未通过照片校验，请查看具体文件后重新选择。'), { code: 'INVALID_IMAGES', invalidFiles })
       // Use the actual image format: downloaded images may have a misleading extension/MIME type.
@@ -303,20 +299,21 @@ export function createJournalRouter(uploadDirectory) {
       }
       connection = await pool.getConnection()
       await connection.beginTransaction()
+      for (const file of files) await registerAsset(file, connection)
       if (data.notebook_page_id != null) await requirePage(connection, data.notebook_page_id)
       const tripIds = new Set([tripId, ...[entryComponents, ...photoComponents].flatMap(list => (list || []).filter(component => component.type === 'trip').map(component => component.value))].filter(Boolean))
       for (const selectedTrip of tripIds) {
-        const [[trip]] = await connection.execute('SELECT id FROM journal_trips WHERE id=?', [selectedTrip])
+        const [[trip]] = await connection.execute('SELECT id FROM journal_trips WHERE id=? AND owner_id=?', [selectedTrip, currentUserId()])
         if (!trip) throw invalid('这段旅程已不存在，可以移除旅程组件后留下照片')
       }
       let existing = []
       if (req.params.id) {
-        const [[entry]] = await connection.execute('SELECT id FROM journal_entries WHERE id=? FOR UPDATE', [entryId])
+        const [[entry]] = await connection.execute('SELECT id FROM journal_entries WHERE id=? AND owner_id=? FOR UPDATE', [entryId, currentUserId()])
         if (!entry) throw missing('这一页已经不存在了')
-        ;[existing] = await connection.execute('SELECT * FROM journal_photos WHERE entry_id=?', [entryId])
-        await connection.execute('UPDATE journal_entries SET trip_id=?,entry_date=?,title=?,caption=?,place_name=?,landmark_id=?,lat=?,lng=?,spot_key=?,mood=?,components=? WHERE id=?', [tripId, entryDate, title, caption, place, landmark, lat, lng, spot, mood, entryComponents == null ? null : JSON.stringify(entryComponents), entryId])
+        ;[existing] = await connection.execute('SELECT * FROM journal_photos WHERE entry_id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [entryId, currentUserId()])
+        await connection.execute('UPDATE journal_entries SET trip_id=?,entry_date=?,title=?,caption=?,place_name=?,landmark_id=?,lat=?,lng=?,spot_key=?,mood=?,components=? WHERE id=? AND owner_id=?', [tripId, entryDate, title, caption, place, landmark, lat, lng, spot, mood, entryComponents == null ? null : JSON.stringify(entryComponents), entryId, currentUserId()])
       } else {
-        await connection.execute('INSERT INTO journal_entries (id,trip_id,entry_date,captured_on,title,caption,place_name,landmark_id,lat,lng,spot_key,mood,components) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [entryId, tripId, entryDate, today(), title, caption, place, landmark, lat, lng, spot, mood, entryComponents == null ? null : JSON.stringify(entryComponents)])
+        await connection.execute('INSERT INTO journal_entries (owner_id,id,trip_id,entry_date,captured_on,title,caption,place_name,landmark_id,lat,lng,spot_key,mood,components) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [currentUserId(), entryId, tripId, entryDate, today(), title, caption, place, landmark, lat, lng, spot, mood, entryComponents == null ? null : JSON.stringify(entryComponents)])
       }
       const usedIds = new Set(), usedUploads = new Set()
       for (const [order, photo] of data.photos.entries()) {
@@ -327,7 +324,7 @@ export function createJournalRouter(uploadDirectory) {
           const old = existing.find(item => item.id === photo.id)
           if (!old || usedIds.has(photo.id)) throw invalid('照片不属于这一页或重复出现')
           usedIds.add(photo.id)
-          await connection.execute('UPDATE journal_photos SET crop_x=?,image_filter=?,sort_order=?,components=? WHERE id=?', [Math.round(crop), filter, order, Object.hasOwn(photo, 'components') ? (photoComponents[order] == null ? null : JSON.stringify(photoComponents[order])) : (old.components == null ? null : JSON.stringify(old.components)), old.id])
+          await connection.execute('UPDATE journal_photos SET crop_x=?,image_filter=?,sort_order=?,components=? WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [Math.round(crop), filter, order, Object.hasOwn(photo, 'components') ? (photoComponents[order] == null ? null : JSON.stringify(photoComponents[order])) : (old.components == null ? null : JSON.stringify(old.components)), old.id, currentUserId()])
         } else {
           const index = photo.upload_index
           if (!Number.isInteger(index) || !files[index] || usedUploads.has(index)) throw invalid('照片上传信息不完整')
@@ -339,11 +336,11 @@ export function createJournalRouter(uploadDirectory) {
           if (data.notebook_page_id != null) await placeItem(connection, data.notebook_page_id, {kind:'photo',id:photoId,x:x??600,y:y??800,rotation:order % 2 ? 3 : -3})
         }
       }
-      if (data.photos.length) await connection.execute('DELETE FROM journal_notebook_entry_items WHERE id=?', [entryId])
+      if (data.photos.length) await connection.execute('DELETE FROM journal_notebook_entry_items WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.id=journal_notebook_entry_items.id AND e.owner_id=?)', [entryId, currentUserId()])
       else if (data.notebook_page_id != null && !req.params.id) await placeItem(connection, data.notebook_page_id, {kind:'entry',id:entryId,x:data.canvas_x??600,y:data.canvas_y??800,rotation:0})
       if (usedUploads.size !== files.length) throw invalid('上传的照片没有全部加入这一页')
       for (const photo of existing.filter(item => !usedIds.has(item.id))) {
-        await connection.execute('DELETE FROM journal_photos WHERE id=?', [photo.id])
+        await connection.execute('DELETE FROM journal_photos WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [photo.id, currentUserId()])
         removed.push(photo.url)
       }
       await connection.commit()
@@ -375,20 +372,20 @@ export function createJournalRouter(uploadDirectory) {
     const placeholders = ids => ids.map(() => '?').join(',')
     try {
       await connection.beginTransaction()
-      const [parents] = groups.photo.length ? await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders(groups.photo)})`, groups.photo) : [[]]
+      const [parents] = groups.photo.length ? await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders(groups.photo)}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)`, [...(groups.photo), currentUserId()]) : [[]]
       const parentIds = [...new Set([...groups.entry, ...parents.map(row => row.entry_id)])]
-      const [lockedParents] = parentIds.length ? await connection.query(`SELECT id FROM journal_entries WHERE id IN (${placeholders(parentIds)}) ORDER BY id FOR UPDATE`, parentIds) : [[]]
+      const [lockedParents] = parentIds.length ? await connection.query(`SELECT id FROM journal_entries WHERE id IN (${placeholders(parentIds)}) AND owner_id=? ORDER BY id FOR UPDATE`, [...(parentIds), currentUserId()]) : [[]]
       if (groups.entry.some(entryId => !lockedParents.some(row => row.id === entryId))) throw missing('有内容已被删除，请刷新后重新选择')
-      const [photos] = groups.photo.length ? await connection.query(`SELECT id,url FROM journal_photos WHERE id IN (${placeholders(groups.photo)}) ORDER BY id FOR UPDATE`, groups.photo) : [[]]
-      const [marks] = groups.mark.length ? await connection.query(`SELECT id FROM journal_marks WHERE id IN (${placeholders(groups.mark)}) ORDER BY id FOR UPDATE`, groups.mark) : [[]]
+      const [photos] = groups.photo.length ? await connection.query(`SELECT id,url FROM journal_photos WHERE id IN (${placeholders(groups.photo)}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?) ORDER BY id FOR UPDATE`, [...(groups.photo), currentUserId()]) : [[]]
+      const [marks] = groups.mark.length ? await connection.query(`SELECT id FROM journal_marks WHERE id IN (${placeholders(groups.mark)}) AND owner_id=? ORDER BY id FOR UPDATE`, [...(groups.mark), currentUserId()]) : [[]]
       if (photos.length !== groups.photo.length || marks.length !== groups.mark.length) throw missing('有内容已被删除，请刷新后重新选择')
       if (groups.entry.length) {
-        const [attached] = await connection.query(`SELECT id FROM journal_photos WHERE entry_id IN (${placeholders(groups.entry)}) FOR UPDATE`, groups.entry)
+        const [attached] = await connection.query(`SELECT id FROM journal_photos WHERE entry_id IN (${placeholders(groups.entry)}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?) FOR UPDATE`, [...(groups.entry), currentUserId()])
         if (attached.length) throw invalid('这条记录含有照片，请选择具体照片删除')
       }
-      if (groups.photo.length) await connection.query(`DELETE FROM journal_photos WHERE id IN (${placeholders(groups.photo)})`, groups.photo)
-      if (groups.mark.length) await connection.query(`DELETE FROM journal_marks WHERE id IN (${placeholders(groups.mark)})`, groups.mark)
-      if (parentIds.length) await connection.query(`DELETE FROM journal_entries WHERE id IN (${placeholders(parentIds)}) AND NOT EXISTS (SELECT 1 FROM journal_photos WHERE entry_id=journal_entries.id)`, parentIds)
+      if (groups.photo.length) await connection.query(`DELETE FROM journal_photos WHERE id IN (${placeholders(groups.photo)}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)`, [...(groups.photo), currentUserId()])
+      if (groups.mark.length) await connection.query(`DELETE FROM journal_marks WHERE id IN (${placeholders(groups.mark)}) AND owner_id=?`, [...(groups.mark), currentUserId()])
+      if (parentIds.length) await connection.query(`DELETE FROM journal_entries WHERE id IN (${placeholders(parentIds)}) AND NOT EXISTS (SELECT 1 FROM journal_photos WHERE entry_id=journal_entries.id) AND owner_id=?`, [...(parentIds), currentUserId()])
       urls = [...new Set(photos.map(photo => photo.url))]
       await connection.commit()
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
@@ -403,12 +400,12 @@ export function createJournalRouter(uploadDirectory) {
     let urls = []
     try {
       await connection.beginTransaction()
-      const [parents] = await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders})`, ids)
-      if (parents.length) await connection.query(`SELECT id FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) ORDER BY id FOR UPDATE`, parents.map(row => row.entry_id))
-      const [photos] = await connection.query(`SELECT id,url FROM journal_photos WHERE id IN (${placeholders}) ORDER BY id FOR UPDATE`, ids)
+      const [parents] = await connection.query(`SELECT DISTINCT entry_id FROM journal_photos WHERE id IN (${placeholders}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)`, [...(ids), currentUserId()])
+      if (parents.length) await connection.query(`SELECT id FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) AND owner_id=? ORDER BY id FOR UPDATE`, [...(parents.map(row => row.entry_id)), currentUserId()])
+      const [photos] = await connection.query(`SELECT id,url FROM journal_photos WHERE id IN (${placeholders}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?) ORDER BY id FOR UPDATE`, [...(ids), currentUserId()])
       if (photos.length !== ids.length) throw missing('有照片已被删除，请刷新后重新选择')
-      await connection.query(`DELETE FROM journal_photos WHERE id IN (${placeholders})`, ids)
-      await connection.query(`DELETE FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) AND NOT EXISTS (SELECT 1 FROM journal_photos WHERE entry_id=journal_entries.id)`, parents.map(row => row.entry_id))
+      await connection.query(`DELETE FROM journal_photos WHERE id IN (${placeholders}) AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)`, [...(ids), currentUserId()])
+      await connection.query(`DELETE FROM journal_entries WHERE id IN (${parents.map(() => '?').join(',')}) AND NOT EXISTS (SELECT 1 FROM journal_photos WHERE entry_id=journal_entries.id) AND owner_id=?`, [...(parents.map(row => row.entry_id)), currentUserId()])
       urls = [...new Set(photos.map(photo => photo.url))]
       await connection.commit()
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
@@ -420,12 +417,12 @@ export function createJournalRouter(uploadDirectory) {
     let url
     try {
       await connection.beginTransaction()
-      const [[photo]] = await connection.execute('SELECT entry_id,url FROM journal_photos WHERE id=?', [photoId])
+      const [[photo]] = await connection.execute('SELECT entry_id,url FROM journal_photos WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [photoId, currentUserId()])
       if (!photo) throw missing('这张照片已经不存在了')
-      await connection.execute('SELECT id FROM journal_entries WHERE id=? FOR UPDATE', [photo.entry_id])
-      await connection.execute('DELETE FROM journal_photos WHERE id=?', [photoId])
-      const [[{ total }]] = await connection.execute('SELECT COUNT(*) AS total FROM journal_photos WHERE entry_id=?', [photo.entry_id])
-      if (!total) await connection.execute('DELETE FROM journal_entries WHERE id=?', [photo.entry_id])
+      await connection.execute('SELECT id FROM journal_entries WHERE id=? AND owner_id=? FOR UPDATE', [photo.entry_id, currentUserId()])
+      await connection.execute('DELETE FROM journal_photos WHERE id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [photoId, currentUserId()])
+      const [[{ total }]] = await connection.execute('SELECT COUNT(*) AS total FROM journal_photos WHERE entry_id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [photo.entry_id, currentUserId()])
+      if (!total) await connection.execute('DELETE FROM journal_entries WHERE id=? AND owner_id=?', [photo.entry_id, currentUserId()])
       url = photo.url
       await connection.commit()
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
@@ -434,8 +431,8 @@ export function createJournalRouter(uploadDirectory) {
   })
   router.delete('/entries/:id', async (req, res) => {
     const entryId = id(req.params.id)
-    const [photos] = await pool.execute('SELECT url FROM journal_photos WHERE entry_id=?', [entryId])
-    const [result] = await pool.execute('DELETE FROM journal_entries WHERE id=?', [entryId])
+    const [photos] = await pool.execute('SELECT url FROM journal_photos WHERE entry_id=? AND EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)', [entryId, currentUserId()])
+    const [result] = await pool.execute('DELETE FROM journal_entries WHERE id=? AND owner_id=?', [entryId, currentUserId()])
     if (!result.affectedRows) throw missing('这一页已经不存在了')
     await Promise.all(photos.map(photo => removeUnused(photo.url).catch(console.error)))
     res.json({ deleted: entryId })
@@ -449,9 +446,9 @@ export function createJournalRouter(uploadDirectory) {
       await connection.beginTransaction()
       for (const item of items) {
         const table = item.kind === 'mark' ? 'journal_marks' : item.kind === 'photo' ? 'journal_photos' : 'journal_entries'
-        const [[row]] = await connection.execute(`SELECT id FROM ${table} WHERE id=? FOR UPDATE`, [item.id])
+        const [[row]] = await connection.execute(`SELECT id FROM ${table} WHERE id=? AND ${item.kind === 'photo' ? 'EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)' : 'owner_id=?'} FOR UPDATE`, [item.id, currentUserId()])
         if (!row) throw missing('照片或手帐已经不存在了')
-        await connection.execute(`UPDATE ${table} SET canvas_x=?,canvas_y=?,rotation=?${item.kind === 'photo' ? ',canvas_absolute=TRUE' : ''} WHERE id=?`, [item.x, item.y, item.rotation ?? 0, item.id])
+        await connection.execute(`UPDATE ${table} SET canvas_x=?,canvas_y=?,rotation=?${item.kind === 'photo' ? ',canvas_absolute=TRUE' : ''} WHERE id=? AND ${item.kind === 'photo' ? 'EXISTS (SELECT 1 FROM journal_entries owner_entry WHERE owner_entry.id=journal_photos.entry_id AND owner_entry.owner_id=?)' : 'owner_id=?'}`, [item.x, item.y, item.rotation ?? 0, item.id, currentUserId()])
       }
       await connection.commit()
       res.json({ saved: items.length })

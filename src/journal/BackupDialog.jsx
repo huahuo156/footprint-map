@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { ArchiveRestore, Download, Save } from 'lucide-react'
 import Modal from './Modal'
 import { localDate } from './model'
+import { apiFetch } from '../lib/api'
 
 // 手帐备份：导出 ZIP（照片 + 数据），或把之前的备份合并还原回来。
 export default function BackupDialog({ onClose, onRestored }) {
@@ -10,7 +11,7 @@ export default function BackupDialog({ onClose, onRestored }) {
   async function exportBackup() {
     setBusy(true); setError(''); setResult('')
     try {
-      const response = await fetch('/api/journal/backup')
+      const response = await apiFetch('/journal/backup')
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || '暂时连不上手帐，请确认后端已启动。')
       const url = URL.createObjectURL(await response.blob()), link = document.createElement('a')
       link.href = url; link.download = `shitu-backup-${localDate()}.zip`; link.click()
@@ -23,13 +24,13 @@ export default function BackupDialog({ onClose, onRestored }) {
     const file = event.target.files[0]
     event.target.value = ''
     if (!file) return
-    if (file.size > 1024 * 1024 * 1024) { setError('备份文件不能超过 1GB。'); return }
+    if (file.size > 64 * 1024 * 1024) { setError('备份文件不能超过 64MiB。'); return }
     if (!/\.zip$/i.test(file.name)) { setError('请选择导出备份时下载的 .zip 文件。'); return }
     if (!window.confirm('还原会把备份里的照片、旅程和手札合并到当前手帐，现有内容全部保留。要继续吗？')) return
     setBusy(true); setError(''); setResult('')
     try {
       const body = new FormData(); body.append('backup', file)
-      const response = await fetch('/api/journal/restore', { method: 'POST', body })
+      const response = await apiFetch('/journal/restore', { method: 'POST', body })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || '还原失败，请重试。')
       const counts = data.restored || {}
@@ -45,7 +46,7 @@ export default function BackupDialog({ onClose, onRestored }) {
     </section>
     <section className="j-backup-section">
       <h3><ArchiveRestore />从备份还原</h3>
-      <p>选择之前导出的 ZIP（最多 1GB），备份内容会作为新内容合并进来；现在手帐里的东西一律保留。重复还原会生成多份副本。</p>
+      <p>选择之前导出的 ZIP（最多 64MiB），备份内容会作为新内容合并进来；现在手帐里的东西一律保留。重复还原会生成多份副本。</p>
       <button type="button" className="j-button" disabled={busy} onClick={() => fileInput.current.click()}><ArchiveRestore />选择备份文件还原</button>
       <input ref={fileInput} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="j-visually-hidden" aria-label="选择备份文件" onChange={restore} />
     </section>

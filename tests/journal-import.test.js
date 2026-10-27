@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { importPhotoFiles } from '../src/journal/importPhotos'
 import { readPhotoExif } from '../src/lib/exif'
 vi.mock('../src/lib/exif', async importOriginal => ({ ...(await importOriginal()), readPhotoExif: vi.fn(async () => null) }))
-vi.mock('../src/lib/api', () => ({ fetchLandmarks: async () => [{ id: 7, name: '西湖', lat: 30.25, lng: 120.15 }], saveJournalEntry: vi.fn() }))
+vi.mock('../src/lib/api', async importOriginal => ({ ...(await importOriginal()), fetchLandmarks: async () => [{ id: 7, name: '西湖', lat: 30.25, lng: 120.15 }], saveJournalEntry: vi.fn() }))
 
 const files = count => Array.from({ length: count }, (_, index) => new File(['photo'], `photo-${index}.png`, { type: 'image/png' }))
 const positions = count => Array.from({ length: count }, (_, index) => ({ x: index * 300, y: -40 }))

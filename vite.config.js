@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   test: {
+    pool: 'threads',
     include: ['tests/**/*.{test,spec}.{js,jsx}'],
     exclude: ['tests/e2e/**'],
     maxWorkers: 1,

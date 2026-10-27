@@ -1,4 +1,12 @@
-import { findPagePosition, itemKey } from './notebooks'
+import { findPagePosition, itemKey, PAGE_WIDTH, PAGE_HEIGHT } from './notebooks'
+
+// Keep the original grab offset, using rendered bounds to account for zoom.
+export function notebookDragPosition(item, source, target, start, point) {
+  return {
+    x: (source.left + item.x / PAGE_WIDTH * source.width + point.x - start.x - target.left) / target.width * PAGE_WIDTH,
+    y: (source.top + item.y / PAGE_HEIGHT * source.height + point.y - start.y - target.top) / target.height * PAGE_HEIGHT,
+  }
+}
 
 export function planNotebookDrop(incoming, existing, preferred) {
   const keys = new Set(incoming.map(itemKey)), stationary = existing.filter(item => !keys.has(itemKey(item)))

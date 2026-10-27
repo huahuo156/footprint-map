@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import NotebookSettings from '../src/journal/NotebookSettings.jsx'
 import { NOTEBOOK_COVERS } from '../shared/notebook-covers.js'
 import { uploadNotebookCover, discardNotebookCover } from '../src/lib/api'
-vi.mock('../src/lib/api', () => ({ uploadNotebookCover: vi.fn(async () => ({ url:'/uploads/cover-custom.jpg' })), discardNotebookCover: vi.fn(async () => ({})) }))
+vi.mock('../src/lib/api', async importOriginal => ({ ...(await importOriginal()), uploadNotebookCover: vi.fn(async () => ({ url:'/uploads/cover-custom.jpg' })), discardNotebookCover: vi.fn(async () => ({})) }))
 
 beforeEach(() => {
   vi.clearAllMocks()

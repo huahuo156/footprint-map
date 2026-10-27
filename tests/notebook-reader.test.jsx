@@ -87,3 +87,74 @@ it('never writes reading state in demo mode and falls back to the flyleaf for a 
   expect(document.querySelector('.nb-ribbon')).toBeNull()
   expect(onReadingChange).not.toHaveBeenCalled()
 })
+
+function dragSetup(props = {}) {
+  vi.stubGlobal('PointerEvent', MouseEvent)
+  const onMove = vi.fn(async () => {}), onOpen = vi.fn(), onError = vi.fn()
+  const view = render(<NotebookReader book={book} data={data} onMove={onMove} onOpen={onOpen} onClose={() => {}} onError={onError} {...props} />)
+  const left = document.querySelector('.nb-spread [data-notebook-page="page0"]'), right = document.querySelector('.nb-spread [data-notebook-page="page1"]')
+  left.getBoundingClientRect = () => ({ left:100, top:100, right:400, bottom:500, width:300, height:400 })
+  right.getBoundingClientRect = () => ({ left:400, top:100, right:700, bottom:500, width:300, height:400 })
+  const photo = left.querySelector('[data-photo-id="photo"]')
+  photo.setPointerCapture = vi.fn()
+  // Captured/dragged content can cover the destination: hit-test geometry instead.
+  document.elementFromPoint = vi.fn(() => photo)
+  return { ...view, photo, onMove, onOpen, onError }
+}
+
+it('previews across the gutter and drops on the destination while preserving the grab offset', async () => {
+  const { photo, onMove, onError } = dragSetup()
+  fireEvent.pointerDown(photo, { button:0, clientX:220, clientY:230 })
+  fireEvent.pointerMove(photo, { clientX:550, clientY:300 })
+  expect(document.querySelector('.nb-drag-layer [data-photo-id="photo"]')).not.toBeNull()
+  expect(document.querySelector('[data-notebook-page="page1"]')).toHaveClass('is-drop-target')
+  fireEvent.pointerUp(photo, { clientX:550, clientY:300 })
+  await waitFor(() => expect(onMove).toHaveBeenCalledWith('page1', [{ id:'photo', kind:'photo', x:520, y:780, rotation:0 }]))
+  expect(onError).not.toHaveBeenCalled()
+  expect(document.querySelector('.nb-drag-layer [data-photo-id]')).toBeNull()
+})
+
+it('cancels a drag without saving or leaving a hidden source photo', () => {
+  const { photo, onMove, onOpen } = dragSetup()
+  fireEvent.pointerDown(photo, { button:0, clientX:220, clientY:230 })
+  fireEvent.pointerMove(photo, { clientX:550, clientY:300 })
+  fireEvent.pointerCancel(photo, { clientX:550, clientY:300 })
+  expect(onMove).not.toHaveBeenCalled()
+  expect(onOpen).not.toHaveBeenCalled()
+  expect(photo.style.opacity).toBe('')
+  expect(document.querySelector('.is-drop-target')).toBeNull()
+  expect(document.querySelector('.nb-drag-layer [data-photo-id]')).toBeNull()
+})
+
+it('keeps the spread stable during dragging and cancels on lost pointer capture', () => {
+  const { photo, onMove } = dragSetup()
+  fireEvent.pointerDown(photo, { button:0, clientX:220, clientY:230 })
+  fireEvent.pointerMove(photo, { clientX:550, clientY:300 })
+  fireEvent.keyDown(photo, { key:'ArrowRight' })
+  expect(screen.getByLabelText('手帐页码')).toHaveTextContent('1–2 / 4')
+  fireEvent.lostPointerCapture(photo)
+  expect(document.querySelector('.nb-drag-layer [data-photo-id]')).toBeNull()
+  expect(document.querySelector('.is-drop-target')).toBeNull()
+  expect(photo.style.opacity).toBe('')
+  expect(onMove).not.toHaveBeenCalled()
+})
+
+it('clears the drag copy and restores the source when persisting the drop fails', async () => {
+  const onMove = vi.fn(async () => { throw new Error('保存失败') })
+  const { photo, onError } = dragSetup({ onMove })
+  fireEvent.pointerDown(photo, { button:0, clientX:220, clientY:230 })
+  fireEvent.pointerMove(photo, { clientX:550, clientY:300 })
+  fireEvent.pointerUp(photo, { clientX:550, clientY:300 })
+  await waitFor(() => expect(onError).toHaveBeenCalledWith('保存失败'))
+  expect(photo.style.opacity).toBe('')
+  expect(document.querySelector('.nb-drag-layer [data-photo-id]')).toBeNull()
+})
+
+it('never creates a moving copy or writes placement in read-only mode', () => {
+  const { photo, onMove } = dragSetup({ readOnly:true })
+  fireEvent.pointerDown(photo, { button:0, clientX:220, clientY:230 })
+  fireEvent.pointerMove(photo, { clientX:550, clientY:300 })
+  fireEvent.pointerUp(photo, { clientX:550, clientY:300 })
+  expect(document.querySelector('.nb-drag-layer [data-photo-id]')).toBeNull()
+  expect(onMove).not.toHaveBeenCalled()
+})

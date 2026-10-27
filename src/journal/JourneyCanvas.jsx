@@ -5,11 +5,11 @@ import NotebookCover from './NotebookCover'
 import { planGroupExpansion, reserveUndecodedPhotos } from './groupExpansion'
 import JournalImage from './JournalImage'
 import CanvasGroupEditor from './CanvasGroupEditor'
-import { buildCanvas, cardBounds, canvasDropObstacles, layoutCanvasGroups, findFreePosition, imageFilter, intersects, isWestLake, itemsInRectangle, zoomAt } from './model'
+import { buildCanvas, cardBounds, canvasDropObstacles, layoutCanvasGroups, findFreePosition, imageFilter, intersects, isWestLake, itemsInRectangle, zoomAt, CANVAS_GROUP_METRICS } from './model'
 import { expandGroupSelection, toggleGroupSelection } from '../../shared/journal-groups.js'
 
 const transformCard = item => `translate3d(${item.x}px,${item.y}px,0) translate(-50%,-50%) rotate(${item.rotation || 0}deg)`
-export default function JourneyCanvas({ data, onOpen, onScene, onMove, onMoveGroup, onSaveGroup, onDeleteGroup, onError, onViewPosition, onBatchEdit, onBatchDelete, onNotebook, onMoveNotebook, onDropItem, notebookOpen = false, demo, overviewRequest = 0 }) {
+export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, onMoveGroup, onSaveGroup, onDeleteGroup, onError, onViewPosition, onBatchEdit, onBatchDelete, onNotebook, onMoveNotebook, onDropItem, notebookOpen = false, demo, overviewRequest = 0 }) {
   const [imageSizes, setImageSizes] = useState({}), [groupEditor, setGroupEditor] = useState(null)
   const model = useMemo(() => buildCanvas(data, imageSizes), [data, imageSizes])
   const photoNodes = useRef(new Map())
@@ -51,7 +51,7 @@ export default function JourneyCanvas({ data, onOpen, onScene, onMove, onMoveGro
     window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); window.addEventListener('blur', clear)
     return () => { window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); window.removeEventListener('blur', clear) }
   }, [selecting, model])
-  const key = demo ? 'shitu-camera-demo-v1' : 'shitu-camera-v1'
+  const key = (demo ? 'shitu-camera-demo-v1' : 'shitu-camera-v1') + (userId ? ':' + userId : '')
   function apply(sync = false) {
     const element = viewport.current
     if (!element || !world.current) return
@@ -219,7 +219,7 @@ export default function JourneyCanvas({ data, onOpen, onScene, onMove, onMoveGro
     <div className={'j-canvas ' + (selecting ? 'is-selecting' : '')} ref={viewport} tabIndex={0} role="region" aria-label="旅行照片画布，拖动空白漫游，滚轮缩放" onPointerDown={event => begin(event)} onPointerMove={move} onPointerUp={event => end(event)} onPointerCancel={event => end(event, true)}>
       <div className="j-world" ref={world}>
         {(data.notebooks || []).map(book => <button key={book.id} className="j-notebook-cover" data-notebook-id={book.id} style={{ transform: transformCard({ x: book.canvas_x, y: book.canvas_y, rotation: book.rotation }) }} aria-label={`打开手帐：${book.name}`} onPointerDown={event => begin(event, { ...book, kind: 'notebook', x: book.canvas_x, y: book.canvas_y, anchor: { x: 0, y: 0 } })} onClick={event => { if (event.detail === 0) onNotebook?.(book.id) }}><NotebookCover book={book} pageCount={(data.notebook_pages || []).filter(page => page.notebook_id === book.id).length} /></button>)}
-        {displayGroups.map(group => <div key={group.id} ref={node => { if (node) groupNodes.current.set(group.id, node); else groupNodes.current.delete(group.id) }} className={'j-canvas-group' + (group.collapsed ? ' is-collapsed' : '') + (selecting && group.photo_ids.every(id => selected.has(id)) ? ' is-selected' : '')} data-group-id={group.id} data-parent-group-id={group.parent_id || undefined} data-color={group.color} style={group.bounds}>
+        {displayGroups.map(group => <div key={group.id} ref={node => { if (node) groupNodes.current.set(group.id, node); else groupNodes.current.delete(group.id) }} className={'j-canvas-group' + (group.collapsed ? ' is-collapsed' : '') + (selecting && group.photo_ids.every(id => selected.has(id)) ? ' is-selected' : '')} data-group-id={group.id} data-parent-group-id={group.parent_id || undefined} data-color={group.color} style={{ ...group.bounds, '--j-group-padding': CANVAS_GROUP_METRICS.padding + 'px', '--j-group-header': CANVAS_GROUP_METRICS.header + 'px' }}>
           <button className="j-group-handle" aria-label={`移动分组：${group.name}`} aria-pressed={selecting ? group.photo_ids.every(id => selected.has(id)) : undefined} onPointerDown={event => beginGroup(event, group)} onClick={event => { if (event.detail === 0 && selecting) toggleItem(group.photo_ids[0]) }}>{group.name}<small>{model.items.filter(item => group.photo_ids.includes(item.id)).length} 张照片{group.child_group_ids.length ? ` · ${group.child_group_ids.length} 个子色块` : ''} · {selecting ? '点击选择整组' : '拖动整组'}</small></button>
           {!demo && <button className="j-group-settings" aria-label={`编辑分组：${group.name}`} disabled={saving} onClick={() => setGroupEditor({ group })}>编辑</button>}
           {!demo && <button className="j-group-collapse" aria-label={`${group.collapsed ? '展开' : '折叠'}分组：${group.name}`} aria-expanded={!group.collapsed} disabled={saving} onClick={() => toggleCollapsed(group)}>{group.collapsed ? '展开' : '折叠'}</button>}

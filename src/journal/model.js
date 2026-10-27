@@ -3,6 +3,7 @@ import { hasComponentContent } from '../../shared/journal-components'
 import { expandCanvasGroups } from '../../shared/journal-groups.js'
 
 export const PALETTES = ['sage', 'sand', 'sky', 'rose', 'lavender']
+export const CANVAS_GROUP_METRICS = { padding: 16, header: 48, minWidth: 280, coverWidth: 280, coverHeight: 200 }
 export const SPOTS = [
   { key: 'bridge', name: '断桥 · 湖岸', lat: 30.2596, lng: 120.1517 },
   { key: 'island', name: '三潭印月 · 湖中', lat: 30.2368, lng: 120.1443 },
@@ -39,24 +40,26 @@ export function photoDimensions(size, bare = true) {
   return { imageWidth, imageHeight, width: Math.max(bare ? 0 : 160, imageWidth + 20), height: imageHeight + (bare ? 20 : 86) }
 }
 export function canvasGroupBounds(group, items) {
+  const { padding, header } = CANVAS_GROUP_METRICS
   const ids = new Set(group.photo_ids), boxes = items.filter(item => ids.has(item.id)).map(item => cardBounds(item, 0))
   if (!boxes.length) return null
-  const left = Math.min(...boxes.map(box => box.x - box.w / 2)) - 30
-  const top = Math.min(...boxes.map(box => box.y - box.h / 2)) - 72
-  return { left, top, width: Math.max(...boxes.map(box => box.x + box.w / 2)) + 30 - left, height: Math.max(...boxes.map(box => box.y + box.h / 2)) + 30 - top }
+  const left = Math.min(...boxes.map(box => box.x - box.w / 2)) - padding
+  const top = Math.min(...boxes.map(box => box.y - box.h / 2)) - header
+  return { left, top, width: Math.max(...boxes.map(box => box.x + box.w / 2)) + padding - left, height: Math.max(...boxes.map(box => box.y + box.h / 2)) + padding - top }
 }
 export function layoutCanvasGroups(groups, items) {
+  const { padding, header, minWidth, coverWidth, coverHeight } = CANVAS_GROUP_METRICS
   const liveIds = new Set(items.map(item => item.id))
   const expanded = expandCanvasGroups(groups.map(group => ({ ...group, direct_photo_ids: (group.direct_photo_ids || group.photo_ids || []).filter(id => liveIds.has(id)) }))).sort((a, b) => b.depth - a.depth)
   const bounds = new Map()
   for (const group of expanded) {
     const own = canvasGroupBounds({ photo_ids: group.direct_photo_ids }, items)
     const children = group.child_group_ids.map(id => bounds.get(id)).filter(Boolean)
-    const boxes = [...(own ? [own] : []), ...children.map(box => ({ left: box.left - 30, top: box.top - 72, width: box.width + 60, height: box.height + 102 }))]
+    const boxes = [...(own ? [own] : []), ...children.map(box => ({ left: box.left - padding, top: box.top - header, width: box.width + padding * 2, height: box.height + header + padding }))]
     if (!boxes.length) continue
     const left = Math.min(...boxes.map(box => box.left)), top = Math.min(...boxes.map(box => box.top))
     const members = items.filter(item => group.photo_ids.includes(item.id))
-    group.bounds = group.collapsed ? { left: Math.min(...members.map(item => item.x)) - 160, top: Math.min(...members.map(item => item.y)) - 115, width: 320, height: 230 } : { left, top, width: Math.max(320, Math.max(...boxes.map(box => box.left + box.width)) - left), height: Math.max(...boxes.map(box => box.top + box.height)) - top }
+    group.bounds = group.collapsed ? { left: Math.min(...members.map(item => item.x)) - coverWidth / 2, top: Math.min(...members.map(item => item.y)) - coverHeight / 2, width: coverWidth, height: coverHeight } : { left, top, width: Math.max(minWidth, Math.max(...boxes.map(box => box.left + box.width)) - left), height: Math.max(...boxes.map(box => box.top + box.height)) - top }
     bounds.set(group.id, group.bounds)
   }
   const byId = new Map(expanded.map(group => [group.id, group]))

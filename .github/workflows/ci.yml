@@ -1,0 +1,36 @@
+name: Multi-account verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: disposable-ci-password
+          MYSQL_ROOT_HOST: '%'
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pdisposable-ci-password"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_ROOT_PASSWORD: disposable-ci-password
+      NODE_OPTIONS: --max-old-space-size=768 --max-semi-space-size=8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:security
+      - run: npm run test:api
+      - run: npm audit --omit=dev
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

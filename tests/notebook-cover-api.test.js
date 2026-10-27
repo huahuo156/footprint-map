@@ -6,6 +6,7 @@ import express from 'express'
 // validation and SQL generation real while recording the database boundary.
 const db = vi.hoisted(() => ({ execute: vi.fn(), query: vi.fn(), beginTransaction: vi.fn(), commit: vi.fn(), rollback: vi.fn(), release: vi.fn() }))
 vi.mock('../server/db.js', () => ({ pool: { query: db.query, getConnection: async () => db } }))
+vi.mock('../server/auth.js', () => ({ currentUserId: () => 'owner-a' }))
 import { notebookRoutes, readNotebooks } from '../server/notebooks.js'
 let server, base
 beforeAll(async () => {
@@ -43,7 +44,7 @@ it('patches arbitrary trimmed cover wording and permits intentionally empty labe
   const result = await request({ cover_label: '  My Notebook  ', cover_text: '  风与记忆\n留在这里  ' }, 'PATCH')
   expect(result.status).toBe(200)
   expect(result.data).toMatchObject({ cover_label: 'My Notebook', cover_text: '风与记忆\n留在这里' })
-  expect(db.execute.mock.calls.find(([sql]) => sql.startsWith('UPDATE journal_notebooks'))).toEqual(['UPDATE journal_notebooks SET cover_label=?,cover_text=? WHERE id=?', ['My Notebook', '风与记忆\n留在这里', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa']])
+  expect(db.execute.mock.calls.find(([sql]) => sql.startsWith('UPDATE journal_notebooks'))).toEqual(['UPDATE journal_notebooks SET cover_label=?,cover_text=? WHERE id=? AND owner_id=?', ['My Notebook', '风与记忆\n留在这里', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'owner-a']])
   expect((await request({ cover_label: '' }, 'PATCH')).data.cover_label).toBe('')
 })
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, BookOpen, DatabaseBackup, ImagePlus, Orbit, Plus, RefreshCw } from 'lucide-react'
+import { AccountMenu } from '../auth/Account'
+import { ArrowLeft, BookOpen, DatabaseBackup, ImagePlus, LayoutDashboard, Map, Orbit, Plus, RefreshCw } from 'lucide-react'
 import { useJournal } from './useJournal'
 import { demoJournal } from './demo'
 import JourneyCanvas from './JourneyCanvas'
@@ -15,7 +16,8 @@ import { materializeJournal } from './components'
 import { canvasData, findPagePosition, pageItems, PAGE_WIDTH, PAGE_HEIGHT } from './notebooks'
 import { prepareNotebookEntry } from './notebookImport'
 import { importPhotoFiles, readPhotoDimensions } from './importPhotos'
-import { saveJournalEntry } from '../lib/api'
+import { captureApiSession, fetchLandmarks, saveJournalEntry } from '../lib/api'
+import PlaceAtlas from './PlaceAtlas'
 import { markDimensions } from '../../shared/journal-marks'
 import NotebookReader from './NotebookReader'
 import NotebookSettings from './NotebookSettings'
@@ -30,7 +32,8 @@ function useMobile() {
   useEffect(() => { const query = matchMedia('(max-width: 767px)'), change = () => setMobile(query.matches); query.addEventListener('change', change); return () => query.removeEventListener('change', change) }, [])
   return mobile
 }
-export default function JournalPage() {
+export default function JournalPage({ userId }) {
+  const sessionGuard = useRef(captureApiSession()).current
   useButtonHints()
   const journal = useJournal(), mobile = useMobile()
   const [demo, setDemo] = useState(false), [editor, setEditor] = useState(undefined), [selection, setSelection] = useState(null), [sceneTrip, setSceneTrip] = useState(null), [notice, setNotice] = useState('')
@@ -41,6 +44,14 @@ export default function JournalPage() {
   const [batch, setBatch] = useState(null)
   const [deletingItems, setDeletingItems] = useState(null)
   const [notebookId, setNotebookId] = useState(null), [bookSettings, setBookSettings] = useState(null), [backup, setBackup] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [view, setView] = useState('canvas'), [landmarks, setLandmarks] = useState([])
+  useEffect(() => {
+    if (view !== 'atlas') return
+    let alive = true
+    fetchLandmarks().then(rows => { if (alive) setLandmarks(rows) }).catch(() => {})
+    return () => { alive = false }
+  }, [view])
   const personalData = useMemo(() => materializeJournal(journal.data), [journal.data])
   const data = demo ? demoJournal : personalData
   const rawData = demo ? demoJournal : journal.data
@@ -58,11 +69,11 @@ export default function JournalPage() {
       const position = findPagePosition(item, pageItems(journal.data, adding.pageId), adding.position)
       values = { ...values, notebook_page_id: adding.pageId, canvas_x: position.x, canvas_y: position.y }
     }
-    await journal.saveMark(id, values); setDemo(false); setSceneTrip(null); if (!id) setOverviewRequest(value => value + 1); setNotice('已经放到手帐里。')
+    await journal.saveMark(id, values); setDemo(false); setSceneTrip(null); if (!id) setOverviewRequest(value => value + 1); setNotice('已经放到手札里。')
   }
   function edit(entry, photoId) { const record = journal.data.entries.find(item => item.id === (entry.record_id || entry.id)); setSelection(null); setEditorPhoto(photoId); setEditor(record) }
   async function remove(entry, photoId) { if (photoId) await journal.deletePhoto(photoId); else await journal.deleteEntry(entry.record_id || entry.id) }
-  function scene(id) { setSelection(null); setSceneTrip(id) }
+  function scene(id) { setSelection(null); setView('canvas'); setSceneTrip(id) }
   async function save(id, body) {
     if (!id && adding?.pageId) body = prepareNotebookEntry(body, adding.pageId, journal.data, await readPhotoDimensions(body.getAll('images')))
     await journal.saveEntry(id, body); setDemo(false); setSceneTrip(null); if (!id) setOverviewRequest(value => value + 1); setNotice('这一刻已经留下。')
@@ -71,6 +82,7 @@ export default function JournalPage() {
   async function importPhotos(files, position, onProgress) {
     if (adding?.pageId) {
       const pageId = adding.pageId, dimensions = await readPhotoDimensions(files)
+      sessionGuard()
       // Preflight the complete batch, so a full page saves no partial upload.
       const probe = new FormData()
       probe.set('data', JSON.stringify({ components: [], photos: files.map((_, upload_index) => ({ upload_index, components: [] })) }))
@@ -78,6 +90,7 @@ export default function JournalPage() {
       const positions = planned.map(photo => ({ x: photo.canvas_x, y: photo.canvas_y }))
       try {
         return await importPhotoFiles(files, positions, onProgress, (_id, body) => {
+          sessionGuard()
           const values = JSON.parse(body.get('data')); values.notebook_page_id = pageId; body.set('data', JSON.stringify(values)); return saveJournalEntry(null, body)
         })
       } finally { await journal.reload().catch(() => setNotice('照片已处理，请重试刷新。')) }
@@ -101,14 +114,17 @@ export default function JournalPage() {
   }
   async function saveBook(id, values) { const saved = await journal.changeNotebook(id, values); setDemo(false); if (!id) { setNotebookId(saved.id); setOverviewRequest(value => value + 1) } }
   const empty = !data.entries.length && !rawData.notebooks?.length
+  const viewSwitcher = <nav className="j-view-switch" aria-label="手札视图"><button aria-pressed={view === 'canvas'} onClick={() => setView('canvas')}><LayoutDashboard />自由画布</button><button aria-pressed={view === 'atlas'} onClick={() => { setView('atlas'); setSceneTrip(null) }}><Map />足迹版图</button></nav>
   return <div className={'journal-app ' + (mobile ? 'is-mobile' : 'is-desktop')}>
-    {!mobile && <header className="j-app-header"><Link className="j-brand" to="/"><Orbit /><span>拾途</span></Link><span className="j-header-caption">把旅程铺开，随意走走。</span><div className="j-header-actions"><button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份</button><button className="j-button" onClick={() => setBookSettings({})}><BookOpen />创建手札</button><button className="j-button j-primary" onClick={create}><Plus />留下一刻</button></div></header>}
-    {demo && <div className="j-demo-banner"><span><BookOpen />正在探索示例手帐</span><button onClick={() => { setDemo(false); setSelection(null); setSceneTrip(null) }}><ArrowLeft />返回我的手帐</button></div>}
+    {<header className="j-app-header"><Link className="j-brand" to="/"><Orbit /><span>拾途</span></Link>{!mobile && viewSwitcher}<div className="j-header-actions"><button className="j-button" onClick={() => setAccountOpen(true)}>账号</button><button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份</button>{!mobile && view === 'canvas' && <button className="j-button" onClick={() => setBookSettings({})}><BookOpen />创建手札</button>}<button className="j-button j-primary" onClick={create}><Plus />留下一刻</button></div></header>}
+    {mobile && <div className="j-mobile-view-switch">{viewSwitcher}</div>}
+    {demo && <div className="j-demo-banner"><span><BookOpen />正在探索示例手札</span><button onClick={() => { setDemo(false); setSelection(null); setSceneTrip(null) }}><ArrowLeft />返回我的手札</button></div>}
     {!demo && journal.error && <div className="j-connection-error" role="alert"><span>{journal.error}</span><button className="j-button" onClick={retry}><RefreshCw />重试</button></div>}
-    {journal.loading && !demo ? <main className="journal-loading" role="status"><Orbit /><p>正在展开你的手帐…</p></main> : empty ? <main className="j-empty"><span className="j-empty-eyebrow">拾途 · 私人旅行手帐</span><div className="j-empty-photos" aria-hidden="true"><span /><span><ImagePlus /></span><span /></div><h1>从一张照片，或一句话开始。</h1><p>留住走过的地方，和当时的小事。<br />以后想起来，再慢慢整理。</p><div><button className="j-button j-primary" onClick={create}><Plus />留下一刻</button><button className="j-button" onClick={() => setBookSettings({})}>创建手札</button>{mobile && <button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份与还原</button>}<button className="j-button" onClick={() => setDemo(true)}>看看示例手帐</button></div></main> : mobile ? <><div className="nb-mobile-books"><button onClick={() => setBookSettings({})}>＋ 创建手札</button>{(rawData.notebooks || []).map(book => <button key={book.id} onClick={() => setNotebookId(book.id)}>{book.name}</button>)}<button aria-label="备份与还原" onClick={() => setBackup(true)}><DatabaseBackup /></button></div><MobileFeed data={looseData} onOpen={open} onNew={create} /></> : sceneTrip ? <Suspense fallback={<div className="journal-loading" role="status">正在准备景点场景…</div>}><WestLakeScene entries={sceneEntries} onClose={() => setSceneTrip(null)} onOpen={open} onNew={create} /></Suspense> : <JourneyCanvas key={demo ? 'demo' : 'personal'} data={looseData} onOpen={open} onScene={scene} onNotebook={setNotebookId} onMoveNotebook={journal.changeNotebook} onDropItem={dropIntoPage} notebookOpen={!!notebook} onMove={journal.saveLayout} onMoveGroup={journal.saveLayouts} onSaveGroup={journal.saveGroup} onDeleteGroup={journal.removeGroup} onError={setNotice} onBatchEdit={(ids, positions) => setBatch({ ids, positions })} onBatchDelete={setDeletingItems} onViewPosition={position => { canvasPosition.current = position }} demo={demo} overviewRequest={demo ? 0 : overviewRequest} />}
+    {journal.loading && !demo ? <main className="journal-loading" role="status"><Orbit /><p>正在展开你的手札…</p></main> : view === 'atlas' ? <PlaceAtlas userId={userId} mobile={mobile} data={data} landmarks={landmarks} onOpen={open} /> : empty ? <main className="j-empty"><span className="j-empty-eyebrow">拾途 · 私人旅行手札</span><div className="j-empty-photos" aria-hidden="true"><span /><span><ImagePlus /></span><span /></div><h1>从一张照片，或一句话开始。</h1><p>留住走过的地方，和当时的小事。<br />以后想起来，再慢慢整理。</p><div><button className="j-button j-primary" onClick={create}><Plus />留下一刻</button><button className="j-button" onClick={() => setBookSettings({})}>创建手札</button>{mobile && <button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份与还原</button>}<button className="j-button" onClick={() => setDemo(true)}>看看示例手札</button></div></main> : mobile ? <><div className="nb-mobile-books"><button onClick={() => setBookSettings({})}>＋ 创建手札</button>{(rawData.notebooks || []).map(book => <button key={book.id} onClick={() => setNotebookId(book.id)}>{book.name}</button>)}<button aria-label="备份与还原" onClick={() => setBackup(true)}><DatabaseBackup /></button></div><MobileFeed data={looseData} onOpen={open} onNew={create} /></> : sceneTrip ? <Suspense fallback={<div className="journal-loading" role="status">正在准备景点场景…</div>}><WestLakeScene entries={sceneEntries} onClose={() => setSceneTrip(null)} onOpen={open} onNew={create} /></Suspense> : <JourneyCanvas userId={userId} key={demo ? 'demo' : 'personal'} data={looseData} onOpen={open} onScene={scene} onNotebook={setNotebookId} onMoveNotebook={journal.changeNotebook} onDropItem={dropIntoPage} notebookOpen={!!notebook} onMove={journal.saveLayout} onMoveGroup={journal.saveLayouts} onSaveGroup={journal.saveGroup} onDeleteGroup={journal.removeGroup} onError={setNotice} onBatchEdit={(ids, positions) => setBatch({ ids, positions })} onBatchDelete={setDeletingItems} onViewPosition={position => { canvasPosition.current = position }} demo={demo} overviewRequest={demo ? 0 : overviewRequest} />}
     {notebook && <NotebookReader key={notebook.id} book={notebook} data={rawData} onOpen={open} onClose={() => setNotebookId(null)} onAdd={addToPage} onMove={journal.moveToPage} onReturn={journal.returnToCanvas} onAddPage={afterId => journal.createPage(notebook.id, afterId)} onDeletePage={journal.removePage} onReorder={ids => journal.reorderPages(notebook.id, ids)} onReadingChange={values => journal.changeNotebookReading(notebook.id,values)} onEditBook={() => setBookSettings({ book: notebook })} onError={setNotice} readOnly={demo} />}
     {bookSettings && <NotebookSettings {...bookSettings} data={journal.data} position={canvasPosition.current} onSave={saveBook} onDelete={async id => { await journal.removeNotebook(id); setNotebookId(null) }} onClose={() => setBookSettings(null)} />}
-    {backup && <BackupDialog onClose={() => setBackup(false)} onRestored={async () => { await journal.reload(); setNotice('备份已经还原，新内容已并入手帐。') }} />}
+    {accountOpen && <AccountMenu onClose={() => setAccountOpen(false)} />}
+    {backup && <BackupDialog onClose={() => setBackup(false)} onRestored={async () => { await journal.reload(); setNotice('备份已经还原，新内容已并入手札。') }} />}
     {adding && <AddMemory {...adding} trips={journal.data.trips} onSave={save} onSaveMark={saveMark} onImport={importPhotos} onCreateTrip={journal.createTrip} onClose={() => setAdding(null)} />}
     {batch && <BatchPhotoEditor photos={journal.data.entries.flatMap(entry => entry.photos).filter(photo => batch.ids.includes(photo.id))} positions={batch.positions} onSave={batchSave} onCreateTrip={journal.createTrip} trips={journal.data.trips} onClose={() => setBatch(null)} />}
     {deletingItems && <BatchItemDelete items={deletingItems} onDelete={batchDelete} onClose={() => setDeletingItems(null)} />}

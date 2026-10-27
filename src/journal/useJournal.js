@@ -1,12 +1,17 @@
+import * as api from '../lib/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createJournalTrip, deleteJournalEntry, deleteJournalPhoto, deleteJournalPhotos, deleteJournalItems, deleteJournalMark, fetchJournal, saveJournalEntry, saveJournalLayout, saveJournalMark, updatePhotoComponents } from '../lib/api'
 import { materializeJournal } from './components'
 import { buildCanvas, cardBounds, planPhotoImport } from './model'
 import { importPhotoFiles, readPhotoDimensions } from './importPhotos'
-import { saveCanvasGroup, deleteCanvasGroup } from '../lib/api'
-import { saveNotebook, saveNotebookReading, deleteNotebook, addNotebookPage, reorderNotebookPages, deleteNotebookPage, moveNotebookItems, returnNotebookItems } from '../lib/api'
 
 export function useJournal() {
+  const scope = useRef(null)
+  if (!scope.current) {
+    const guard = api.captureApiSession()
+    scope.current = Object.fromEntries(Object.entries(api).filter(([, value]) => typeof value === 'function').map(([name, fn]) => [name, (...args) => { guard(); return fn(...args) }]))
+  }
+  const { createJournalTrip, deleteJournalEntry, deleteJournalPhoto, deleteJournalPhotos, deleteJournalItems, deleteJournalMark, fetchJournal, saveJournalEntry, saveJournalLayout, saveJournalMark, updatePhotoComponents, saveCanvasGroup, deleteCanvasGroup, saveNotebook, saveNotebookReading, deleteNotebook, addNotebookPage, reorderNotebookPages, deleteNotebookPage, moveNotebookItems, returnNotebookItems } = scope.current
+
   const [data, setData] = useState({ trips: [], entries: [], marks: [] })
   const [loading, setLoading] = useState(true), [error, setError] = useState('')
   const readingQueues = useRef(new Map())
@@ -100,7 +105,9 @@ export function useJournal() {
   }
   async function importPhotos(files, position, onProgress) {
     if (!files.length || files.length > 500) throw new Error('一次可导入 1 至 500 张照片。')
+    const guard = api.captureApiSession()
     const dimensions = await readPhotoDimensions(files)
+    guard()
     const model = buildCanvas(materializeJournal(data)), positions = planPhotoImport(files.length, position || { x: 0, y: 0 }, [...model.headers, ...model.items.map(item => cardBounds(item.kind === 'photo' ? { ...item, width: 280, height: 326 } : item))], dimensions)
     try { return await importPhotoFiles(files, positions, onProgress) }
     finally { await reload().catch(() => setError('请重试刷新列表，已导入的照片会保留。')) }
