@@ -6,26 +6,26 @@ import { useJournal } from './useJournal'
 import { demoJournal } from './demo'
 import JourneyCanvas from './JourneyCanvas'
 import MobileFeed from './MobileFeed'
-import EntryEditor from './EntryEditor'
-import PhotoViewer from './PhotoViewer'
-import MarkEditor from './MarkEditor'
-import AddMemory from './AddMemory'
-import BatchPhotoEditor from './BatchPhotoEditor'
-import BatchItemDelete from './BatchItemDelete'
 import { materializeJournal } from './components'
 import { canvasData, findPagePosition, pageItems, PAGE_WIDTH, PAGE_HEIGHT } from './notebooks'
 import { prepareNotebookEntry } from './notebookImport'
 import { importPhotoFiles, readPhotoDimensions } from './importPhotos'
 import { captureApiSession, fetchLandmarks, saveJournalEntry } from '../lib/api'
-import PlaceAtlas from './PlaceAtlas'
 import { markDimensions } from '../../shared/journal-marks'
-import NotebookReader from './NotebookReader'
-import NotebookSettings from './NotebookSettings'
-import BackupDialog from './BackupDialog'
 import useButtonHints from './useButtonHints'
 import { notebookDropPage, planNotebookDrop } from './notebookDrop'
 import './journal.css'
 
+const EntryEditor = lazy(() => import('./EntryEditor'))
+const PhotoViewer = lazy(() => import('./PhotoViewer'))
+const MarkEditor = lazy(() => import('./MarkEditor'))
+const AddMemory = lazy(() => import('./AddMemory'))
+const BatchPhotoEditor = lazy(() => import('./BatchPhotoEditor'))
+const BatchItemDelete = lazy(() => import('./BatchItemDelete'))
+const PlaceAtlas = lazy(() => import('./PlaceAtlas'))
+const NotebookReader = lazy(() => import('./NotebookReader'))
+const NotebookSettings = lazy(() => import('./NotebookSettings'))
+const BackupDialog = lazy(() => import('./BackupDialog'))
 const WestLakeScene = lazy(() => import('./WestLakeScene'))
 function useMobile() {
   const [mobile, setMobile] = useState(() => matchMedia('(max-width: 767px)').matches)
@@ -120,17 +120,17 @@ export default function JournalPage({ userId }) {
     {mobile && <div className="j-mobile-view-switch">{viewSwitcher}</div>}
     {demo && <div className="j-demo-banner"><span><BookOpen />正在探索示例手札</span><button onClick={() => { setDemo(false); setSelection(null); setSceneTrip(null) }}><ArrowLeft />返回我的手札</button></div>}
     {!demo && journal.error && <div className="j-connection-error" role="alert"><span>{journal.error}</span><button className="j-button" onClick={retry}><RefreshCw />重试</button></div>}
-    {journal.loading && !demo ? <main className="journal-loading" role="status"><Orbit /><p>正在展开你的手札…</p></main> : view === 'atlas' ? <PlaceAtlas userId={userId} mobile={mobile} data={data} landmarks={landmarks} onOpen={open} /> : empty ? <main className="j-empty"><span className="j-empty-eyebrow">拾途 · 私人旅行手札</span><div className="j-empty-photos" aria-hidden="true"><span /><span><ImagePlus /></span><span /></div><h1>从一张照片，或一句话开始。</h1><p>留住走过的地方，和当时的小事。<br />以后想起来，再慢慢整理。</p><div><button className="j-button j-primary" onClick={create}><Plus />留下一刻</button><button className="j-button" onClick={() => setBookSettings({})}>创建手札</button>{mobile && <button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份与还原</button>}<button className="j-button" onClick={() => setDemo(true)}>看看示例手札</button></div></main> : mobile ? <><div className="nb-mobile-books"><button onClick={() => setBookSettings({})}>＋ 创建手札</button>{(rawData.notebooks || []).map(book => <button key={book.id} onClick={() => setNotebookId(book.id)}>{book.name}</button>)}<button aria-label="备份与还原" onClick={() => setBackup(true)}><DatabaseBackup /></button></div><MobileFeed data={looseData} onOpen={open} onNew={create} /></> : sceneTrip ? <Suspense fallback={<div className="journal-loading" role="status">正在准备景点场景…</div>}><WestLakeScene entries={sceneEntries} onClose={() => setSceneTrip(null)} onOpen={open} onNew={create} /></Suspense> : <JourneyCanvas userId={userId} key={demo ? 'demo' : 'personal'} data={looseData} onOpen={open} onScene={scene} onNotebook={setNotebookId} onMoveNotebook={journal.changeNotebook} onDropItem={dropIntoPage} notebookOpen={!!notebook} onMove={journal.saveLayout} onMoveGroup={journal.saveLayouts} onSaveGroup={journal.saveGroup} onDeleteGroup={journal.removeGroup} onError={setNotice} onBatchEdit={(ids, positions) => setBatch({ ids, positions })} onBatchDelete={setDeletingItems} onViewPosition={position => { canvasPosition.current = position }} demo={demo} overviewRequest={demo ? 0 : overviewRequest} />}
-    {notebook && <NotebookReader key={notebook.id} book={notebook} data={rawData} onOpen={open} onClose={() => setNotebookId(null)} onAdd={addToPage} onMove={journal.moveToPage} onReturn={journal.returnToCanvas} onAddPage={afterId => journal.createPage(notebook.id, afterId)} onDeletePage={journal.removePage} onReorder={ids => journal.reorderPages(notebook.id, ids)} onReadingChange={values => journal.changeNotebookReading(notebook.id,values)} onEditBook={() => setBookSettings({ book: notebook })} onError={setNotice} readOnly={demo} />}
-    {bookSettings && <NotebookSettings {...bookSettings} data={journal.data} position={canvasPosition.current} onSave={saveBook} onDelete={async id => { await journal.removeNotebook(id); setNotebookId(null) }} onClose={() => setBookSettings(null)} />}
+    {journal.loading && !demo ? <main className="journal-loading" role="status"><Orbit /><p>正在展开你的手札…</p></main> : view === 'atlas' ? <Suspense fallback={<main className="journal-loading" role="status">正在展开足迹版图…</main>}><PlaceAtlas userId={userId} mobile={mobile} data={data} landmarks={landmarks} onOpen={open} /></Suspense> : empty ? <main className="j-empty"><span className="j-empty-eyebrow">拾途 · 私人旅行手札</span><div className="j-empty-photos" aria-hidden="true"><span /><span><ImagePlus /></span><span /></div><h1>从一张照片，或一句话开始。</h1><p>留住走过的地方，和当时的小事。<br />以后想起来，再慢慢整理。</p><div><button className="j-button j-primary" onClick={create}><Plus />留下一刻</button><button className="j-button" onClick={() => setBookSettings({})}>创建手札</button>{mobile && <button className="j-button" onClick={() => setBackup(true)}><DatabaseBackup />备份与还原</button>}<button className="j-button" onClick={() => setDemo(true)}>看看示例手札</button></div></main> : mobile ? <><div className="nb-mobile-books"><button onClick={() => setBookSettings({})}>＋ 创建手札</button>{(rawData.notebooks || []).map(book => <button key={book.id} onClick={() => setNotebookId(book.id)}>{book.name}</button>)}<button aria-label="备份与还原" onClick={() => setBackup(true)}><DatabaseBackup /></button></div><MobileFeed data={looseData} onOpen={open} onNew={create} /></> : sceneTrip ? <Suspense fallback={<div className="journal-loading" role="status">正在准备景点场景…</div>}><WestLakeScene entries={sceneEntries} onClose={() => setSceneTrip(null)} onOpen={open} onNew={create} /></Suspense> : <JourneyCanvas userId={userId} key={demo ? 'demo' : 'personal'} data={looseData} onOpen={open} onScene={scene} onNotebook={setNotebookId} onMoveNotebook={journal.changeNotebook} onDropItem={dropIntoPage} notebookOpen={!!notebook} onMove={journal.saveLayout} onMoveGroup={journal.saveLayouts} onSaveGroup={journal.saveGroup} onDeleteGroup={journal.removeGroup} onError={setNotice} onBatchEdit={(ids, positions) => setBatch({ ids, positions })} onBatchDelete={setDeletingItems} onViewPosition={position => { canvasPosition.current = position }} demo={demo} overviewRequest={demo ? 0 : overviewRequest} />}
+    {notebook && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><NotebookReader key={notebook.id} book={notebook} data={rawData} onOpen={open} onClose={() => setNotebookId(null)} onAdd={addToPage} onMove={journal.moveToPage} onReturn={journal.returnToCanvas} onAddPage={afterId => journal.createPage(notebook.id, afterId)} onDeletePage={journal.removePage} onReorder={ids => journal.reorderPages(notebook.id, ids)} onReadingChange={values => journal.changeNotebookReading(notebook.id,values)} onEditBook={() => setBookSettings({ book: notebook })} onError={setNotice} readOnly={demo} /></Suspense>}
+    {bookSettings && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><NotebookSettings {...bookSettings} data={journal.data} position={canvasPosition.current} onSave={saveBook} onDelete={async id => { await journal.removeNotebook(id); setNotebookId(null) }} onClose={() => setBookSettings(null)} /></Suspense>}
     {accountOpen && <AccountMenu onClose={() => setAccountOpen(false)} />}
-    {backup && <BackupDialog onClose={() => setBackup(false)} onRestored={async () => { await journal.reload(); setNotice('备份已经还原，新内容已并入手札。') }} />}
-    {adding && <AddMemory {...adding} trips={journal.data.trips} onSave={save} onSaveMark={saveMark} onImport={importPhotos} onCreateTrip={journal.createTrip} onClose={() => setAdding(null)} />}
-    {batch && <BatchPhotoEditor photos={journal.data.entries.flatMap(entry => entry.photos).filter(photo => batch.ids.includes(photo.id))} positions={batch.positions} onSave={batchSave} onCreateTrip={journal.createTrip} trips={journal.data.trips} onClose={() => setBatch(null)} />}
-    {deletingItems && <BatchItemDelete items={deletingItems} onDelete={batchDelete} onClose={() => setDeletingItems(null)} />}
-    {markEditor && <MarkEditor {...markEditor} onSave={saveMark} onDelete={journal.deleteMark} onClose={() => setMarkEditor(null)} />}
-    {editor !== undefined && <EntryEditor key={editor?.id || 'new'} entry={editor} initialPhotoId={editorPhoto} trips={journal.data.trips} onClose={() => setEditor(undefined)} onSave={save} onCreateTrip={journal.createTrip} />}
-    {selection && <PhotoViewer key={selection.entryId + ':' + selection.photoId} selection={selection} data={data} onClose={() => setSelection(null)} onEdit={edit} onDelete={remove} onScene={scene} demo={demo} mobile={mobile} />}
+    {backup && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><BackupDialog onClose={() => setBackup(false)} onRestored={async () => { await journal.reload(); setNotice('备份已经还原，新内容已并入手札。') }} /></Suspense>}
+    {adding && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><AddMemory {...adding} trips={journal.data.trips} onSave={save} onSaveMark={saveMark} onImport={importPhotos} onCreateTrip={journal.createTrip} onClose={() => setAdding(null)} /></Suspense>}
+    {batch && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><BatchPhotoEditor photos={journal.data.entries.flatMap(entry => entry.photos).filter(photo => batch.ids.includes(photo.id))} positions={batch.positions} onSave={batchSave} onCreateTrip={journal.createTrip} trips={journal.data.trips} onClose={() => setBatch(null)} /></Suspense>}
+    {deletingItems && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><BatchItemDelete items={deletingItems} onDelete={batchDelete} onClose={() => setDeletingItems(null)} /></Suspense>}
+    {markEditor && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><MarkEditor {...markEditor} onSave={saveMark} onDelete={journal.deleteMark} onClose={() => setMarkEditor(null)} /></Suspense>}
+    {editor !== undefined && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><EntryEditor key={editor?.id || 'new'} entry={editor} initialPhotoId={editorPhoto} trips={journal.data.trips} onClose={() => setEditor(undefined)} onSave={save} onCreateTrip={journal.createTrip} /></Suspense>}
+    {selection && <Suspense fallback={<div className="j-toast" role="status">正在准备…</div>}><PhotoViewer key={selection.entryId + ':' + selection.photoId} selection={selection} data={data} onClose={() => setSelection(null)} onEdit={edit} onDelete={remove} onScene={scene} demo={demo} mobile={mobile} /></Suspense>}
     {notice && <div className="j-toast" role="status">{notice}</div>}
   </div>
 }

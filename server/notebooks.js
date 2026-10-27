@@ -55,10 +55,11 @@ async function verifyCoverFile(url, uploadDirectory, connection) {
 }
 export async function transaction(fn, lockCovers = false) {
   const connection = await pool.getConnection()
+  const lockName = 'shitu-cover:' + currentUserId()
   let coverLocked = false
   try {
     if (lockCovers) {
-      const [[lock]] = await connection.query("SELECT GET_LOCK('shitu-notebook-covers', 10) AS acquired")
+      const [[lock]] = await connection.query('SELECT GET_LOCK(?, 10) AS acquired', [lockName])
       if (!lock?.acquired) fail('封面正在更新，请稍后重试', 409)
       coverLocked = true
     }
@@ -72,7 +73,7 @@ export async function transaction(fn, lockCovers = false) {
     throw error
   } finally {
     try {
-      if (coverLocked) await connection.query("SELECT RELEASE_LOCK('shitu-notebook-covers')")
+      if (coverLocked) await connection.query('SELECT RELEASE_LOCK(?)', [lockName])
     } finally { connection.release() }
   }
 }

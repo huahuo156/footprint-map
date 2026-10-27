@@ -2,6 +2,7 @@ import sharp from 'sharp'
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { pool } from './db.js'
 import { currentUserId } from './auth.js'
+import { incrementMetric } from './telemetry.js'
 
 const invalid = (message, status = 400) => Object.assign(new Error(message), { status })
 const formats = { jpeg: ['image/jpeg', '.jpg'], png: ['image/png', '.png'], webp: ['image/webp', '.webp'] }
@@ -49,7 +50,10 @@ export async function registerAsset(file, connection = pool) {
     if (ownedConnection) await db.beginTransaction()
     await db.execute('SELECT id FROM users WHERE id=? FOR UPDATE', [owner])
     const [[usage]] = await db.execute('SELECT COALESCE(SUM(bytes),0) AS bytes FROM assets WHERE owner_id=?', [owner])
-    if (Number(usage.bytes) + bytes > USER_STORAGE_BYTES) throw invalid('已达到账号 512MB 图片容量上限', 413)
+    if (Number(usage.bytes) + bytes > USER_STORAGE_BYTES) {
+      incrementMetric('storage_rejections')
+      throw invalid('已达到账号 512MB 图片容量上限', 413)
+    }
     await db.execute("INSERT INTO assets (storage_key,owner_id,bytes,mime,status) VALUES (?,?,?,?,'active')", [key, owner, bytes, file.mimetype])
     if (ownedConnection) await db.commit()
   } catch (error) {

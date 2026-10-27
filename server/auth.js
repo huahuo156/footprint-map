@@ -6,6 +6,8 @@ import { pool } from './db.js'
 import { sendMail as defaultSendMail } from './mail.js'
 
 const context = new AsyncLocalStorage()
+// Internal background work uses an owner already authenticated by the API.
+export const withUserContext = (ownerId, operation) => context.run({ id: ownerId }, operation)
 const COOKIE = 'shitu_session'
 const SESSION_MS = 7 * 24 * 60 * 60 * 1000
 const hash = value => createHash('sha256').update(value).digest('hex')
@@ -94,13 +96,13 @@ async function passwordWork(operation) {
 async function passwordHash(password) { return passwordWork(() => argon2.hash(password, { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 })) }
 async function passwordVerify(encoded, password) { return passwordWork(() => argon2.verify(encoded, password)) }
 
-export function createAuthRouter({ database = pool, sendMail = defaultSendMail, config = environment() } = {}) {
+export function createAuthRouter({ database = pool, sendMail = defaultSendMail, config = environment(), limiter = rateLimit } = {}) {
   const router = Router()
   const middleware = createAuthMiddleware({ database, appOrigin: config.appOrigin })
   const mailReady = () => Boolean(config.smtpUrl && config.mailFrom && /^https?:\/\/[^/]+$/.test(config.appOrigin || ''))
   const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: Boolean(config.production), path: '/' }
-  const ipLimit = rateLimit({ max: 30 })
-  const accountLimit = rateLimit({ max: 10, key: req => typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : req.ip })
+  const ipLimit = limiter({ scope: 'auth-ip', max: 30 })
+  const accountLimit = limiter({ scope: 'auth-account', max: 10, key: req => typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : req.ip })
   let dummyHash
   router.use(asyncRoute(async (req, res, next) => { await middleware.resolve(req); next() }), middleware.csrfProtection)
   // Public credential submissions still require the configured same origin.

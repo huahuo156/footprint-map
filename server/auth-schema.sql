@@ -33,3 +33,11 @@ CREATE TABLE IF NOT EXISTS assets (
   FOREIGN KEY (owner_id) REFERENCES users(id),
   INDEX idx_assets_owner (owner_id)
 );
+CREATE TABLE IF NOT EXISTS rate_limits (
+  scope VARCHAR(64) NOT NULL,
+  key_hash CHAR(64) NOT NULL,
+  requests BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  expires_at DATETIME(3) NOT NULL,
+  PRIMARY KEY (scope,key_hash),
+  INDEX idx_rate_limits_expiry (expires_at)
+);

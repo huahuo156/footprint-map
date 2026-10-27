@@ -77,9 +77,10 @@ async function journal() {
 }
 async function changeCanvasGroups(change) {
   const connection = await pool.getConnection()
+  const lockName = 'shitu-groups:' + currentUserId()
   let locked = false
   try {
-    const [[lock]] = await connection.query("SELECT GET_LOCK('shitu-canvas-groups', 10) AS acquired")
+    const [[lock]] = await connection.query('SELECT GET_LOCK(?, 10) AS acquired', [lockName])
     if (!lock.acquired) throw invalid('色块正在更新，请稍后重试')
     locked = true
     await connection.beginTransaction()
@@ -93,7 +94,7 @@ async function changeCanvasGroups(change) {
     return result
   } catch (error) { await connection.rollback(); throw error }
   finally {
-    if (locked) await connection.query("SELECT RELEASE_LOCK('shitu-canvas-groups')")
+    if (locked) await connection.query('SELECT RELEASE_LOCK(?)', [lockName])
     connection.release()
   }
 }

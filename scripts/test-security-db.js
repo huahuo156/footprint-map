@@ -25,6 +25,7 @@ try {
   process.env.MYSQL_PASSWORD = process.env.TEST_MYSQL_ADMIN_PASSWORD || process.env.MYSQL_ROOT_PASSWORD
   process.env.UPLOAD_DIRECTORY = uploads
   process.env.APP_ORIGIN = 'http://localhost:4173'
+  process.env.OPERATIONS_TOKEN = 'isolated-operations-token-' + randomBytes(16).toString('hex')
   const { pool, initializeDatabase } = await import('../server/db.js')
   try {
     await initializeDatabase()
@@ -55,4 +56,8 @@ try {
   const arguments_ = process.argv.includes('--e2e') ? ['scripts/real-ui-test.mjs'] : ['--test', '--test-concurrency=1', 'server/security.test.js']
   const child = spawn(process.execPath, arguments_, { stdio: 'inherit', env: { ...process.env, SECURITY_TEST_DATABASE: databaseName } })
   process.exitCode = await new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', code => resolve(code ?? 1)) })
+  if (!process.argv.includes('--e2e') && !process.exitCode) {
+    const { runSystemBackupIntegration } = await import('./restore-drill.js')
+    await runSystemBackupIntegration()
+  }
 } finally { await cleanup() }

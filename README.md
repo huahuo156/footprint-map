@@ -80,6 +80,12 @@ npm run dev
 | `npm run db:migrate` | 显式执行数据库迁移 |
 | `npm run assets:gc -- --dry-run` | 预览超过 24 小时的未引用图片与待重试删除任务 |
 | `npm run assets:gc` | 回收上述图片并释放容量；保留仍被照片或封面引用的文件 |
+| `npm run maintenance -- --dry-run` | 预览过期会话、邮件凭据、限流记录和遗留文件清理 |
+| `npm run maintenance` | 手动执行维护；正常服务每小时自动执行一次 |
+| `npm run ops:check` | 检查受保护的运维状态，容量或错误告警时返回非零退出码 |
+| `npm run backup:system -- --offline --out <新目录>` | 停写维护窗口创建完整恢复点 |
+| `npm run backup:verify -- <目录>` / `npm run backup:drill -- <目录>` | 校验恢复点 / 在随机隔离数据库中演练恢复 |
+| `npm run check:bundle` | 检查真实构建依赖图和首屏分包预算 |
 | `npm run lint` | 静态检查 |
 | `npm test` | 前端、模型和 API 边界单元测试 |
 | `npm run test:security` | 身份 HTTP 测试及所有权、私有资源回归，使用数据库/邮件替身 |
@@ -88,6 +94,8 @@ npm run dev
 | `npm run test:smoke` | 使用模拟 API 检查桌面/手机深浅主题、版图和阅读器焦点 |
 
 `test:api` 和 `test:e2e` 需要数据库建库权限，自动生成随机测试库与临时图片目录，结束后清理，不访问个人手帐数据库。浏览器测试在 Windows 使用 Edge，其他平台使用 Playwright Chromium（首次执行 `npx playwright install chromium`）。真实浏览器失败截图和追踪写入 `test-results/real-e2e/`，模拟检查截图写入 `test-results/ui-smoke/`，均不进入版本控制。
+
+`test:api` 还包含完整系统恢复演练，覆盖双账号、旧表与手帐关系、日期/JSON/大整数及图片哈希。监控配置见 [监控与维护](docs/monitoring.md)，停写条件和恢复点权限见 [恢复演练](docs/recovery.md)。
 
 CI 见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，在临时 MySQL 服务上执行静态检查、单元测试、安全测试、真实 API 测试、依赖审计和浏览器冒烟测试。
 
@@ -103,6 +111,10 @@ npm start
 本地构建运行时，将 `APP_ORIGIN` 改为 `http://127.0.0.1:3001`。手机与电脑连接同一局域网时，设置 `API_HOST=0.0.0.0`，把 `APP_ORIGIN` 改为 `http://电脑局域网IP:3001`，重启 API 后从手机访问该地址。浏览器定位需要安全上下文，局域网 HTTP 下可手工填写地点。
 
 生产环境使用 HTTPS 和 `NODE_ENV=production`，设置准确的来源、代理和数据库权限，详见 [运行说明](docs/operations.md)。
+
+升级此版本需先停服务，备份后运行 `npm run db:migrate` 创建共享限流表，再重新构建并启动。所有 API 实例必须连接同一 MySQL 主库、共用图片目录，并使用相同的 `RESTORE_CONCURRENCY`（默认 2）；不需要 Redis。图片校验和还原在独立工作线程处理，每个账号同时最多一个还原。当前 HTTP 请求会等待任务结果，任务不提供持久化排队或断点续传。
+
+画布首页按需加载版图、阅读器、编辑器与备份窗口；地图地理数据不再随首页下载。当前手帐入口分包约 61kB（gzip 21kB），可选地图包约 802kB，首次打开版图时仍需加载。
 
 ## 数据与备份
 

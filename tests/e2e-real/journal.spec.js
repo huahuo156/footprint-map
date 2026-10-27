@@ -4,18 +4,26 @@ import { readFile } from 'node:fs/promises'
 
 test('real accounts upload, keep media private, save a notebook, back up, restore and revoke logout', async ({ page, context, browser }, testInfo) => {
   const email = `${testInfo.project.name}-a@example.com`, password = 'disposable-browser-password-123'
-  const errors = []
+  const errors = [], featureLoads = []
   page.on('pageerror', error => errors.push(error.message))
+  page.on('request', request => {
+    if (/\/assets\/(?:PlaceAtlas|NotebookReader|EntryEditor)-[^/]+\.js$/.test(request.url())) featureLoads.push(request.url())
+  })
   await page.goto('/')
   await page.getByLabel('邮箱', { exact: true }).fill(email)
   await page.getByLabel('密码', { exact: true }).fill(password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('button', { name: '账号', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '自由画布', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(featureLoads).toEqual([])
   const session = await (await context.request.get('/api/auth/session')).json()
   const headers = { Origin: testInfo.project.use.baseURL, 'X-CSRF-Token': session.csrfToken }
   const image = await sharp({ create: { width: 30, height: 20, channels: 3, background: '#aabbcc' } }).png().toBuffer()
   await page.getByRole('button', { name: '留下一刻', exact: true }).first().click()
   const editor = page.getByRole('dialog', { name: '留下一刻', exact: true })
+  await expect(editor).toBeVisible()
+  expect(featureLoads.some(url => url.includes('/EntryEditor-'))).toBe(true)
+  expect(featureLoads.some(url => /\/(?:PlaceAtlas|NotebookReader)-/.test(url))).toBe(false)
   await editor.getByLabel('选择旅行照片').setInputFiles({ name: 'memory.png', mimeType: 'image/png', buffer: image })
   const saved = page.waitForResponse(r => r.url().endsWith('/journal/entries') && r.request().method() === 'POST')
   await editor.getByRole('button', { name: '留下', exact: true }).click()
@@ -51,7 +59,14 @@ test('real accounts upload, keep media private, save a notebook, back up, restor
   await expect(settings).toBeHidden()
   const reader = page.getByRole('dialog', { name: '真实旅行手札，翻页手帐' })
   await expect(reader).toBeVisible()
+  expect(featureLoads.some(url => url.includes('/NotebookReader-'))).toBe(true)
+  expect(featureLoads.some(url => url.includes('/PlaceAtlas-'))).toBe(false)
   await reader.getByRole('button', { name: '合上手札', exact: true }).click()
+
+  await page.getByRole('button', { name: '足迹版图', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '我的中国足迹', exact: true })).toBeVisible()
+  expect(featureLoads.some(url => url.includes('/PlaceAtlas-'))).toBe(true)
+  await page.getByRole('button', { name: '自由画布', exact: true }).click()
 
   await page.getByRole('button', { name: '备份', exact: true }).click()
   const backup = page.getByRole('dialog', { name: '备份与还原' })

@@ -13,8 +13,8 @@ import { components as parseComponents } from './journal.js'
 import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
 import { openZipFile, zipChunks } from './zip.js'
 import { expandCanvasGroups } from '../shared/journal-groups.js'
+import { acquireRestoreSlot, runRestoreThread } from './restore-runner.js'
 
-let restoring = false
 const MAX_BACKUP_BYTES = 576 * 1024 * 1024
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 const BACKUP_FORMAT = 'shitu-journal-backup'
@@ -75,7 +75,7 @@ async function bulkInsert(connection, table, columns, rows) {
   }
 }
 
-export function backupRoutes(router, uploadDirectory) {
+export function backupRoutes(router, uploadDirectory, { acquireSlot = acquireRestoreSlot, runRestore = runRestoreThread } = {}) {
   router.get('/backup', async (req, res) => {
     const connection = await pool.getConnection()
     let snapshot
@@ -147,30 +147,33 @@ export function backupRoutes(router, uploadDirectory) {
     fileFilter: (_req, file, cb) => cb(/\.zip$/i.test(file.originalname) || ['application/zip', 'application/x-zip-compressed'].includes(file.mimetype) ? null : invalid('请选择 .zip 备份文件'), true),
   })
   router.post('/restore', async (req, res) => {
-    if (restoring) throw Object.assign(new Error('Restore already running'), {status:429})
-    restoring = true
-    let archive
+    // A malformed non-multipart request needs no admission slot or worker.
+    if (!req.is('multipart/form-data')) throw invalid('请选择备份压缩包')
+    const owner = currentUserId(), release = await acquireSlot(owner)
     try {
       await new Promise((resolve, reject) => restoreUpload.single('backup')(req, res, error => error ? reject(error) : resolve()))
       if (!req.file) throw invalid('请选择备份压缩包')
-      archive = await openZipFile(req.file.path, { maxBytes: MAX_BACKUP_BYTES, maxManifestBytes: MAX_MANIFEST_BYTES })
-      const files = archive.files
-      let manifest
-      try { manifest = JSON.parse((await files.get('backup.json')?.read())?.toString('utf8') ?? 'null') } catch { throw invalid('备份清单无法读取') }
-      if (manifest?.format !== BACKUP_FORMAT || manifest?.version !== 1 || !manifest.data || typeof manifest.data !== 'object') throw invalid('这不是拾途导出的手帐备份')
-      const plan = await buildRestorePlan(manifest.data, files)
-      const used = new Set(plan.fileWrites.map(file => file.source))
-      for (const [name, source] of files) if (name !== 'backup.json' && !used.has(source)) await source.read()
-      await applyRestore(plan, uploadDirectory)
-      res.json({ restored: { trips: plan.trips.length, entries: plan.entries.length, photos: plan.photos.length, marks: plan.marks.length, canvas_groups: plan.groups.length, notebooks: plan.notebooks.length } })
+      res.json(await runRestore(req.file.path, uploadDirectory, owner, { signal: release.signal }))
     } finally {
-      try { await archive?.close() }
-      finally {
-        if (req.file) await unlink(req.file.path).catch(() => {})
-        restoring = false
-      }
+      if (req.file) await unlink(req.file.path).catch(() => {})
+      await release()
     }
   })
+}
+
+export async function restoreArchive(filename, uploadDirectory) {
+  const archive = await openZipFile(filename, { maxBytes: MAX_BACKUP_BYTES, maxManifestBytes: MAX_MANIFEST_BYTES })
+  try {
+    const files = archive.files
+    let manifest
+    try { manifest = JSON.parse((await files.get('backup.json')?.read())?.toString('utf8') ?? 'null') } catch { throw invalid('备份清单无法读取') }
+    if (manifest?.format !== BACKUP_FORMAT || manifest?.version !== 1 || !manifest.data || typeof manifest.data !== 'object') throw invalid('这不是拾途导出的手帐备份')
+    const plan = await buildRestorePlan(manifest.data, files)
+    const used = new Set(plan.fileWrites.map(file => file.source))
+    for (const [name, source] of files) if (name !== 'backup.json' && !used.has(source)) await source.read()
+    await applyRestore(plan, uploadDirectory)
+    return { restored: { trips: plan.trips.length, entries: plan.entries.length, photos: plan.photos.length, marks: plan.marks.length, canvas_groups: plan.groups.length, notebooks: plan.notebooks.length } }
+  } finally { await archive.close() }
 }
 
 async function buildRestorePlan(data, files) {
@@ -220,7 +223,7 @@ async function buildRestorePlan(data, files) {
     if (!filename) {
       const content = files.get('photos/' + basename)
       if (!content) throw invalid(`备份里缺少照片文件 ${basename}，这份备份不完整`)
-      filename = randomUUID() + path.extname(basename)
+      filename = 'restore-photo-' + randomUUID() + path.extname(basename)
       renamed.set(basename, filename)
       fileWrites.push({ filename, source: content })
     }
@@ -269,7 +272,7 @@ async function buildRestorePlan(data, files) {
       if (content) {
         let filename = renamed.get(basename)
         if (!filename) {
-          filename = 'cover-' + randomUUID() + path.extname(basename)
+          filename = 'cover-restore-' + randomUUID() + path.extname(basename)
           renamed.set(basename, filename)
           fileWrites.push({ filename, source: content })
         }

@@ -1,4 +1,5 @@
 import JournalImage from './JournalImage'
+import './notebook.css'
 
 export default function NotebookCover({ book, pageCount }) {
   const label = book.cover_label ?? 'MEMO'

@@ -9,13 +9,16 @@ const db = vi.hoisted(() => ({ run: null, connection: null }))
 vi.mock('../server/db.js', () => ({ pool: { query: (...args) => db.run(...args), execute: (...args) => db.run(...args), getConnection: async () => db.connection } }))
 vi.mock('../server/auth.js', () => ({ currentUserId: () => 'owner-a' }))
 import { createJournalRouter } from '../server/journal.js'
-import { backupRoutes } from '../server/backup.js'
+import { backupRoutes, restoreArchive } from '../server/backup.js'
 const servers = []
 const directories = []
 afterEach(async () => { await Promise.all(directories.splice(0).map(dir => rm(dir,{recursive:true,force:true}))); await Promise.all(servers.splice(0).map(s => new Promise(resolve => {s.closeAllConnections();s.close(resolve)}))) })
 async function server() {
   const directory = await mkdtemp(path.join(tmpdir(),'ownership-'));directories.push(directory)
-  const app = express(); app.use(express.json()); const router = createJournalRouter(directory); backupRoutes(router,directory); app.use(router)
+  const app = express(); app.use(express.json()); const router = createJournalRouter(directory)
+  // Keep parser/validation/SQL real; only the process boundary and admission DB
+  // are replaced because this suite uses an injected database instead of MySQL.
+  backupRoutes(router,directory,{ acquireSlot: async () => async () => {}, runRestore: restoreArchive }); app.use(router)
   app.use((error,_req,res,_next) => res.status(error.status || 500).json({error:error.message}))
   const listener = app.listen(0,'127.0.0.1'); servers.push(listener)
   await new Promise(resolve => listener.once('listening',resolve)); return `http://127.0.0.1:${listener.address().port}`

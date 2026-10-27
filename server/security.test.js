@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID, randomBytes } from 'node:crypto'
-import { readdir, stat, rename, copyFile, open } from 'node:fs/promises'
+import { readdir, stat, rename, copyFile, open, writeFile, utimes } from 'node:fs/promises'
 import { openAsBlob, createWriteStream } from 'node:fs'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -12,6 +12,8 @@ import { app, uploadDirectory } from './app.js'
 import { pool } from './db.js'
 import { readZip, zipChunks } from './zip.js'
 import { collectUnusedAssets } from './asset-lifecycle.js'
+import { metricsSnapshot } from './telemetry.js'
+import { runMaintenance } from './operations.js'
 
 if (!/^footprint_security_test_[a-f0-9]{12}$/.test(process.env.MYSQL_DATABASE || '') || process.env.MYSQL_DATABASE !== process.env.SECURITY_TEST_DATABASE) throw new Error('Use npm run test:api: isolated disposable database required')
 const origin = process.env.APP_ORIGIN
@@ -206,7 +208,14 @@ test('a backup over 64MiB streams as one ZIP, restores fully and rolls back a co
   await pipeline(Readable.fromWeb(response.body), createWriteStream(target))
   assert.ok((await stat(target)).size > 64 * 1024 * 1024)
   const restoreForm = new FormData(); restoreForm.append('backup', await openAsBlob(target), 'large.zip')
-  const restored = await json(user, '/api/journal/restore', restoreForm)
+  const restoring = request(user, '/api/journal/restore', restoreForm)
+  const deadline = Date.now() + 15000
+  while (!metricsSnapshot().restore_active && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10))
+  assert.ok(metricsSnapshot().restore_active > 0, 'Large restore runs in a tracked background thread')
+  assert.equal((await fetch(base + '/api/health', { signal: AbortSignal.timeout(2000) })).status, 200)
+  const restoredResponse = await restoring
+  assert.equal(restoredResponse.status, 200)
+  const restored = await restoredResponse.json()
   assert.equal(restored.restored.photos, 8)
   assert.equal((await json(user, '/api/journal')).entries.length, 2)
   const before = (await readdir(uploadDirectory)).sort()
@@ -256,4 +265,83 @@ test('backup preflight does not consume the five actual download slots', async (
     await download.arrayBuffer()
   }
   assert.equal((await request(user, '/api/journal/backup')).status, 429)
+})
+
+test('independent rate limiter instances share an atomic account budget and expiry in MySQL', async () => {
+  const { sharedRateLimit } = await import('./shared-rate-limit.js')
+  const { default: express } = await import('express')
+  const limiterApp = express(), scope = 'integration-' + randomUUID()
+  const options = { scope, max: 3, windowMs: 60000, key: req => req.get('X-Test-Key') }
+  limiterApp.get('/one', sharedRateLimit(options), (_req, res) => res.json({ ok: true }))
+  limiterApp.get('/two', sharedRateLimit(options), (_req, res) => res.json({ ok: true }))
+  limiterApp.use((error, _req, res, _next) => res.status(error.status || 500).json({ error: error.message }))
+  const listener = limiterApp.listen(0, '127.0.0.1')
+  await new Promise(resolve => listener.once('listening', resolve))
+  const address = `http://127.0.0.1:${listener.address().port}`
+  try {
+    const results = await Promise.all(Array.from({ length: 8 }, (_, i) => fetch(address + (i % 2 ? '/one' : '/two'), { headers: { 'X-Test-Key': 'a' } })))
+    assert.equal(results.filter(response => response.status === 200).length, 3)
+    assert.equal(results.filter(response => response.status === 429).length, 5)
+    assert.equal((await fetch(address + '/two', { headers: { 'X-Test-Key': 'b' } })).status, 200)
+    await pool.execute('UPDATE rate_limits SET expires_at=DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 1 SECOND) WHERE scope=?', [scope])
+    assert.equal((await fetch(address + '/one', { headers: { 'X-Test-Key': 'a' } })).status, 200)
+  } finally { await new Promise(resolve => listener.close(resolve)) }
+})
+
+test('restore admission is shared across instances, limits each owner, and releases slots', async () => {
+  const { acquireRestoreSlot } = await import('./restore-runner.js')
+  const first = await acquireRestoreSlot(a.id), second = await acquireRestoreSlot(b.id)
+  try {
+    await assert.rejects(acquireRestoreSlot(a.id), { status: 429 })
+    await assert.rejects(acquireRestoreSlot(unverified.id), { status: 429 })
+    await first()
+    const available = await acquireRestoreSlot(unverified.id)
+    await available()
+  } finally { await first(); await second() }
+})
+
+test('notebook mutations no longer wait on a global cross-account cover lock', async () => {
+  const blocker = await pool.getConnection()
+  await blocker.query("SELECT GET_LOCK('shitu-notebook-covers',0)")
+  try {
+    const response = await fetch(base + '/api/journal/notebooks', { method: 'POST', signal: AbortSignal.timeout(1500), headers: { Cookie: b.cookie, Origin: origin, 'X-CSRF-Token': b.csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'independent account' }) })
+    assert.equal(response.status, 201)
+  } finally { await blocker.query("SELECT RELEASE_LOCK('shitu-notebook-covers')"); blocker.release() }
+})
+
+test('maintenance removes expired credentials and stale temporary files while protected operations report capacity', async () => {
+  const token = process.env.OPERATIONS_TOKEN
+  assert.equal((await fetch(base + '/api/operations/status')).status, 401)
+  const old = new Date(Date.now() - 2 * 86400000), temporary = 'restore-' + randomUUID() + '.zip'
+  const target = path.join(uploadDirectory, temporary), unknown = path.join(uploadDirectory, 'operator-unknown.txt')
+  await writeFile(target, 'stale'); await utimes(target, old, old)
+  await writeFile(unknown, 'keep'); await utimes(unknown, old, old)
+  const expiredHash = randomBytes(32).toString('hex')
+  await pool.execute('INSERT INTO sessions (token_hash,user_id,csrf_token,expires_at) VALUES (?,?,?,?)', [expiredHash, a.id, randomBytes(32).toString('hex'), old])
+  await pool.execute('INSERT INTO auth_tokens (id,user_id,token_hash,purpose,expires_at) VALUES (?,?,?,?,?)', [randomUUID(), a.id, randomBytes(32).toString('hex'), 'verify', old])
+  await runMaintenance({ uploadDirectory, dryRun: true })
+  assert.ok(await stat(target))
+  const result = await runMaintenance({ uploadDirectory })
+  assert.ok(result.expired.sessions >= 1 && result.expired.auth_tokens >= 1)
+  await assert.rejects(stat(target), { code: 'ENOENT' })
+  assert.ok(await stat(unknown))
+  const response = await fetch(base + '/api/operations/status', { headers: { Authorization: 'Bearer ' + token } })
+  assert.equal(response.status, 200)
+  const status = await response.json()
+  assert.ok(status.nearCapacityAccounts > 0)
+  assert.ok(status.warnings.includes('accounts_near_capacity'))
+  assert.ok(!JSON.stringify(status).includes('example.com'))
+})
+
+test('maintenance preserves both registered and unregistered images still referenced by retired guides and checkins', async () => {
+  const user = await account('legacy-retention@example.com'), url = await cover(user)
+  await pool.execute('UPDATE assets SET created_at=DATE_SUB(NOW(), INTERVAL 2 DAY) WHERE storage_key=?', [path.basename(url)])
+  await pool.execute('INSERT INTO guides (title,cover_image_url,landmark_ids) VALUES (?,?,?)', ['archived guide', url, '[]'])
+  const key = 'restore-photo-' + randomUUID() + '.png', target = path.join(uploadDirectory, key)
+  await writeFile(target, 'legacy image preserved for system recovery')
+  const old = new Date(Date.now() - 2 * 86400000); await utimes(target, old, old)
+  await pool.execute('INSERT INTO checkins (lat,lng,image_url) VALUES (?,?,?)', [30, 120, '/uploads/' + key])
+  await runMaintenance({ uploadDirectory })
+  assert.equal((await request(user, url)).status, 200)
+  assert.ok(await stat(target))
 })

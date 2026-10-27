@@ -31,6 +31,7 @@ jobs:
       - run: npm test
       - run: npm run test:security
       - run: npm run test:api
+      - run: npm run check:bundle
       - run: npm audit --omit=dev
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
