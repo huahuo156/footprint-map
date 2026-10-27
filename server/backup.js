@@ -4,18 +4,19 @@ import multer from 'multer'
 import { randomUUID } from 'node:crypto'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { open, readFile, stat, unlink } from 'node:fs/promises'
+import { open, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pool } from './db.js'
 import { currentUserId } from './auth.js'
 import { assertOwnedAsset, registerAsset, normalizeImageBuffer } from './assets.js'
 import { components as parseComponents } from './journal.js'
 import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
-import { readZip, zipChunks } from './zip.js'
+import { openZipFile, zipChunks } from './zip.js'
 import { expandCanvasGroups } from '../shared/journal-groups.js'
 
 let restoring = false
-const MAX_BACKUP_BYTES = 64 * 1024 * 1024
+const MAX_BACKUP_BYTES = 576 * 1024 * 1024
+const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 const BACKUP_FORMAT = 'shitu-journal-backup'
 const colors = ['sage', 'sand', 'sky', 'rose', 'lavender']
 const filters = ['original', 'film', 'mono']
@@ -75,7 +76,7 @@ async function bulkInsert(connection, table, columns, rows) {
 }
 
 export function backupRoutes(router, uploadDirectory) {
-  router.get('/backup', async (_req, res) => {
+  router.get('/backup', async (req, res) => {
     const connection = await pool.getConnection()
     let snapshot
     try {
@@ -115,7 +116,10 @@ export function backupRoutes(router, uploadDirectory) {
       await assertOwnedAsset('/uploads/' + basename)
       const target = path.join(uploadDirectory, basename)
       const info = await stat(target).catch(error => { if (error.code !== 'ENOENT') throw error; return null })
-      if (info?.isFile()) { photoEntries.push({ name: 'photos/' + basename, path: target }); totalBytes += info.size }
+      if (info?.isFile()) {
+        if (info.size > 10 * 1024 * 1024) throw invalid('备份中有图片超过 10MiB，无法还原，请先处理该图片')
+        photoEntries.push({ name: 'photos/' + basename, path: target }); totalBytes += info.size
+      }
       else missing.push('/uploads/' + basename)
     }
     const manifest = {
@@ -128,10 +132,12 @@ export function backupRoutes(router, uploadDirectory) {
     const entries2 = [{ name: 'backup.json', data: Buffer.from(JSON.stringify(manifest)) }, ...photoEntries]
     // A successful export must fit the same limits as restore, including ZIP headers.
     const zipOverhead = 22 + entries2.reduce((size, entry) => size + 76 + Buffer.byteLength(entry.name) * 2, 0)
-    if (totalBytes + entries2[0].data.length + zipOverhead > MAX_BACKUP_BYTES) throw Object.assign(new Error('备份超过 64MiB，无法导出为可还原的 ZIP。请使用数据库卷和 uploads 目录做完整备份。'), { status: 413 })
+    if (entries2[0].data.length > MAX_MANIFEST_BYTES || entries2.length >= 65535 || totalBytes + entries2[0].data.length + zipOverhead > MAX_BACKUP_BYTES) throw Object.assign(new Error('备份超过 576MiB、清单超过 16MiB 或文件数过多。请使用数据库和图片目录做完整备份。'), { status: 413 })
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="shitu-backup-${today()}.zip"`)
     res.setHeader('X-Backup-Missing-Files', missing.length)
+    res.setHeader('Content-Length', totalBytes + entries2[0].data.length + zipOverhead)
+    if (req.method === 'HEAD') return res.end()
     await pipeline(Readable.from(zipChunks(entries2)), res)
   })
 
@@ -143,19 +149,26 @@ export function backupRoutes(router, uploadDirectory) {
   router.post('/restore', async (req, res) => {
     if (restoring) throw Object.assign(new Error('Restore already running'), {status:429})
     restoring = true
+    let archive
     try {
       await new Promise((resolve, reject) => restoreUpload.single('backup')(req, res, error => error ? reject(error) : resolve()))
       if (!req.file) throw invalid('请选择备份压缩包')
-      const files = readZip(await readFile(req.file.path), { maxBytes: MAX_BACKUP_BYTES })
+      archive = await openZipFile(req.file.path, { maxBytes: MAX_BACKUP_BYTES, maxManifestBytes: MAX_MANIFEST_BYTES })
+      const files = archive.files
       let manifest
-      try { manifest = JSON.parse(files.get('backup.json')?.toString('utf8') ?? 'null') } catch { throw invalid('备份清单无法读取') }
+      try { manifest = JSON.parse((await files.get('backup.json')?.read())?.toString('utf8') ?? 'null') } catch { throw invalid('备份清单无法读取') }
       if (manifest?.format !== BACKUP_FORMAT || manifest?.version !== 1 || !manifest.data || typeof manifest.data !== 'object') throw invalid('这不是拾途导出的手帐备份')
       const plan = await buildRestorePlan(manifest.data, files)
+      const used = new Set(plan.fileWrites.map(file => file.source))
+      for (const [name, source] of files) if (name !== 'backup.json' && !used.has(source)) await source.read()
       await applyRestore(plan, uploadDirectory)
       res.json({ restored: { trips: plan.trips.length, entries: plan.entries.length, photos: plan.photos.length, marks: plan.marks.length, canvas_groups: plan.groups.length, notebooks: plan.notebooks.length } })
     } finally {
-      if (req.file) await unlink(req.file.path).catch(() => {})
-      restoring = false
+      try { await archive?.close() }
+      finally {
+        if (req.file) await unlink(req.file.path).catch(() => {})
+        restoring = false
+      }
     }
   })
 }
@@ -209,7 +222,7 @@ async function buildRestorePlan(data, files) {
       if (!content) throw invalid(`备份里缺少照片文件 ${basename}，这份备份不完整`)
       filename = randomUUID() + path.extname(basename)
       renamed.set(basename, filename)
-      fileWrites.push({ filename, data: content })
+      fileWrites.push({ filename, source: content })
     }
     photoRows.push([
       photoMap.get(uuid(photo.id)), mapped(entryMap, photo.entry_id, '照片'), '/uploads/' + filename,
@@ -254,8 +267,12 @@ async function buildRestorePlan(data, files) {
       const basename = raw.slice('/uploads/'.length), content = files.get('photos/' + basename)
       if (!content) throw invalid(`备份里缺少封面文件 ${basename}，这份备份不完整`)
       if (content) {
-        const filename = 'cover-' + randomUUID() + path.extname(basename)
-        fileWrites.push({ filename, data: content })
+        let filename = renamed.get(basename)
+        if (!filename) {
+          filename = 'cover-' + randomUUID() + path.extname(basename)
+          renamed.set(basename, filename)
+          fileWrites.push({ filename, source: content })
+        }
         coverUrl = '/uploads/' + filename
       }
     } else if (/^\/(journal-demo\/[\w-]+\.(jpg|png|webp)|notebook-covers\/[\w-]+\.jpg)$/.test(raw)) coverUrl = raw
@@ -285,21 +302,22 @@ async function applyRestore(plan, uploadDirectory) {
   try {
     for (const file of plan.fileWrites) {
       const mime = {'.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp'}[path.extname(file.filename)]
-      const normalized = await normalizeImageBuffer(file.data, mime)
+      const normalized = await normalizeImageBuffer(await file.source.read(), mime)
       if (normalized.extension !== path.extname(file.filename)) throw invalid('Image format mismatch')
-      file.data = normalized.data; file.mimetype = normalized.mime
+      file.size = normalized.data.length; file.mimetype = normalized.mime
       const handle = await open(path.join(uploadDirectory, file.filename), 'wx')
       created.push(file.filename)
-      try { await handle.writeFile(file.data) } finally { await handle.close() }
+      try { await handle.writeFile(normalized.data) } finally { await handle.close() }
     }
-  } catch {
+  } catch (error) {
     await Promise.all(created.map(name => unlink(path.join(uploadDirectory, name)).catch(() => {})))
+    if (error.status) throw error
     throw invalid('备份里的照片文件写入失败，请重试')
   }
   try {
     connection = await pool.getConnection()
     await connection.beginTransaction()
-    for (const file of plan.fileWrites) await registerAsset({filename:file.filename,path:path.join(uploadDirectory,file.filename),size:file.data.length,mimetype:file.mimetype}, connection)
+    for (const file of plan.fileWrites) await registerAsset({filename:file.filename,path:path.join(uploadDirectory,file.filename),size:file.size,mimetype:file.mimetype}, connection)
     await bulkInsert(connection, 'journal_trips', ['owner_id', 'id', 'name', 'region', 'color', 'canvas_x', 'canvas_y', 'created_at'], plan.trips.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_entries', ['owner_id', 'id', 'trip_id', 'entry_date', 'captured_on', 'components', 'title', 'caption', 'place_name', 'landmark_id', 'lat', 'lng', 'spot_key', 'mood', 'canvas_x', 'canvas_y', 'rotation', 'created_at', 'updated_at'], plan.entries.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_photos', ['id', 'entry_id', 'url', 'crop_x', 'image_filter', 'components', 'canvas_x', 'canvas_y', 'canvas_absolute', 'rotation', 'sort_order'], plan.photos)
@@ -311,9 +329,10 @@ async function applyRestore(plan, uploadDirectory) {
     await bulkInsert(connection, 'journal_notebook_pages', ['id', 'notebook_id', 'sort_order'], plan.pages)
     for (const [kind, rows] of Object.entries(plan.itemRows)) await bulkInsert(connection, `journal_notebook_${kind}_items`, ['id', 'page_id', 'x', 'y', 'rotation'], rows)
     await connection.commit()
-  } catch {
+  } catch (error) {
     await connection?.rollback().catch(() => {})
     await Promise.all(created.map(name => unlink(path.join(uploadDirectory, name)).catch(() => {})))
+    if (error.status) throw error
     throw invalid('备份内容写入手帐时失败，现有数据没有变化')
   } finally {
     connection?.release()

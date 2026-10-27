@@ -2,22 +2,8 @@
 // 解包支持 store 与 deflate，足够还原自己导出的备份。不支持 ZIP64。
 import { readFile } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
-
-const CRC_TABLE = (() => {
-  const table = new Int32Array(256)
-  for (let i = 0; i < 256; i++) {
-    let value = i
-    for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xEDB88320 ^ (value >>> 1) : value >>> 1
-    table[i] = value
-  }
-  return table
-})()
-
-function crc32(buffer) {
-  let crc = -1
-  for (let i = 0; i < buffer.length; i++) crc = CRC_TABLE[(crc ^ buffer[i]) & 0xFF] ^ (crc >>> 8)
-  return (crc ^ -1) >>> 0
-}
+import { crc32 } from './zip-crc.js'
+export { openZipFile } from './zip-file.js'
 
 function dosDateTime(date) {
   return {

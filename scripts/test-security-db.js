@@ -52,6 +52,7 @@ try {
       console.log('Legacy migration: explicit account required, no first-signup claim, repeat-safe.')
     } finally { connection.release() }
   } finally { await pool.end() }
-  const child = spawn(process.execPath, ['--test', '--test-concurrency=1', 'server/security.test.js'], { stdio: 'inherit', env: { ...process.env, SECURITY_TEST_DATABASE: databaseName } })
+  const arguments_ = process.argv.includes('--e2e') ? ['scripts/real-ui-test.mjs'] : ['--test', '--test-concurrency=1', 'server/security.test.js']
+  const child = spawn(process.execPath, arguments_, { stdio: 'inherit', env: { ...process.env, SECURITY_TEST_DATABASE: databaseName } })
   process.exitCode = await new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', code => resolve(code ?? 1)) })
 } finally { await cleanup() }

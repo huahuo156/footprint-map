@@ -5,6 +5,7 @@ import path from 'node:path'
 import { pool } from './db.js'
 import { currentUserId } from './auth.js'
 import { assertOwnedAsset, registerAsset, normalizeImageBuffer } from './assets.js'
+import { collectUnusedAssets, reclaimAssets } from './asset-lifecycle.js'
 
 // Per-kind tables provide real source foreign keys and one page membership per item.
 const tables = { photo: 'journal_photos', mark: 'journal_marks', entry: 'journal_entries' }
@@ -62,6 +63,7 @@ export async function transaction(fn, lockCovers = false) {
       coverLocked = true
     }
     await connection.beginTransaction()
+    await connection.execute('SELECT id FROM users WHERE id=? FOR UPDATE', [currentUserId()])
     const result = await fn(connection)
     await connection.commit()
     return result
@@ -168,13 +170,9 @@ export function notebookRoutes(router, uploadDirectory) {
   router.delete('/notebook-covers', async (req, res) => {
     const url = req.query.url
     if (!uploadedCover(url)) fail('封面图片无效')
-    await transaction(async connection => {
-      await assertOwnedAsset(url, connection)
-      const [[row]] = await connection.query('SELECT COUNT(*) AS total FROM journal_notebooks WHERE cover_url=? AND owner_id=?', [url, currentUserId()])
-      if (Number(row.total)) fail('封面仍被手帐使用', 409)
-      await unlink(path.join(uploadDirectory, path.basename(url))).catch(error => { if (error.code !== 'ENOENT') throw error })
-      await connection.execute('DELETE FROM assets WHERE storage_key=? AND owner_id=?', [path.basename(url), currentUserId()])
-    }, true)
+    await assertOwnedAsset(url)
+    const result = await collectUnusedAssets(uploadDirectory, { urls: [url] })
+    if (result.retained) fail('封面仍被照片或手帐使用', 409)
     res.json({ deleted: url })
   })
   router.use(['/notebooks', '/notebook-pages', '/notebook-items'], (req, _res, next) => {
@@ -224,23 +222,29 @@ export function notebookRoutes(router, uploadDirectory) {
                   ? coverText(req.body[key], 500, '封面寄语无效（最多500字）')
                   : numeric(req.body[key], key === 'rotation' ? -20 : -1e7, key === 'rotation' ? 20 : 1e7)
     if (!Object.keys(fields).length) fail('请选择修改内容')
-    await transaction(async (connection) => {
+    const previousCover = await transaction(async (connection) => {
       await verifyCoverFile(fields.cover_url, uploadDirectory, connection)
       await bookPages(connection, req.params.id)
+      const [[previous]] = await connection.execute('SELECT cover_url FROM journal_notebooks WHERE id=? AND owner_id=?', [req.params.id, currentUserId()])
       await connection.execute(
         `UPDATE journal_notebooks SET ${Object.keys(fields)
           .map((k) => k + '=?')
           .join(',')} WHERE id=? AND owner_id=?`,
         [...Object.values(fields), req.params.id, currentUserId()]
       )
+      return previous.cover_url
     }, true)
+    if (Object.hasOwn(fields, 'cover_url') && previousCover !== fields.cover_url) await reclaimAssets(uploadDirectory, [previousCover])
     res.json({ id: req.params.id, ...fields })
   })
   router.delete('/notebooks/:id', async (req, res) => {
-    await transaction(async (connection) => {
+    const previousCover = await transaction(async (connection) => {
       await bookPages(connection, req.params.id)
+      const [[previous]] = await connection.execute('SELECT cover_url FROM journal_notebooks WHERE id=? AND owner_id=?', [req.params.id, currentUserId()])
       await connection.execute('DELETE FROM journal_notebooks WHERE id=? AND owner_id=?', [req.params.id, currentUserId()])
+      return previous.cover_url
     })
+    await reclaimAssets(uploadDirectory, [previousCover])
     res.json({ deleted: req.params.id })
   })
   router.patch('/notebooks/:id/reading', async (req, res) => {

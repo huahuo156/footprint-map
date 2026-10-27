@@ -78,17 +78,20 @@ npm run dev
 | `npm start` | API 提供构建后的页面，默认 [http://127.0.0.1:3001](http://127.0.0.1:3001) |
 | `npm run db:up` / `npm run db:down` | 启动 / 停止 MySQL，保留持久卷 |
 | `npm run db:migrate` | 显式执行数据库迁移 |
+| `npm run assets:gc -- --dry-run` | 预览超过 24 小时的未引用图片与待重试删除任务 |
+| `npm run assets:gc` | 回收上述图片并释放容量；保留仍被照片或封面引用的文件 |
 | `npm run lint` | 静态检查 |
 | `npm test` | 前端、模型和 API 边界单元测试 |
 | `npm run test:security` | 身份 HTTP 测试及所有权、私有资源回归，使用数据库/邮件替身 |
 | `npm run test:api` | 创建随机临时 MySQL 库和图片目录，执行真实接口集成测试后清理 |
-| `npm run test:e2e` | 构建并用模拟 API 检查桌面/手机深浅主题、登录、版图和阅读器焦点 |
+| `npm run test:e2e` | 在独立临时 MySQL 库中，用真实 API 检查桌面/手机登录、上传、私有图片、手札、备份还原与退出 |
+| `npm run test:smoke` | 使用模拟 API 检查桌面/手机深浅主题、版图和阅读器焦点 |
 
-`test:api` 需要数据库建库权限。浏览器测试在 Windows 使用 Edge，其他平台使用 Playwright Chromium（首次执行 `npx playwright install chromium`）。截图和结果写入 `test-results/ui-smoke/`，不进入版本控制。
+`test:api` 和 `test:e2e` 需要数据库建库权限，自动生成随机测试库与临时图片目录，结束后清理，不访问个人手帐数据库。浏览器测试在 Windows 使用 Edge，其他平台使用 Playwright Chromium（首次执行 `npx playwright install chromium`）。真实浏览器失败截图和追踪写入 `test-results/real-e2e/`，模拟检查截图写入 `test-results/ui-smoke/`，均不进入版本控制。
 
 CI 见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，在临时 MySQL 服务上执行静态检查、单元测试、安全测试、真实 API 测试、依赖审计和浏览器冒烟测试。
 
-`server/` 的旧单用户测试和 `tests/e2e/` 的旧场景尚未统一更新账号夹具；以上 npm 命令是当前验证入口，直接运行旧测试可能触及配置中的数据库。
+真实浏览器用例位于 `tests/e2e-real/`，由专用配置收集。`server/` 的旧单用户测试和 `tests/e2e/` 的旧场景尚未统一更新账号夹具，不会混入当前验证入口；不要对个人数据库直接运行旧测试。
 
 ## 构建运行与手机访问
 
@@ -105,7 +108,9 @@ npm start
 
 - 手帐保存在 MySQL `journal_*` 表，账号、会话和图片归属由服务端维护。
 - 数据库位于 Compose 的 `mysql_data` 卷，图片位于 `uploads/` 或 `UPLOAD_DIRECTORY`。
-- 界面 ZIP 只备份当前账号，上限 **64MiB**，还原后的解压总量同样受限；不支持 ZIP64。
+- 界面下载单个 ZIP，归档与解压总量上限 **576MiB**，覆盖 512MiB 账号图片容量并预留清单空间；清单最多 16MiB，单图最多 10MiB，不支持 ZIP64。
+- 浏览器直接下载，服务端逐文件读取与还原，不把整包加载进内存；兼容旧版 ZIP。还原仍受账号剩余容量限制，失败时回滚并清理新文件。
+- 更换封面、删除手札或照片后自动回收没有任何引用的图片；长时间未关联的上传及失败删除任务通过 `assets:gc` 维护。
 - 完整部署备份需同时保存数据库和图片目录，并验证恢复。`docker compose down -v` 会删除数据库卷。
 - 旧打卡通过显式迁移导入手帐；旧攻略、打卡、点赞等 API 返回 410，原始资料仍保留。
 

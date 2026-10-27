@@ -20,7 +20,7 @@ beforeAll(async () => {
 })
 beforeEach(() => {
   vi.clearAllMocks()
-  db.execute.mockImplementation(async sql => sql.startsWith('SELECT id FROM') ? [[{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }]] : [[]])
+  db.execute.mockImplementation(async sql => sql.startsWith('SELECT cover_url FROM') ? [[{ cover_url: null }]] : sql.startsWith('SELECT id FROM') ? [[{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }]] : [[]])
   db.query.mockImplementation(async sql => sql.includes('GET_LOCK') ? [[{ acquired: 1 }]] : [[]])
 })
 afterAll(async () => { await new Promise(resolve => server.close(resolve)) })

@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+export const journalBackupUrl = API_BASE + '/journal/backup'
 let csrfToken = null
 let generation = 0
 const requests = new Set()

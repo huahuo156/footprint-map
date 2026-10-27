@@ -18,9 +18,11 @@
     "db:down": "docker compose stop mysql",
     "db:migrate": "node scripts/migrate-database.js",
     "db:create-user": "node scripts/create-user.js",
+    "assets:gc": "node scripts/cleanup-assets.js",
     "test:security": "node --test server/auth.test.js && npm test -- tests/assets-security.test.js tests/ownership-migration.test.js tests/private-api-boundary.test.js tests/ownership.test.js tests/ownership-routes.test.js",
     "test:api": "node scripts/test-security-db.js",
-    "test:e2e": "npm run build && node scripts/publication-ui-smoke.mjs"
+    "test:smoke": "npm run build && node scripts/publication-ui-smoke.mjs",
+    "test:e2e": "npm run build && node scripts/test-security-db.js --e2e"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

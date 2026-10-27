@@ -61,7 +61,8 @@ export async function registerAsset(file, connection = pool) {
 
 export async function assertOwnedAsset(url, connection = pool) {
   const owner = currentUserId(), key = assetFilename(url)
-  const [[asset]] = await connection.execute("SELECT storage_key FROM assets WHERE storage_key=? AND owner_id=? AND status='active'", [key, owner])
+  if (connection !== pool) await connection.execute('SELECT id FROM users WHERE id=? FOR UPDATE', [owner])
+  const [[asset]] = await connection.execute("SELECT storage_key FROM assets WHERE storage_key=? AND owner_id=? AND status='active'" + (connection !== pool ? ' FOR UPDATE' : ''), [key, owner])
   if (!asset) throw invalid('图片不存在', 404)
   return key
 }

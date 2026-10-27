@@ -5,7 +5,8 @@ import { rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pool } from './db.js'
 import { currentUserId } from './auth.js'
-import { normalizeImage, registerAsset, assertOwnedAsset } from './assets.js'
+import { normalizeImage, registerAsset } from './assets.js'
+import { reclaimAssets } from './asset-lifecycle.js'
 import { notebookRoutes, readNotebooks, transaction, requirePage, placeItem } from './notebooks.js'
 import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
 import { legacyComponents, patchComponents } from '../shared/journal-components.js'
@@ -106,15 +107,7 @@ export function createJournalRouter(uploadDirectory) {
     fileFilter: (_req, file, cb) => cb(extensions[file.mimetype] ? null : invalid('请选择 JPG、PNG 或 WebP 照片'), !!extensions[file.mimetype]),
   })
   async function removeUnused(url) {
-    if (!/^\/uploads\/[\w-]+\.(jpg|png|webp)$/.test(url)) return
-    await transaction(async connection => {
-      await assertOwnedAsset(url, connection)
-      const [[row]] = await connection.query('SELECT (SELECT COUNT(*) FROM journal_photos WHERE url=?) + (SELECT COUNT(*) FROM journal_notebooks WHERE cover_url=?) AS total', [url, url])
-      if (!Number(row.total)) {
-        await unlink(path.join(uploadDirectory, path.basename(url))).catch(() => {})
-        await connection.execute('DELETE FROM assets WHERE storage_key=? AND owner_id=?', [path.basename(url), currentUserId()])
-      }
-    }, true)
+    await reclaimAssets(uploadDirectory, [url])
   }
   router.get('/', async (_req, res) => res.json(await journal()))
   router.post('/groups', async (req, res) => {

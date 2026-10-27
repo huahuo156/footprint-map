@@ -1,12 +1,17 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
-import { readdir } from 'node:fs/promises'
+import { randomUUID, randomBytes } from 'node:crypto'
+import { readdir, stat, rename, copyFile, open } from 'node:fs/promises'
+import { openAsBlob, createWriteStream } from 'node:fs'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import path from 'node:path'
 import argon2 from 'argon2'
 import sharp from 'sharp'
 import { app, uploadDirectory } from './app.js'
 import { pool } from './db.js'
 import { readZip, zipChunks } from './zip.js'
+import { collectUnusedAssets } from './asset-lifecycle.js'
 
 if (!/^footprint_security_test_[a-f0-9]{12}$/.test(process.env.MYSQL_DATABASE || '') || process.env.MYSQL_DATABASE !== process.env.SECURITY_TEST_DATABASE) throw new Error('Use npm run test:api: isolated disposable database required')
 const origin = process.env.APP_ORIGIN
@@ -115,4 +120,140 @@ test('logout invalidates server-side session including private media', async () 
   await json(unverified, '/api/auth/logout', {})
   assert.equal((await request(unverified, '/api/journal')).status, 401)
   const session = await json(unverified, '/api/auth/session'); assert.equal(session.user, null)
+})
+
+async function cover(user) {
+  const image = await sharp({ create: { width: 12, height: 8, channels: 3, background: '#ccaaaa' } }).png().toBuffer()
+  const form = new FormData()
+  form.append('image', new Blob([image], { type: 'image/png' }), 'cover.png')
+  return (await json(user, '/api/journal/notebook-covers', form)).url
+}
+
+test('cover replacement and last notebook deletion reclaim files and quota without deleting shared covers', async () => {
+  const user = await account('lifecycle@example.com'), first = await cover(user), second = await cover(user)
+  const one = await json(user, '/api/journal/notebooks', { name: 'one', cover_url: first })
+  const two = await json(user, '/api/journal/notebooks', { name: 'two', cover_url: first })
+  await json(user, '/api/journal/notebooks/' + one.id, { cover_url: second }, 'PATCH')
+  assert.equal((await request(user, first)).status, 200)
+  assert.equal((await request(b, '/api/journal/notebooks/' + two.id, undefined, 'DELETE')).status, 404)
+  await json(user, '/api/journal/notebooks/' + two.id, undefined, 'DELETE')
+  assert.equal((await request(user, first)).status, 404)
+  await assert.rejects(stat(path.join(uploadDirectory, path.basename(first))), { code: 'ENOENT' })
+  const [[remaining]] = await pool.execute('SELECT COUNT(*) AS total FROM assets WHERE owner_id=?', [user.id])
+  assert.equal(Number(remaining.total), 1)
+  await json(user, '/api/journal/notebooks/' + one.id, undefined, 'DELETE')
+  const [[usage]] = await pool.execute('SELECT COALESCE(SUM(bytes),0) AS bytes FROM assets WHERE owner_id=?', [user.id])
+  assert.equal(Number(usage.bytes), 0)
+})
+
+test('a cover also referenced by a photo survives discarding and notebook deletion until its last photo is removed', async () => {
+  const user = await account('shared-photo@example.com'), url = await cover(user)
+  const book = await json(user, '/api/journal/notebooks', { name: 'shared', cover_url: url })
+  const entry = await photo(user)
+  const journal = await json(user, '/api/journal'), oldPhoto = journal.entries.find(e => e.id === entry.id).photos[0]
+  await pool.execute('UPDATE journal_photos SET url=? WHERE id=?', [url, oldPhoto.id])
+  await json(user, '/api/journal/notebooks/' + book.id, undefined, 'DELETE')
+  assert.equal((await request(user, '/api/journal/notebook-covers?url=' + encodeURIComponent(url), undefined, 'DELETE')).status, 409)
+  assert.equal((await request(user, url)).status, 200)
+  await json(user, '/api/journal/photos/' + oldPhoto.id, undefined, 'DELETE')
+  assert.equal((await request(user, url)).status, 404)
+  await assert.rejects(stat(path.join(uploadDirectory, path.basename(url))), { code: 'ENOENT' })
+})
+
+test('maintenance preserves fresh uploads and references, supports dry run and retries a failed disk delete', async () => {
+  const user = await account('maintenance@example.com'), fresh = await cover(user), orphan = await cover(user), shared = await cover(user)
+  await json(user, '/api/journal/notebooks', { name: 'retained', cover_url: shared })
+  await pool.execute('UPDATE assets SET created_at=DATE_SUB(NOW(), INTERVAL 2 DAY) WHERE storage_key IN (?,?)', [path.basename(orphan), path.basename(shared)])
+  assert.deepEqual(await collectUnusedAssets(uploadDirectory, { ownerId: user.id, dryRun: true }), { deleted: 1, retained: 1 })
+  assert.equal((await request(user, orphan)).status, 200)
+  // A missing mount directory fails after the durable deletion marker commits.
+  const savedDirectory = uploadDirectory + '-temporarily-unavailable'
+  await rename(uploadDirectory, savedDirectory)
+  try {
+    // Simulate EISDIR without permissions/platform-specific chmod semantics.
+    const { mkdir } = await import('node:fs/promises')
+    await mkdir(path.join(uploadDirectory, path.basename(orphan)), { recursive: true })
+    await assert.rejects(collectUnusedAssets(uploadDirectory, { ownerId: user.id }))
+  } finally {
+    const { rm } = await import('node:fs/promises')
+    await rm(uploadDirectory, { recursive: true, force: true })
+    await rename(savedDirectory, uploadDirectory)
+  }
+  assert.equal((await request(user, orphan)).status, 404)
+  assert.deepEqual(await collectUnusedAssets(uploadDirectory, { ownerId: user.id }), { deleted: 1, retained: 1 })
+  assert.equal((await request(user, fresh)).status, 200)
+  assert.equal((await request(user, shared)).status, 200)
+  await assert.rejects(stat(path.join(uploadDirectory, path.basename(orphan))), { code: 'ENOENT' })
+})
+
+test('a backup over 64MiB streams as one ZIP, restores fully and rolls back a corrupted final image', async () => {
+  const user = await account('large-backup@example.com')
+  const image = await sharp(randomBytes(2048 * 1536 * 3), { raw: { width: 2048, height: 1536, channels: 3 } }).png().toBuffer()
+  const form = new FormData(); form.set('data', JSON.stringify({ photos: [{ upload_index: 0 }] }))
+  form.append('images', new Blob([image], { type: 'image/png' }), 'noise.png')
+  const entry = await json(user, '/api/journal/entries', form)
+  const journal = await json(user, '/api/journal'), original = journal.entries.find(e => e.id === entry.id).photos[0]
+  const originalPath = path.join(uploadDirectory, path.basename(original.url)), bytes = (await stat(originalPath)).size
+  for (let i = 0; i < 7; i++) {
+    const key = randomUUID() + '.png'
+    await copyFile(originalPath, path.join(uploadDirectory, key))
+    await pool.execute('INSERT INTO assets (storage_key,owner_id,bytes,mime) VALUES (?,?,?,?)', [key, user.id, bytes, 'image/png'])
+    await pool.execute('INSERT INTO journal_photos (id,entry_id,url) VALUES (?,?,?)', [randomUUID(), entry.id, '/uploads/' + key])
+  }
+  const response = await request(user, '/api/journal/backup')
+  assert.equal(response.status, 200)
+  const target = path.join(uploadDirectory, 'large-roundtrip-test.zip')
+  await pipeline(Readable.fromWeb(response.body), createWriteStream(target))
+  assert.ok((await stat(target)).size > 64 * 1024 * 1024)
+  const restoreForm = new FormData(); restoreForm.append('backup', await openAsBlob(target), 'large.zip')
+  const restored = await json(user, '/api/journal/restore', restoreForm)
+  assert.equal(restored.restored.photos, 8)
+  assert.equal((await json(user, '/api/journal')).entries.length, 2)
+  const before = (await readdir(uploadDirectory)).sort()
+  const handle = await open(target, 'r+'), footer = Buffer.alloc(22), length = (await handle.stat()).size
+  await handle.read(footer, 0, 22, length - 22)
+  const finalByte = footer.readUInt32LE(16) - 1, damaged = Buffer.alloc(1)
+  await handle.read(damaged, 0, 1, finalByte); damaged[0] ^= 0xff
+  await handle.write(damaged, 0, 1, finalByte); await handle.close()
+  const bad = new FormData(); bad.append('backup', await openAsBlob(target), 'corrupt.zip')
+  assert.equal((await request(user, '/api/journal/restore', bad)).status, 400)
+  assert.equal((await json(user, '/api/journal')).entries.length, 2)
+  assert.deepEqual((await readdir(uploadDirectory)).sort(), before)
+})
+
+test('concurrent attachment and collection never leave a notebook with a deleted cover', async () => {
+  const user = await account('concurrent-cover@example.com')
+  for (let i = 0; i < 3; i++) {
+    const url = await cover(user)
+    const [, response] = await Promise.all([
+      collectUnusedAssets(uploadDirectory, { ownerId: user.id, urls: [url] }),
+      request(user, '/api/journal/notebooks', { name: 'concurrent-' + i, cover_url: url }),
+    ])
+    assert.ok([201, 404].includes(response.status))
+    assert.equal((await request(user, url)).status, response.status === 201 ? 200 : 404)
+  }
+})
+
+test('restore exceeding remaining quota rolls back assets, journal rows and new files', async () => {
+  const user = await account('full-storage@example.com'), url = await cover(user)
+  await pool.execute('UPDATE assets SET bytes=? WHERE storage_key=?', [512 * 1024 * 1024, path.basename(url)])
+  const backup = await request(a, '/api/journal/backup'), body = Buffer.from(await backup.arrayBuffer())
+  const before = (await readdir(uploadDirectory)).sort()
+  const form = new FormData(); form.append('backup', new Blob([body]), 'backup.zip')
+  assert.equal((await request(user, '/api/journal/restore', form)).status, 413)
+  assert.equal((await json(user, '/api/journal')).entries.length, 0)
+  const [[count]] = await pool.execute('SELECT COUNT(*) AS total FROM assets WHERE owner_id=?', [user.id])
+  assert.equal(Number(count.total), 1)
+  assert.deepEqual((await readdir(uploadDirectory)).sort(), before)
+})
+
+test('backup preflight does not consume the five actual download slots', async () => {
+  const user = await account('download-rate@example.com')
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await request(user, '/api/journal/backup', undefined, 'HEAD')).status, 200)
+    const download = await request(user, '/api/journal/backup')
+    assert.equal(download.status, 200)
+    await download.arrayBuffer()
+  }
+  assert.equal((await request(user, '/api/journal/backup')).status, 429)
 })
