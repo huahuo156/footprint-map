@@ -14,6 +14,16 @@
 
 当前是多账号初版，生产运行边界和升级步骤见 [运行与迁移说明](docs/operations.md)。
 
+## 界面预览
+
+以下为实际生产构建在模拟 API 下的截图，仅使用仓库示例资料；不代表线上部署或真实用户数据。
+
+| 足迹版图（桌面） | 手札阅读（手机） |
+| --- | --- |
+| ![桌面足迹版图与地点照片](docs/screenshots/atlas-desktop.png) | ![手机深色主题手札阅读器](docs/screenshots/reader-mobile.png) |
+
+截图来自 `npm run test:smoke`；可以在本地启动后使用内置示例体验。当前没有承诺长期可用的公共演示站。
+
 ## 技术栈
 
 React 19、Vite、Tailwind CSS、Three.js；Node.js 24+、Express、MySQL 8.4。MySQL 由 Docker Compose 提供；图片默认存储在本地 `uploads/`，由 API 鉴权读取。
@@ -148,3 +158,14 @@ docs/             当前运行与迁移文档
 - 示例照片：[来源声明](public/journal-demo/ATTRIBUTION.md)。
 - 手札封面：[来源声明](public/notebook-covers/Attribution.md)。
 - 西湖场景：[来源声明](public/scenes/ATTRIBUTION.md)。
+
+## 开发、发布与参与
+
+- [架构与代码入口](docs/architecture.md) · [贡献指南](CONTRIBUTING.md)
+- [发布检查与验收记录模板](docs/release-checklist.md) · [变更记录](CHANGELOG.md)
+- [M0 验证记录](docs/verification/2026-10-29-m0.md) · [长期开发计划](docs/superpowers/plans/2026-10-29-long-term-development.md)
+- [安全报告流程](SECURITY.md)（GitHub 私密报告启用状态待验证）
+
+目前为早期多账号版本，稳定发布、生产部署和完整验收状态以对应记录为准。生产安装暂按 [运行说明](docs/operations.md)、[监控](docs/monitoring.md) 和 [恢复](docs/recovery.md) 手动完成；应用镜像和一体化生产部署属于后续阶段。
+
+项目自有代码采用 [MIT](LICENSE)。第三方依赖、照片及地理数据保留各自许可；已核对的声明与公开分发前待确认事项见 [第三方说明](docs/third-party-notices.md)。

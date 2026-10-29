@@ -1,0 +1,31 @@
+name: 问题报告
+description: 提交可复现的功能问题（请勿公开报告安全漏洞或私人数据）
+body:
+  - type: markdown
+    attributes:
+      value: 请先阅读 SECURITY.md。截图请使用示例照片并移除账号、位置和令牌。
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交
+      description: 提交标识、浏览器、操作系统、桌面或手机。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 最短复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果与脱敏证据
+    validations:
+      required: true
