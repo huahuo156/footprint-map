@@ -1,10 +1,10 @@
 import boundary from '../data/china-boundary.json'
 import regions from '../data/china-places.json'
-import { cardBounds, intersects } from './model'
+import { cardBounds, findFreePosition, intersects } from './model'
 import { projectPlace, regionForPlace } from './atlasGeography'
+import { ATLAS_MAP_BOUNDS, projectAtlasPoint } from './atlasScene'
 export { projectPlace } from './atlasGeography'
 
-export const ATLAS_PAGE_SIZE = 12
 const polygons = boundary.features.flatMap(feature => feature.geometry.type === 'MultiPolygon' ? feature.geometry.coordinates : [feature.geometry.coordinates])
 export const chinaPaths = polygons.map(polygon => polygon.map(ring => ring.map(([lng, lat], i) => {
   const point = projectPlace(lng, lat)
@@ -68,7 +68,7 @@ export function atlasPhotos(data, landmarks = []) {
 
 export function settleAtlasPosition(item, others, point, bounds, avoidMap = false) {
   const obstacles = others.map(other => cardBounds(other, 12))
-  if (avoidMap) obstacles.push({ x: 550, y: 390, w: 500, h: 350 })
+  if (avoidMap) obstacles.push(typeof avoidMap === 'object' ? avoidMap : { x: 550, y: 390, w: 500, h: 350 })
   function free(x, y) {
     const box = cardBounds({ ...item, x, y }, 12)
     const withinBounds = !bounds || box.x - box.w / 2 >= 8 && box.x + box.w / 2 <= bounds.width - 8 && box.y - box.h / 2 >= 8 && box.y + box.h / 2 <= bounds.height - 8
@@ -102,25 +102,41 @@ export function layoutScatter(items, imageSizes = {}, saved = {}, unbounded = fa
 }
 
 export function layoutAtlas(items, saved = {}) {
-  const slots = [
-    [210, 110], [448, 108], [655, 112], [890, 110],
-    [1000, 305], [1000, 495],
-    [885, 690], [650, 688], [445, 692], [210, 690],
-    [100, 495], [100, 305],
-  ].map(([x, y]) => ({ x, y }))
-  // Match the nearest available slot to each pin. Slots reserve the full card,
-  // including captions, so even photos at the same location cannot collide.
-  const cards = items.slice(0, ATLAS_PAGE_SIZE).map((item, i) => {
-    let best = 0, distance = Infinity
-    slots.forEach((slot, index) => {
-      const next = Math.hypot(slot.x - item.point.x, slot.y - item.point.y)
-      if (next < distance) { distance = next; best = index }
-    })
-    return { ...item, ...slots.splice(best, 1)[0], width: 166, height: 172, rotation: [-2, 1, -1, 2, -1, 1][i % 6] }
-  })
+  const provinces = new Map(), positions = new Map(), occupied = [ATLAS_MAP_BOUNDS]
+  for (const item of items) {
+    const key = String(item.province?.code ?? item.placeKey ?? `${item.point.x},${item.point.y}`)
+    if (!provinces.has(key)) provinces.set(key, { key, items: [] })
+    provinces.get(key).items.push(item)
+  }
+  // Reserve each province as one compact block, near its geographic center.
+  // Trying several grid shapes lets narrow map edges fit a province without
+  // scattering its later photos across whichever slots happen to remain.
+  const footprint = cardBounds({ width: 166, height: 172, rotation: 2 }, 12)
+  for (const group of [...provinces.values()].sort((a, b) => b.items.length - a.items.length || a.key.localeCompare(b.key))) {
+    const provinceCenter = group.items[0].province?.center
+    const anchor = projectAtlasPoint(provinceCenter ? projectPlace(...provinceCenter) : {
+      x: group.items.reduce((sum, item) => sum + item.point.x, 0) / group.items.length,
+      y: group.items.reduce((sum, item) => sum + item.point.y, 0) / group.items.length,
+    }, 0)
+    let best
+    const count = group.items.length
+    for (let columns = 1; columns <= Math.min(count, Math.ceil(Math.sqrt(count)) + 1); columns++) {
+      const rows = Math.ceil(count / columns), width = (columns - 1) * 194 + footprint.w, height = (rows - 1) * 200 + footprint.h
+      const block = { ...anchor, width, height, rotation: 0 }
+      const point = findFreePosition(block, occupied)
+      const score = (point.x - anchor.x) ** 2 + (point.y - anchor.y) ** 2 + .25 * (width ** 2 + height ** 2)
+      if (!best || score < best.score) best = { ...block, ...point, score, columns, rows }
+    }
+    occupied.push(cardBounds(best))
+    group.items.forEach((item, index) => positions.set(item.photo.id, {
+      x: best.x + (index % best.columns - (best.columns - 1) / 2) * 194,
+      y: best.y + (Math.floor(index / best.columns) - (best.rows - 1) / 2) * 200,
+    }))
+  }
+  const cards = items.map((item, i) => ({ ...item, ...positions.get(item.photo.id), width: 166, height: 172, rotation: [-2, 1, -1, 2, -1, 1][i % 6] }))
   const placed = []
   for (const card of [...cards].sort((a, b) => Number(!!saved[b.photo.id]) - Number(!!saved[a.photo.id]))) {
-    Object.assign(card, settleAtlasPosition(card, placed, saved[card.photo.id] || card, saved[card.photo.id] ? null : { width: 1100, height: 800 }, true))
+    Object.assign(card, settleAtlasPosition(card, placed, saved[card.photo.id] || card, null, ATLAS_MAP_BOUNDS))
     placed.push(card)
   }
   return cards

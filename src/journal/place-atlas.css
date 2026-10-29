@@ -1,7 +1,3 @@
-.j-view-switch { display:flex; align-items:center; gap:3px; padding:3px; border:1px solid var(--j-line); border-radius:var(--j-radius-lg); background:var(--j-bg); }
-.j-view-switch button { display:flex; align-items:center; justify-content:center; gap:6px; border:0; border-radius:var(--j-radius); padding:5px 9px; color:var(--j-muted); background:transparent; white-space:nowrap; }
-.j-view-switch button[aria-pressed=true] { background:var(--j-paper); color:var(--j-accent); box-shadow:0 2px 6px var(--j-shadow); }
-.j-mobile-view-switch { display:flex; justify-content:center; padding:12px; }
 .j-place-atlas { position:relative; flex:1; min-height:0; height:calc(100dvh - 57px); overflow:hidden; background:var(--j-bg); padding:0; background-image:radial-gradient(var(--j-grid) .7px,transparent .7px); background-size:22px 22px; }
 .j-atlas-heading { position:absolute; z-index:10; inset:10px 14px auto; display:flex; justify-content:space-between; align-items:center; gap:12px; pointer-events:none; }
 .j-atlas-heading>div { pointer-events:auto; background:var(--j-paper); border:1px solid var(--j-line); border-radius:var(--j-radius); padding:3px 6px; box-shadow:0 2px 8px var(--j-shadow); }
@@ -18,6 +14,11 @@
 .j-atlas-viewport.is-panning { cursor:grabbing; user-select:none; }
 .j-atlas-world { position:absolute; left:0; top:0; width:0; height:0; transform-origin:0 0; will-change:transform; }
 .j-atlas-board { position:absolute; width:1100px; height:800px; transform-origin:top left; }
+.j-atlas-map-surface { position:absolute; inset:0; width:1100px; height:800px; transform-origin:550px 390px; will-change:transform; filter:drop-shadow(0 16px 14px var(--j-shadow)); }
+.j-atlas-land-depth { fill:color-mix(in srgb,var(--j-sage) 55%,var(--j-bg)); stroke:var(--j-line); stroke-width:1; pointer-events:none; }
+.j-atlas-angle { min-width:62px; color:var(--j-muted); text-align:center; font-size:11px; }
+.j-atlas-overlay { pointer-events:none; z-index:2; }
+.j-atlas-overlay [role=button] { pointer-events:auto; }
 .journal-app .j-atlas-map { position:absolute; inset:0; width:1100px; height:800px; overflow:visible; }
 /* SVG focus outlines include hidden labels and grow with the zoomed map.
    Keyboard focus is shown by the province, pin and city styles below. */
@@ -27,8 +28,12 @@
 .j-atlas-province.is-visited { fill:var(--province-color); fill-opacity:.3; stroke:var(--province-color); stroke-opacity:.8; cursor:pointer; transition:fill-opacity .2s; }
 .j-atlas-province.is-visited:hover,.j-atlas-province.is-visited:focus-visible { fill-opacity:.6; outline:none; stroke-width:1.6; }
 .j-atlas-province.is-selected { fill-opacity:.65; stroke-width:2; }
-.j-atlas-thread { fill:none; stroke:var(--j-accent); stroke-width:1.1; stroke-dasharray:4 6; opacity:.28; transition:opacity .2s; pointer-events:none; }
-.j-atlas-thread.is-active { opacity:1; stroke-width:2; }
+.j-atlas-thread-halo { fill:none; stroke:var(--j-bg); stroke-width:3.25; stroke-dasharray:6 6; stroke-linecap:round; opacity:.8; vector-effect:non-scaling-stroke; pointer-events:none; }
+.j-atlas-thread { fill:none; stroke:var(--atlas-thread-color,var(--j-accent)); stroke-width:1.25; stroke-dasharray:6 6; stroke-linecap:round; opacity:.72; vector-effect:non-scaling-stroke; transition:opacity .15s; pointer-events:none; }
+.j-atlas-thread.is-active { opacity:1; stroke-width:2.25; }
+.has-active-photo .j-atlas-thread:not(.is-active) { opacity:.16; }
+.has-active-photo .j-atlas-thread-halo { opacity:.25; }
+.j-atlas-overlay g.is-muted .j-atlas-thread-halo { opacity:.1; }
 .j-atlas-pin { fill:var(--pin-color,var(--j-accent)); stroke:var(--j-paper); stroke-width:1.6; cursor:pointer; transition:opacity .2s; }
 .j-atlas-pin circle { fill:var(--j-paper); stroke:none; }
 .j-atlas-pin.is-active { filter:drop-shadow(0 0 5px var(--pin-color,var(--j-accent))); }
@@ -51,7 +56,7 @@
 .j-atlas-cluster-leader { fill:none; stroke:var(--j-muted); stroke-width:.7; stroke-dasharray:3 4; pointer-events:none; }
 .j-atlas-map-label { position:absolute; left:400px; top:555px; width:300px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:7px; color:var(--j-accent); letter-spacing:3px; pointer-events:none; }
 .j-atlas-map-label small { flex-basis:100%; text-align:center; color:var(--j-muted); font-size:10px; letter-spacing:2px; }
-.j-atlas-photo { position:absolute; padding:8px; border:1px solid var(--j-line); background:var(--j-paper); color:var(--j-ink); border-radius:var(--j-radius-xs); box-shadow:0 5px 14px var(--j-shadow); text-align:left; transition:box-shadow .2s,border-color .2s; }
+.j-atlas-photo { position:absolute; z-index:3; padding:8px; border:1px solid var(--j-line); background:var(--j-paper); color:var(--j-ink); border-radius:var(--j-radius-xs); box-shadow:0 5px 14px var(--j-shadow); text-align:left; transition:box-shadow .2s,border-color .2s; }
 .j-atlas-photo.is-active { border-color:var(--j-accent); box-shadow:0 7px 24px var(--j-shadow); }
 .j-atlas-photo>img,.j-atlas-photo>.j-image-failed { display:block; width:148px; height:118px; object-fit:cover; border-radius:1px; }
 .j-atlas-photo>span { display:flex; align-items:center; gap:4px; margin-top:9px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:17px; }
@@ -61,6 +66,9 @@
 .j-atlas-pagination { position:absolute; z-index:10; bottom:12px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:16px; color:var(--j-muted); font-size:11px; white-space:nowrap; pointer-events:none; }
 .j-atlas-pagination>span,.j-atlas-pagination>div { padding:3px 8px; border:1px solid var(--j-line); border-radius:var(--j-radius); background:var(--j-paper); }
 .j-atlas-pagination>div { display:flex; align-items:center; gap:12px; pointer-events:auto; }
+.j-atlas-photo-count { font-variant-numeric:tabular-nums; }
+@media(max-width:767px) { .j-atlas-angle { display:none; }.j-atlas-photo-count { display:none!important; } }
+@media(prefers-reduced-motion:reduce) { .j-atlas-thread,.j-atlas-photo { transition:none; } }
 .j-atlas-extras { position:absolute; top:850px; left:0; width:1100px; }
 .j-atlas-shelf { margin:24px 0 0; border-top:1px solid var(--j-line); padding-top:24px; }
 .j-atlas-shelf h2 { font:400 20px Georgia,"Songti SC","SimSun",serif; margin:0 0 8px; }

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { materializeJournal } from '../src/journal/components'
 import { atlasPhotos, layoutAtlas, layoutScatter, settleAtlasPosition } from '../src/journal/atlasLayout'
 import { cardBounds, intersects } from '../src/journal/model'
+import { ATLAS_MAP_BOUNDS, atlasSceneBounds } from '../src/journal/atlasScene'
 import PlaceAtlas from '../src/journal/PlaceAtlas'
 
 afterEach(cleanup)
@@ -81,28 +82,26 @@ it('moves a photo near a requested point without colliding with a neighbour or t
   expect(position).not.toEqual({ x: 440, y: 90 })
 })
 
-it('keeps every photo inside the board, outside the map and clear of every other photo', () => {
+it('expands the board to keep every photo outside the larger map and clear of other photos', () => {
   const items = layoutAtlas(Array.from({ length: 12 }, (_, id) => ({ photo: photo(String(id)), point: { x: 550, y: 400 } })))
   expect(items).toHaveLength(12)
+  const bounds = atlasSceneBounds(items)
   for (const a of items) {
-    expect(a.x - a.width / 2).toBeGreaterThanOrEqual(0)
-    expect(a.x + a.width / 2).toBeLessThanOrEqual(1100)
-    expect(a.y - a.height / 2).toBeGreaterThanOrEqual(0)
-    expect(a.y + a.height / 2).toBeLessThanOrEqual(800)
-    expect(Math.abs(a.x - 550) >= (a.width + 500) / 2 || Math.abs(a.y - 390) >= (a.height + 350) / 2).toBe(true)
+    expect(Math.abs(a.x - 550) + a.width / 2).toBeLessThanOrEqual(bounds.width / 2)
+    expect(Math.abs(a.y - 390) + a.height / 2).toBeLessThanOrEqual(bounds.height / 2)
+    expect(intersects(cardBounds(a, 12), ATLAS_MAP_BOUNDS)).toBe(false)
     for (const b of items.filter(b => b !== a)) expect(Math.abs(a.x - b.x) >= (a.width + b.width) / 2 + 12 || Math.abs(a.y - b.y) >= (a.height + b.height) / 2 + 12).toBe(true)
   }
 })
 
-it('opens the correct photo and exposes all photos when the ring fills up', () => {
+it('opens the correct photo and shows every photo without pagination when the first ring fills up', () => {
   const onOpen = vi.fn()
   const entries = Array.from({ length: 14 }, (_, i) => ({ id: 'e' + i, place_name: '湖边', lat: 30, lng: 120, photos: [photo('p' + i)] }))
   render(<PlaceAtlas data={{ entries }} landmarks={[]} onOpen={onOpen} />)
-  expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(12)
+  expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(14)
   fireEvent.click(screen.getByRole('button', { name: '打开照片：湖边 1' }))
   expect(onOpen).toHaveBeenCalledWith(entries[0], 'p0')
-  fireEvent.click(screen.getByRole('button', { name: '下一组照片' }))
-  expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(2)
+  expect(screen.queryByRole('button', { name: '下一组照片' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: '打开照片：湖边 13' })).toBeInTheDocument()
 })
 
@@ -134,23 +133,32 @@ it('zooms with the wheel over the map and keeps the page from scrolling', () => 
   expect(screen.getByText('100%')).toBeInTheDocument()
 })
 
+it('accumulates small trackpad deltas gradually instead of treating each event as a full wheel notch', () => {
+  render(<PlaceAtlas data={{ entries: [] }} onOpen={() => {}} />)
+  const viewport = document.querySelector('.j-atlas-viewport')
+  for (let index = 0; index < 20; index++) fireEvent.wheel(viewport, { deltaY: -6 })
+  expect(screen.getByRole('slider', { name: '快速缩放地点视图' })).toHaveValue('110')
+  const tilt = Number(document.querySelector('.j-atlas-map-surface').dataset.atlasTilt)
+  expect(tilt).toBeGreaterThan(18)
+  expect(tilt).toBeLessThan(20)
+})
+
 const explorationData = { entries: [
   { id: 'chengdu', place_name: '成都市', entry_date: '2026-10-02', photos: [photo('chengdu')] },
   ...Array.from({ length: 14 }, (_, i) => ({ id: `wuhan-${i}`, record_id: 'wuhan-record', place_name: '武汉市', entry_date: '2026-10-01', photos: [photo(`wuhan-${i}`)] })),
 ] }
 
-it('focuses all photos at a pin across pages, dims other places, and restores the overview', () => {
+it('focuses all photos at a pin together, dims other places, and restores the overview', () => {
   render(<PlaceAtlas data={explorationData} onOpen={() => {}} />)
   const pin = screen.getByRole('button', { name: '聚焦地点：武汉市 · 14 张照片' })
   fireEvent.click(pin)
-  expect(document.querySelectorAll('.j-atlas-photo:not(.is-muted)')).toHaveLength(12)
+  expect(document.querySelectorAll('.j-atlas-photo:not(.is-muted)')).toHaveLength(14)
   expect(document.querySelector('[data-atlas-photo="chengdu"]')).toHaveClass('is-muted')
   expect(screen.getByRole('complementary', { name: '武汉市的回忆' })).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '下一组照片' }))
-  expect(document.querySelectorAll('.j-atlas-photo:not(.is-muted)')).toHaveLength(2)
+  expect(within(screen.getByRole('complementary')).getAllByRole('button', { name: /查看原片/ })).toHaveLength(14)
   fireEvent.click(pin)
   expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
-  expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(12)
+  expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(15)
   expect(document.querySelectorAll('.j-atlas-photo.is-muted')).toHaveLength(0)
 })
 
@@ -160,7 +168,7 @@ it('shows city counts when zoomed out and exposes photos when a city is selected
   expect(document.querySelectorAll('.j-atlas-photo')).toHaveLength(0)
   const city = screen.getByRole('button', { name: '聚焦城市：武汉市 · 14 张照片' })
   fireEvent.keyDown(city, { key: 'Enter' })
-  expect(document.querySelectorAll('.j-atlas-photo:not(.is-muted)')).toHaveLength(12)
+  expect(document.querySelectorAll('.j-atlas-photo:not(.is-muted)')).toHaveLength(14)
   expect(screen.getByText('100%')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '返回全景' }))
   expect(screen.getByText('60%')).toBeInTheDocument()
