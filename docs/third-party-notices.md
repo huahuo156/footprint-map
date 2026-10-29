@@ -32,7 +32,7 @@
 
 | 路径 | 已有来源 | M0 核查状态 |
 | --- | --- | --- |
-| `public/journal-demo/` | [来源记录](../public/journal-demo/ATTRIBUTION.md)，来自 China-Travel-Map | 来源可追溯，但现有文件未提供逐图授权依据；公开分发前核实或替换 |
+| `public/journal-demo/` | [来源记录](../public/journal-demo/ATTRIBUTION.md)，来自 China-Travel-Map | 11 张文件与上游逐字节一致，已追溯原始来源页；[逐图核查](photo-source-audit.md) 中的作者/许可条件仍待补齐 |
 | `public/notebook-covers/` | [Unsplash 来源记录](../public/notebook-covers/Attribution.md) | 已有逐图链接与许可说明，保留原声明；非项目 MIT 素材 |
 | `public/scenes/` | [OSM、地形数据记录](../public/scenes/ATTRIBUTION.md) | 需随分发保留来源与适用的数据许可 |
 | `src/data/china-*.json` | [DataV 来源记录](../src/data/china-boundary-attribution.md) | 已记录来源，尚需核实离线再分发条件 |
@@ -44,3 +44,5 @@
 - 未核实的照片可以替换为原创或明确允许分发的样例，但应单独处理并更新相关测试、署名和截图。
 - 已知来源、逐文件许可、修改说明和随产物分发要求应保留；本次不删除或替换既有素材。
 - 许可证变更不代表生产部署、公共注册或素材合规已经验收。
+
+2026-10-29 重试：已检查上游文件树和照片来源索引；来源追溯取得进展，未将页面通用许可或“仓库公开”当作照片授权依据。DataV 页面本次未提供可核验的再分发条款，保持待确认。

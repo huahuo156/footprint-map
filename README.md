@@ -164,7 +164,7 @@ docs/             当前运行与迁移文档
 - [架构与代码入口](docs/architecture.md) · [贡献指南](CONTRIBUTING.md)
 - [发布检查与验收记录模板](docs/release-checklist.md) · [变更记录](CHANGELOG.md)
 - [M0 验证记录](docs/verification/2026-10-29-m0.md) · [长期开发计划](docs/superpowers/plans/2026-10-29-long-term-development.md)
-- [安全报告流程](SECURITY.md)（GitHub 私密报告启用状态待验证）
+- [安全报告流程](SECURITY.md)（GitHub 私密报告已启用）
 
 目前为早期多账号版本，稳定发布、生产部署和完整验收状态以对应记录为准。生产安装暂按 [运行说明](docs/operations.md)、[监控](docs/monitoring.md) 和 [恢复](docs/recovery.md) 手动完成；应用镜像和一体化生产部署属于后续阶段。
 

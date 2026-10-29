@@ -4,11 +4,9 @@
 
 ## 私密报告渠道
 
-维护者已选择 GitHub 私密漏洞报告。入口为仓库的 [Report a vulnerability](https://github.com/huahuo156/footprint-map/security/advisories/new)。**启用状态尚未验证**；若入口不可用，请勿改用公开 Issue 提交详情。
+已启用 GitHub 私密漏洞报告，请通过 [Report a vulnerability](https://github.com/huahuo156/footprint-map/security/advisories/new) 私密提交，需要登录 GitHub。
 
-维护者须在 GitHub 仓库 Settings → Advanced Security（或 Security & analysis）中启用 Private vulnerability reporting，并使用普通报告者账号确认入口可用；确认后更新本节。该仓库端设置无法通过新增本文件自动开启。
-
-在渠道确认前，请保留详细报告；如需发起联系，公开问题仅说明“希望获取私密安全报告渠道”，不要附上漏洞细节或敏感资料。
+2026-10-29 已经 GitHub API 设置并复查 `enabled: true`。如果入口不可用，请不要改用公开 Issue 发布细节；可仅公开询问私密联系渠道，不附敏感信息。尚未进行实际报告提交演练，不会为验证功能创建虚假漏洞。
 
 报告应包含受影响的提交/版本、最短复现、影响范围和脱敏证据。不得为复现漏洞访问他人账号或数据。
 
