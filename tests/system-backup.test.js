@@ -17,6 +17,14 @@ async function fixture(run) {
   } finally { await rm(root, { recursive: true, force: true }) }
 }
 describe('full system recovery point', () => {
+  it('excludes reproducible private thumbnail caches while preserving source images', () => fixture(async ({ uploads, database, output }) => {
+    await mkdir(path.join(uploads, '.thumbnails', 'v1', 'actual.png'), { recursive: true })
+    await writeFile(path.join(uploads, '.thumbnails', 'v1', 'actual.png', 'derived.webp'), 'reproducible derivative')
+    await writeRecoveryPoint({ uploadDirectory: uploads, outputDirectory: output, database })
+    const verified = await verifyRecoveryPoint(output)
+    expect(verified.manifest.files.some(file => file.path.includes('.thumbnails'))).toBe(false)
+    expect(await readFile(path.join(output, 'images', 'actual.png'))).toEqual(Buffer.from([0, 1, 254, 255]))
+  }))
   it('rejects a recovery point that silently omits known optional columns', () => fixture(async ({ uploads, database, output }) => {
     const guides = database.tables.find(table => table.name === 'guides')
     guides.columns = guides.columns.filter(column => column !== 'content')

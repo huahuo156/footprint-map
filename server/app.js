@@ -9,7 +9,7 @@ import { backupRoutes } from './backup.js'
 import { createPlaceSearchRouter } from './place-search.js'
 import { createAuthRouter, requireAuth, requireVerified, csrfProtection } from './auth.js'
 import { sharedRateLimit as rateLimit } from './shared-rate-limit.js'
-import { assertOwnedAsset } from './assets.js'
+import { createPrivateImageHandler } from './thumbnails.js'
 import { createOperationsRouter } from './operations.js'
 import { incrementMetric } from './telemetry.js'
 
@@ -47,12 +47,7 @@ const journalRouter = createJournalRouter(uploadDirectory)
 backupRoutes(journalRouter, uploadDirectory)
 app.use('/api/journal', journalRouter)
 app.use('/api/places', rateLimit({ scope: 'places-ip', max: 30, windowMs: 60000 }), rateLimit({ scope: 'places-account', max: 30, windowMs: 60000, key: req => req.user.id }), createPlaceSearchRouter())
-app.use('/uploads', requireAuth, async (req, res, next) => {
-  try {
-    const key = await assertOwnedAsset('/uploads' + req.path)
-    res.sendFile(key, { root: uploadDirectory, dotfiles: 'deny', cacheControl: false, lastModified: false, headers: { 'Cache-Control': 'private, no-store' } }, error => { if (error) next(error) })
-  } catch (error) { next(error) }
-})
+app.use('/uploads', requireAuth, createPrivateImageHandler(uploadDirectory))
 const distDirectory = fileURLToPath(new URL('../dist/', import.meta.url))
 app.use(express.static(distDirectory))
 app.use((req, res, next) => {

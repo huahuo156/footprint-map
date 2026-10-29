@@ -6,6 +6,7 @@ import { pool } from './db.js'
 import { collectUnusedAssets } from './asset-lifecycle.js'
 import { USER_STORAGE_BYTES } from './assets.js'
 import { incrementMetric, metricsSnapshot } from './telemetry.js'
+import { pruneThumbnailCache } from './thumbnails.js'
 
 const DAY = 24 * 60 * 60 * 1000
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
@@ -54,6 +55,7 @@ export async function runMaintenance({ database = pool, uploadDirectory, dryRun 
       if (!dryRun) await unlink(filename).catch(error => { if (error.code !== 'ENOENT') throw error })
       result.temporaryFiles++
     }
+    result.thumbnailCachesRemoved = await pruneThumbnailCache(uploadDirectory, { dryRun })
     return result
   } finally {
     try { if (locked) await connection.execute("SELECT RELEASE_LOCK('shitu-maintenance-v1')") }

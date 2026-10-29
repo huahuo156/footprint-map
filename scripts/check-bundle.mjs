@@ -23,6 +23,7 @@ assert.ok(Buffer.byteLength(journal.code) < 250_000, 'The journal chunk must sta
 const initialCssFiles = new Set([...initial].flatMap(chunk => [...(chunk.viteMetadata?.importedCss || [])]))
 const initialCss = result.output.filter(item => item.type === 'asset' && initialCssFiles.has(item.fileName)).map(item => String(item.source)).join('\n')
 assert.ok(initialCss.includes('.j-notebook-cover') && initialCss.includes('.nb-cover-art'), 'Canvas notebook covers must retain their styles before opening the deferred reader')
+assert.ok(initialCss.includes('.j-view-switch') && initialCss.includes('.j-mobile-view-switch'), 'The shared view switch must be styled on initial canvas load, before loading the atlas')
 for (const chunk of chunks) {
   console.log(`${chunk.fileName}: ${(Buffer.byteLength(chunk.code) / 1000).toFixed(2)} kB; gzip ${(gzipSync(chunk.code).length / 1000).toFixed(2)} kB`)
 }

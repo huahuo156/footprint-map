@@ -59,14 +59,17 @@ async function directory(dir) {
   if (info.isSymbolicLink() || !info.isDirectory()) fail('Only real directories are allowed')
   return realpath(dir)
 }
-async function imageNames(dir) {
+async function imageNames(dir, { allowThumbnailCache = false } = {}) {
   await directory(dir)
   const names = (await readdir(dir)).sort()
+  const images = []
   for (const name of names) {
+    if (allowThumbnailCache && name === '.thumbnails') { await directory(path.join(dir, name)); continue }
     if (!IMAGE.test(name)) fail('Unexpected image file in upload directory')
     await regularFile(path.join(dir, name))
+    images.push(name)
   }
-  return names
+  return images
 }
 export async function assertOffline({ offline, healthUrl = process.env.API_HEALTH_URL || `http://127.0.0.1:${process.env.API_PORT || 3001}/api/health` } = {}) {
   if (offline !== true) fail('Explicit --offline is required: stop API and every worker before backup')
@@ -96,7 +99,7 @@ export async function writeRecoveryPoint({ database, uploadDirectory, outputDire
   const parent = await realpath(path.dirname(target))
   const canonicalTarget = path.join(parent, path.basename(target))
   if (canonicalTarget === uploads || canonicalTarget.startsWith(uploads + path.sep)) fail('Backup output must be outside uploads')
-  const names = await imageNames(uploads)
+  const names = await imageNames(uploads, { allowThumbnailCache: true })
   // Exclusive creation; caller owns failures for inspection, never delete user supplied paths.
   await mkdir(target, { mode: 0o700 })
   await protectDirectory(target)

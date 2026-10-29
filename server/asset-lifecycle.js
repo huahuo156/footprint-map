@@ -3,6 +3,7 @@ import path from 'node:path'
 import { pool } from './db.js'
 import { currentUserId } from './auth.js'
 import { assetFilename } from './assets.js'
+import { removeAssetThumbnails } from './thumbnails.js'
 
 // Mark before unlinking: a failed disk delete remains retryable and cannot be
 // attached to new content. Never remove a file before the reference check commits.
@@ -31,6 +32,7 @@ export async function collectUnusedAssets(directory, { ownerId = currentUserId()
   finally { connection.release() }
   if (!dryRun) for (const key of removable) {
     await unlink(path.join(directory, key)).catch(error => { if (error.code !== 'ENOENT') throw error })
+    await removeAssetThumbnails(directory, key)
     await database.execute("DELETE FROM assets WHERE storage_key=? AND owner_id=? AND status='staged'", [key, ownerId])
   }
   return { deleted: removable.length, retained }

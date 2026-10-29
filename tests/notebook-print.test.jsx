@@ -24,6 +24,13 @@ it('prints the cover, title and all ordered pages, waiting for images first', as
   expect(document.title).toBe(originalTitle)
 })
 
+it('uses full private images in an explicit print preview rather than printing thumbnails', () => {
+  const data = { trips: [], entries: [{ id: 'e', entry_date: '2026-10-27', components: [], photos: [{ id: 'p', url: '/uploads/p.jpg', components: [] }] }], marks: [], notebook_pages: [{ id: 'page', notebook_id: 'book', sort_order: 0 }], notebook_items: [{ id: 'p', kind: 'photo', page_id: 'page', x: 600, y: 800 }] }
+  render(<NotebookPrint book={{ id: 'book', name: '打印', cover_mode: 'photo', cover_url: '/uploads/cover.jpg' }} data={data} onClose={() => {}} />)
+  expect(screen.getByAltText('旅行照片')).toHaveAttribute('src', '/uploads/p.jpg')
+  expect(screen.getByAltText('手帐封面')).toHaveAttribute('src', '/uploads/cover.jpg')
+})
+
 it('lets an unavailable image finish with a visible warning instead of hanging', async () => {
   render(<NotebookPrint book={{ id: 'b', name: '手札', cover_mode: 'photo', cover_url: '/missing.jpg' }} data={{ entries: [], trips: [], notebook_pages: [], notebook_items: [] }} onClose={() => {}} />)
   fireEvent.error(screen.getByAltText('手帐封面'))
