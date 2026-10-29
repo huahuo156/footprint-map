@@ -5,15 +5,18 @@ import NotebookCover from './NotebookCover'
 import { planGroupExpansion, reserveUndecodedPhotos } from './groupExpansion'
 import JournalImage from './JournalImage'
 import CanvasGroupEditor from './CanvasGroupEditor'
-import { buildCanvas, cardBounds, canvasDropObstacles, layoutCanvasGroups, findFreePosition, imageFilter, intersects, isWestLake, itemsInRectangle, zoomAt, CANVAS_GROUP_METRICS } from './model'
+import { buildCanvas, cardBounds, layoutCanvasGroups, imageFilter, intersects, isWestLake, itemsInRectangle, zoomAt, CANVAS_GROUP_METRICS } from './model'
+import { canvasHeaders, collisionItems, placeCanvasItem, planCanvasGroupMove } from './canvasCollision'
 import { expandGroupSelection, toggleGroupSelection } from '../../shared/journal-groups.js'
 
 const transformCard = item => `translate3d(${item.x}px,${item.y}px,0) translate(-50%,-50%) rotate(${item.rotation || 0}deg)`
 export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, onMoveGroup, onSaveGroup, onDeleteGroup, onError, onViewPosition, onBatchEdit, onBatchDelete, onNotebook, onMoveNotebook, onDropItem, notebookOpen = false, demo, overviewRequest = 0 }) {
   const [imageSizes, setImageSizes] = useState({}), [groupEditor, setGroupEditor] = useState(null)
-  const model = useMemo(() => buildCanvas(data, imageSizes), [data, imageSizes])
+  const model = useMemo(() => buildCanvas(data, imageSizes, false), [data, imageSizes])
   const photoNodes = useRef(new Map())
   const canvasGroups = layoutCanvasGroups(data.canvas_groups || [], model.items)
+  const reservedItems = collisionItems(model.items)
+  const collisionScene = { items: reservedItems, groups: layoutCanvasGroups(data.canvas_groups || [], reservedItems), notebooks: data.notebooks || [], headers: canvasHeaders(model) }
   const displayGroups = canvasGroups.filter(group => !group.hidden)
   const hiddenPhotoIds = new Set(canvasGroups.filter(group => group.collapsed).flatMap(group => group.photo_ids))
   const displayItems = model.items.filter(item => !hiddenPhotoIds.has(item.id))
@@ -32,7 +35,7 @@ export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, o
     if (saving || demo) return
     setSaving(true)
     try {
-      const positions = group.collapsed ? planGroupExpansion(group.id, data.canvas_groups || [], reserveUndecodedPhotos(model.items, imageSizes)) : []
+      const positions = group.collapsed ? planGroupExpansion(group.id, data.canvas_groups || [], reserveUndecodedPhotos(model.items, imageSizes), data.notebooks || [], collisionScene.headers) : []
       await onSaveGroup(group.id, { collapsed: !group.collapsed, ...(positions.length ? { positions } : {}) })
     }
     catch (error) { onError?.(error.message) }
@@ -184,7 +187,9 @@ export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, o
       // The optimistic layout update will move the background through its bounds.
       try {
         if (onDropItem && await onDropItem(current.members, { x: event.clientX, y: event.clientY })) { shiftGroup(current, 0, 0); return }
-        await onMoveGroup(current.members.map(item => ({ id: item.id, kind: 'photo', x: item.x + current.dx, y: item.y + current.dy, rotation: item.rotation || 0 })))
+        const positions = planCanvasGroupMove(current.group.id, collisionScene, { x: current.dx, y: current.dy })
+        if (positions.length) shiftGroup(current, positions[0].x - current.members[0].x, positions[0].y - current.members[0].y)
+        await onMoveGroup(positions)
       }
       catch (error) { shiftGroup(current, 0, 0); onError(error.message) }
       finally { setSaving(false) }
@@ -196,7 +201,10 @@ export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, o
     if (current.item.kind === 'notebook') {
       if (cancelled || demo) { current.target.style.transform = transformCard(current.item); return }
       setSaving(true)
-      try { await onMoveNotebook?.(current.item.id, { canvas_x: current.x, canvas_y: current.y }) } catch (error) { current.target.style.transform = transformCard(current.item); onError?.(error.message) } finally { setSaving(false) }
+      const position = placeCanvasItem({ ...current.item, x: current.x, y: current.y }, collisionScene)
+      current.target.style.transition = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 160ms ease-out'
+      current.target.style.transform = transformCard({ ...current.item, ...position })
+      try { await onMoveNotebook?.(current.item.id, { canvas_x: position.x, canvas_y: position.y }) } catch (error) { current.target.style.transform = transformCard(current.item); onError?.(error.message) } finally { setSaving(false) }
       return
     }
     if (!cancelled && !demo && onDropItem) {
@@ -204,13 +212,14 @@ export default function JourneyCanvas({ userId, data, onOpen, onScene, onMove, o
         if (await onDropItem(current.item, { x: event.clientX, y: event.clientY })) { current.target.style.transform = transformCard(current.item); return }
       } catch (error) { current.target.style.transform = transformCard(current.item); onError?.(error.message); return }
     }
-    const position = cancelled ? { x: current.originalX, y: current.originalY } : findFreePosition({ ...current.item, x: current.x, y: current.y }, [...model.headers, ...canvasDropObstacles(model.items, canvasGroups, current.item.id)])
+    const reserved = reservedItems.find(item => item.id === current.item.id) || current.item
+    const position = cancelled ? { x: current.originalX, y: current.originalY } : placeCanvasItem({ ...reserved, x: current.x, y: current.y }, collisionScene)
     current.target.style.transition = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'transform 160ms ease-out'
     current.target.style.transform = transformCard({ ...current.item, ...position })
     settleTimer.current = setTimeout(() => { if (current.target.isConnected) current.target.style.transition = 'none' }, 170)
     if (cancelled || demo) return
     setSaving(true)
-    try { await onMove({ id: current.item.id, kind: current.item.kind, x: position.x - (current.item.kind === 'photo' ? 0 : current.item.anchor.x), y: position.y - (current.item.kind === 'photo' ? 0 : current.item.anchor.y), rotation: current.item.rotation || 0 }) } catch (error) { current.target.style.transform = transformCard(current.item); onError(error.message) } finally { setSaving(false) }
+    try { await onMove({ id: current.item.kind === 'entry' ? current.item.entry.record_id || current.item.id : current.item.id, kind: current.item.kind, x: position.x - (current.item.kind === 'photo' ? 0 : current.item.anchor.x), y: position.y - (current.item.kind === 'photo' ? 0 : current.item.anchor.y), rotation: current.item.rotation || 0 }) } catch (error) { current.target.style.transform = transformCard(current.item); onError(error.message) } finally { setSaving(false) }
   }
   const visible = item => Math.abs(item.x * view.scale + view.x) < size.width / 2 + 600 && Math.abs(item.y * view.scale + view.y) < size.height / 2 + 600
   const looseIds = new Set(model.groups.filter(group => group.ungrouped).map(group => group.id))

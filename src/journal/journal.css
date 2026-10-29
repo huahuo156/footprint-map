@@ -24,6 +24,11 @@ body { margin: 0; background: var(--j-bg); color: var(--j-ink); }
 .j-place-search-status,.j-place-address { display:block; margin-top:5px; }
 .journal-app, .journal-modal { font: 14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; color: var(--j-ink); }
 .journal-app *, .journal-modal * { box-sizing: border-box; }
+/* Shared navigation must be available before the atlas is opened. */
+.j-view-switch { display:flex; align-items:center; gap:3px; padding:3px; border:1px solid var(--j-line); border-radius:var(--j-radius-lg); background:var(--j-bg); }
+.j-view-switch button { display:flex; align-items:center; justify-content:center; gap:6px; border:0; border-radius:var(--j-radius); padding:5px 9px; color:var(--j-muted); background:transparent; white-space:nowrap; }
+.j-view-switch button[aria-pressed=true] { background:var(--j-paper); color:var(--j-accent); box-shadow:0 2px 6px var(--j-shadow); }
+.j-mobile-view-switch { display:flex; justify-content:center; padding:12px; }
 .journal-app button, .journal-modal button { font: inherit; cursor: pointer; }
 .journal-app button:disabled, .journal-modal button:disabled { opacity: .55; cursor: wait; }
 .journal-app button:focus-visible, .journal-app a:focus-visible, .journal-modal button:focus-visible, .journal-modal input:focus-visible, .journal-modal select:focus-visible, .journal-modal textarea:focus-visible { outline: 2px solid var(--j-accent); outline-offset: 4px; }
@@ -145,8 +150,10 @@ body { margin: 0; background: var(--j-bg); color: var(--j-ink); }
 .j-viewer .journal-modal-heading { margin-bottom: 0; }
 .j-viewer .journal-modal-heading h2 { font-family: inherit; font-size: 14px; line-height: 1.5; color: var(--j-muted); }
 .j-viewer-date { color: var(--j-muted); font-size: 12px; margin: 0 0 12px; }
-.j-viewer-photo { height: min(57dvh,640px); background: var(--j-bg); border-radius: var(--j-radius); overflow: hidden; }
+.j-viewer-photo { position:relative; height: min(57dvh,640px); background: var(--j-bg); border-radius: var(--j-radius); overflow: hidden; }
 .j-viewer-photo>img, .j-viewer-photo>.j-image-failed { display: block; width: 100%; height: 100%; object-fit: contain; }
+.j-viewer-photo>.j-viewer-thumbnail { position:absolute; inset:0; pointer-events:none; }
+.j-viewer-photo>.j-viewer-original { position:relative; }
 .j-viewer-copy { padding: 18px 0 10px; }
 .j-viewer-copy h3 { font: 400 25px/1.5 Georgia,"Songti SC",serif; margin: 7px 0; }
 .j-viewer-copy p { margin: 9px 0 0; font: 400 17px/1.8 Georgia,"Songti SC",serif; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -1,7 +1,8 @@
 import * as api from '../lib/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { materializeJournal } from './components'
-import { buildCanvas, cardBounds, planPhotoImport } from './model'
+import { buildCanvas, layoutCanvasGroups, planPhotoImport } from './model'
+import { canvasData } from './notebooks'
+import { canvasHeaders, canvasObstacles, collisionItems, planCanvasRepair } from './canvasCollision'
 import { importPhotoFiles, readPhotoDimensions } from './importPhotos'
 
 export function useJournal() {
@@ -13,10 +14,28 @@ export function useJournal() {
   const { createJournalTrip, deleteJournalEntry, deleteJournalPhoto, deleteJournalPhotos, deleteJournalItems, deleteJournalMark, fetchJournal, saveJournalEntry, saveJournalLayout, saveJournalMark, updatePhotoComponents, saveCanvasGroup, deleteCanvasGroup, saveNotebook, saveNotebookReading, deleteNotebook, addNotebookPage, reorderNotebookPages, deleteNotebookPage, moveNotebookItems, returnNotebookItems } = scope.current
 
   const [data, setData] = useState({ trips: [], entries: [], marks: [] })
+  const dataRef = useRef(null)
+  dataRef.current = data
   const [loading, setLoading] = useState(true), [error, setError] = useState('')
   const readingQueues = useRef(new Map())
   const reload = useCallback(async signal => {
-    const journal = await fetchJournal(signal)
+    let journal = await fetchJournal(signal)
+    if (signal?.aborted) return journal
+    const repair = planCanvasRepair(journal, dataRef.current)
+    try {
+      for (let index = 0; index < repair.items.length; index += 500) await saveJournalLayout(repair.items.slice(index, index + 500))
+      for (const book of repair.notebooks) await saveNotebook(book.id, { canvas_x: book.canvas_x, canvas_y: book.canvas_y })
+      if (repair.items.length || repair.notebooks.length) {
+        const updates = new Map(repair.items.map(item => [item.id, { canvas_x: item.x, canvas_y: item.y, rotation: item.rotation, ...(item.kind === 'photo' ? { canvas_absolute: 1 } : {}) }]))
+        const books = new Map(repair.notebooks.map(book => [book.id, book]))
+        journal = { ...journal, notebooks: (journal.notebooks || []).map(book => ({ ...book, ...books.get(book.id) })), marks: (journal.marks || []).map(mark => ({ ...mark, ...updates.get(mark.id) })), entries: journal.entries.map(entry => ({ ...entry, ...updates.get(entry.id), photos: entry.photos.map(photo => ({ ...photo, ...updates.get(photo.id) })) })) }
+      }
+    } catch (error) {
+      setData(journal)
+      const failure = new Error('自动避让位置未保存，请点击重试。' + error.message)
+      setError(failure.message)
+      throw failure
+    }
     setData(journal); setError('')
     return journal
   }, [])
@@ -108,7 +127,8 @@ export function useJournal() {
     const guard = api.captureApiSession()
     const dimensions = await readPhotoDimensions(files)
     guard()
-    const model = buildCanvas(materializeJournal(data)), positions = planPhotoImport(files.length, position || { x: 0, y: 0 }, [...model.headers, ...model.items.map(item => cardBounds(item.kind === 'photo' ? { ...item, width: 280, height: 326 } : item))], dimensions)
+    const model = buildCanvas(canvasData(data), {}, false), items = collisionItems(model.items)
+    const positions = planPhotoImport(files.length, position || { x: 0, y: 0 }, canvasObstacles({ items, groups: layoutCanvasGroups(data.canvas_groups || [], items), notebooks: data.notebooks, headers: canvasHeaders(model) }), dimensions)
     try { return await importPhotoFiles(files, positions, onProgress) }
     finally { await reload().catch(() => setError('请重试刷新列表，已导入的照片会保留。')) }
   }
