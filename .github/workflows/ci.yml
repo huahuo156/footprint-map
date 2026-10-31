@@ -21,7 +21,7 @@ jobs:
       MYSQL_ROOT_PASSWORD: disposable-ci-password
       NODE_OPTIONS: --max-old-space-size=768 --max-semi-space-size=8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 24
