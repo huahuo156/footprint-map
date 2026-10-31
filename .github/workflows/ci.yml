@@ -45,6 +45,12 @@ jobs:
       - run: npm run test:e2e
       - run: npm run test:smoke
       - run: npm run test:canvas-ui
+        env:
+          CANVAS_UI_MODE: interactions
+      # Trusted OS window-focus events are verified separately in a real display.
+      - run: xvfb-run -a npm run test:canvas-ui
+        env:
+          CANVAS_UI_MODE: window-focus
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

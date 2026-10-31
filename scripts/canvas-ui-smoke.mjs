@@ -5,14 +5,17 @@ import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-const output = path.resolve('test-results/canvas-ui', 'run-' + Date.now())
+const mode = process.env.CANVAS_UI_MODE || 'all'
+if (!['all', 'interactions', 'window-focus'].includes(mode)) throw new Error('Invalid CANVAS_UI_MODE')
+const output = path.resolve('test-results/canvas-ui', mode + '-run-' + Date.now())
 await mkdir(output, { recursive: true })
 const app = express(), root = path.resolve('dist')
 app.use(express.static(root))
 app.get('/{*path}', (_req, res) => res.sendFile(path.join(root, 'index.html')))
 const server = app.listen(0, '127.0.0.1')
 await new Promise(resolve => server.once('listening', resolve))
-const browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined })
+// CI runs the trusted window-focus checks inside Xvfb with a headed browser.
+const browser = await chromium.launch({ headless: mode !== 'window-focus' && process.env.CANVAS_UI_HEADED !== '1', channel: process.platform === 'win32' ? 'msedge' : undefined })
 const results = [], errors = []
 try {
   for (const mobile of [false, true]) for (const theme of ['light', 'dark']) {
@@ -120,6 +123,7 @@ try {
       await page.mouse.up()
       assert.equal(writes.length, 0, label + ' native capture loss must cancel without saving')
 
+      if (mode !== 'interactions') {
       await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 35, y + 15, { steps: 3 })
       assert.notEqual(await photo.evaluate(node => node.style.transform), original)
       const blurBefore = await page.evaluate(() => window.canvasInputAudit.blur)
@@ -139,6 +143,12 @@ try {
       }
       await page.mouse.up()
       assert.equal(writes.length, 0, label + ' tab blur must cancel without saving')
+
+      }
+      if (mode === 'window-focus') {
+        results.push({ label, trustedWindowBlur: true, blurRollback: true, blurLayoutWrites: writes.length })
+        continue
+      }
 
       // Keyboard focus can leave a captured pointer gesture. Opening the real
       // editor must end that gesture before the mouse is eventually released.
@@ -441,6 +451,6 @@ try {
     }
   }
   assert.deepEqual(errors, [])
-  await writeFile(path.join(output, 'results.json'), JSON.stringify({ results, errors, api: 'mocked; no personal data or real database', touch: 'Chromium emulation; not a physical phone' }, null, 2))
-  console.log(`Canvas browser smoke: ${results.length} configurations passed. Artifacts: ${output}`)
+  await writeFile(path.join(output, 'results.json'), JSON.stringify({ mode, results, errors, api: 'mocked; no personal data or real database', touch: 'Chromium emulation; not a physical phone' }, null, 2))
+  console.log(`Canvas browser smoke (${mode}): ${results.length} configurations passed. Artifacts: ${output}`)
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
