@@ -3,11 +3,22 @@ export const journalBackupUrl = API_BASE + '/journal/backup'
 let csrfToken = null
 let generation = 0
 const requests = new Set()
+const sessionResetListeners = new Set()
+export const getApiSessionEpoch = () => generation
+export function subscribeApiSessionReset(listener) {
+  sessionResetListeners.add(listener)
+  return () => sessionResetListeners.delete(listener)
+}
 export function clearApiSession() {
   generation += 1
   csrfToken = null
   for (const controller of requests) controller.abort()
   requests.clear()
+  // Snapshot delivery: listeners may unsubscribe or subscribe during a reset.
+  // eslint-disable-next-line unicorn/no-useless-spread
+  for (const listener of [...sessionResetListeners]) {
+    try { listener(generation) } catch (error) { console.error('Session reset listener failed', error) }
+  }
 }
 export function setApiSession(session) { clearApiSession(); csrfToken = session?.csrfToken || null }
 export function captureApiSession() { const version = generation; return () => { if (version !== generation) throw aborted() } }

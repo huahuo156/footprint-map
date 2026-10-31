@@ -14,18 +14,18 @@ const fail = message => { throw new Error(message) }
 const quote = name => mysql.escapeId(name)
 
 // The only SQL ever executed during restore comes from these trusted project files.
-async function schemaStatements() {
+async function schemaStatements({ legacyLayout = false } = {}) {
   const statements = []
   for (const file of SCHEMA_FILES) {
     const text = await readFile(new URL(file, import.meta.url), 'utf8')
     statements.push(...text.split(';').filter(value => value.trim()))
   }
-  return statements
+  return legacyLayout ? statements.filter(sql => !/CREATE TABLE IF NOT EXISTS journal_layout_state\s/.test(sql)).map(sql => sql.replace(/\s*layout_version BIGINT UNSIGNED NOT NULL DEFAULT 0,/g, '')) : statements
 }
-export async function schemaCatalog() {
+export async function schemaCatalog(options = {}) {
   const catalog = {}
-  for (const sql of await schemaStatements()) {
-    const match = /CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*)\)\s*$/i.exec(sql)
+  for (const sql of await schemaStatements(options)) {
+    const match = /CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*)\)\s*(?:ENGINE=InnoDB)?\s*$/i.exec(sql)
     if (!match) fail('Unsupported local schema')
     const columns = [...match[2].matchAll(/(?:^|,)\s*(\w+)\s+(?:INT|VARCHAR|CHAR|DOUBLE|TEXT|MEDIUMTEXT|DATE|DATETIME|TIMESTAMP|JSON|ENUM|BOOLEAN|BIGINT)\b/gi)].map(item => item[1])
     catalog[match[1]] = columns
@@ -34,7 +34,8 @@ export async function schemaCatalog() {
   return catalog
 }
 async function validateDatabase(database) {
-  const catalog = await schemaCatalog()
+  const legacyLayout = !database?.tables?.some(table => table?.name === 'journal_layout_state')
+  const catalog = await schemaCatalog({ legacyLayout })
   if (!database || !Array.isArray(database.tables) || database.tables.length !== Object.keys(catalog).length) fail('Incomplete database schema')
   const seen = new Set()
   for (const table of database.tables) {
@@ -47,6 +48,7 @@ async function validateDatabase(database) {
       for (const value of Object.values(row)) if (value !== null && typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) fail('Invalid row scalar')
     }
   }
+  if (legacyLayout && database.tables.find(table => table.name === 'journal_migrations')?.rows.some(row => row.name === 'layout-versions-v1')) fail('Layout schema profile mismatch')
   return catalog
 }
 async function regularFile(file) {
@@ -154,9 +156,9 @@ export async function verifyRecoveryPoint(backupDirectory) {
   return { manifest, database, directory: root }
 }
 export async function exportDatabase(connection) {
-  const catalog = await schemaCatalog()
   const [tables] = await connection.query('SHOW FULL TABLES')
   const names = tables.map(row => Object.values(row)[0])
+  const catalog = await schemaCatalog({ legacyLayout: !names.includes('journal_layout_state') })
   if (names.length !== Object.keys(catalog).length || names.some(name => !Object.hasOwn(catalog, name))) fail('Unknown or missing source table; update recovery schema before backup')
   const result = { tables: [] }
   await connection.query("SET time_zone='+00:00'")
@@ -185,11 +187,11 @@ export async function createSystemBackup({ connection, offline, healthUrl, uploa
 export function assertDrillDatabase(name) {
   if (!/^footprint_restore_drill_[a-f0-9]{24}$/.test(name)) fail('Invalid disposable restore drill database')
 }
-export async function initializeDrillSchema(connection) {
+export async function initializeDrillSchema(connection, { legacyLayout = false } = {}) {
   const [[{ name }]] = await connection.query('SELECT DATABASE() AS name')
   assertDrillDatabase(name)
   // users must exist before ownership foreign keys; raw schema does not seed or migrate data.
-  const statements = await schemaStatements()
+  const statements = await schemaStatements({ legacyLayout })
   const users = statements.find(sql => /CREATE TABLE IF NOT EXISTS users\s/.test(sql))
   await connection.query(users)
   for (const sql of statements) if (sql !== users) await connection.query(sql)
@@ -215,8 +217,9 @@ export async function restoreDrill({ backupDirectory, adminOptions }) {
     created = true
     connection = await mysql.createConnection({ ...options, database: name })
     await connection.query("SET time_zone='+00:00'")
-    await initializeDrillSchema(connection)
-    const catalog = await schemaCatalog()
+    const legacyLayout = !verified.database.tables.some(table => table.name === 'journal_layout_state')
+    await initializeDrillSchema(connection, { legacyLayout })
+    const catalog = await schemaCatalog({ legacyLayout })
     // Schema creation order already follows dependencies except users, which goes first.
     const order = ['users', ...Object.keys(catalog).filter(table => table !== 'users')]
     const tables = new Map(verified.database.tables.map(table => [table.name, table]))

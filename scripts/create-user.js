@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import argon2 from 'argon2'
+import { createLayoutUser } from '../server/layout-session.js'
 if (process.env.MIGRATION_MYSQL_USER) process.env.MYSQL_USER = process.env.MIGRATION_MYSQL_USER
 if (process.env.MIGRATION_MYSQL_PASSWORD) process.env.MYSQL_PASSWORD = process.env.MIGRATION_MYSQL_PASSWORD
 const { pool } = await import('../server/db.js')
@@ -12,7 +13,7 @@ try {
   const schema = await readFile(new URL('../server/auth-schema.sql', import.meta.url), 'utf8')
   for (const sql of schema.split(';').filter(value => value.trim())) await pool.query(sql)
   const hash = await argon2.hash(password, { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 })
-  await pool.execute('INSERT INTO users (id,email,password_hash,email_verified_at) VALUES (?,?,?,NOW(3))', [randomUUID(), email, hash])
+  await createLayoutUser(pool, { id: randomUUID(), email, passwordHash: hash, emailVerifiedAt: new Date() })
   console.log('指定账号已创建；不会覆盖已有账号或自动领取历史资料。')
 } catch (error) { console.error('创建失败：', error.code === 'ER_DUP_ENTRY' ? '邮箱已存在' : error.message); process.exitCode = 1 }
 finally { delete process.env.INITIAL_USER_PASSWORD; await pool.end() }

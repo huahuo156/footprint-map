@@ -102,6 +102,9 @@ npm run dev
 | `npm run test:api` | 创建随机临时 MySQL 库和图片目录，执行真实接口集成测试后清理 |
 | `npm run test:e2e` | 在独立临时 MySQL 库中，用真实 API 检查桌面/手机登录、上传、私有图片、手札、备份还原与退出 |
 | `npm run test:smoke` | 使用模拟 API 检查桌面/手机深浅主题、版图和阅读器焦点 |
+| `npm run test:canvas-ui` | 使用模拟 API 和真实浏览器检查桌面/触屏平板的拖动取消、框选、快捷键隔离、多指输入与布局提交 |
+| `npm run test:layout-migration` | 在显式指定的隔离 MySQL 上验证布局版本迁移；需设置 `LAYOUT_TEST_MYSQL_PORT`、`LAYOUT_TEST_MYSQL_PASSWORD`，可选 `LAYOUT_TEST_MYSQL_USER`；只创建和清理随机测试库 |
+| `npm run test:layout-lifecycle` | 使用同样的显式隔离 MySQL 配置，验证真实迁移、CLI 建号和重复执行；只创建和清理随机测试库 |
 
 `test:api` 和 `test:e2e` 需要数据库建库权限，自动生成随机测试库与临时图片目录，结束后清理，不访问个人手帐数据库。浏览器测试在 Windows 使用 Edge，其他平台使用 Playwright Chromium（首次执行 `npx playwright install chromium`）。真实浏览器失败截图和追踪写入 `test-results/real-e2e/`，模拟检查截图写入 `test-results/ui-smoke/`，均不进入版本控制。
 

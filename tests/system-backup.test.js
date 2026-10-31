@@ -17,6 +17,31 @@ async function fixture(run) {
   } finally { await rm(root, { recursive: true, force: true }) }
 }
 describe('full system recovery point', () => {
+  it('catalogs versioned layouts and retains an explicit complete legacy profile', async () => {
+    const current = await schemaCatalog(), legacy = await schemaCatalog({ legacyLayout: true })
+    expect(current.journal_layout_state).toEqual(['owner_id', 'structure_version'])
+    for (const name of ['journal_entries', 'journal_photos', 'journal_marks']) {
+      expect(current[name]).toContain('layout_version')
+      expect(legacy[name]).not.toContain('layout_version')
+    }
+    expect(legacy).not.toHaveProperty('journal_layout_state')
+  })
+  it('preserves exact version tokens in a full system recovery point', () => fixture(async ({ uploads, database, output }) => {
+    database.tables.find(table => table.name === 'journal_layout_state').rows.push({ owner_id: 'owner-1', structure_version: '9007199254740993' })
+    await writeRecoveryPoint({ uploadDirectory: uploads, outputDirectory: output, database })
+    expect((await verifyRecoveryPoint(output)).database.tables.find(table => table.name === 'journal_layout_state').rows[0].structure_version).toBe('9007199254740993')
+  }))
+  it('accepts the complete old profile but rejects a partly stripped versioned schema', () => fixture(async ({ uploads, database, output }) => {
+    const legacy = structuredClone(database)
+    legacy.tables = legacy.tables.filter(table => table.name !== 'journal_layout_state')
+    for (const table of legacy.tables) table.columns = table.columns.filter(column => column !== 'layout_version')
+    await writeRecoveryPoint({ uploadDirectory: uploads, outputDirectory: output, database: legacy })
+    await verifyRecoveryPoint(output)
+    const incomplete = structuredClone(database)
+    const entries = incomplete.tables.find(table => table.name === 'journal_entries')
+    entries.columns = entries.columns.filter(column => column !== 'layout_version')
+    await expect(writeRecoveryPoint({ uploadDirectory: uploads, outputDirectory: output + '-invalid', database: incomplete })).rejects.toThrow(/schema/i)
+  }))
   it('excludes reproducible private thumbnail caches while preserving source images', () => fixture(async ({ uploads, database, output }) => {
     await mkdir(path.join(uploads, '.thumbnails', 'v1', 'actual.png'), { recursive: true })
     await writeFile(path.join(uploads, '.thumbnails', 'v1', 'actual.png', 'derived.webp'), 'reproducible derivative')

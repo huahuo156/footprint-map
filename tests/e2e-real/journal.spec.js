@@ -37,6 +37,128 @@ test('real accounts upload, keep media private, save a notebook, back up, restor
   expect(media.status()).toBe(200)
   expect((await sharp(await media.body()).metadata()).width).toBe(30)
 
+  if (testInfo.project.name === 'desktop') {
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    const card = page.locator(`[data-photo-id="${photo.id}"]`)
+    await expect(card).toBeVisible()
+    const original = await card.evaluate(node => node.style.transform), attempts = []
+    let fail = true
+    await page.route('**/api/journal/layout', async route => {
+      attempts.push(route.request().postDataJSON())
+      if (fail) { fail = false; return route.fulfill({ status: 503, json: { error: '真实回归模拟断网' } }) }
+      return route.continue()
+    })
+    const box = await card.boundingBox(), x = box.x + box.width / 2, y = box.y + box.height / 2
+    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 60, y + 20, { steps: 4 }); await page.mouse.up()
+    await expect(page.getByRole('alert').filter({ hasText: '真实回归模拟断网' })).toBeVisible()
+    const retained = await card.evaluate(node => node.style.transform)
+    expect(retained).not.toBe(original)
+    // Cancelling a real browser refresh must leave the in-memory draft intact.
+    const leaving = page.waitForEvent('dialog')
+    // A cancelled navigation has no load event; do not await page.reload().
+    await page.evaluate(() => { setTimeout(() => location.reload(), 0) })
+    const leaveDialog = await leaving
+    expect(leaveDialog.type()).toBe('beforeunload')
+    await leaveDialog.dismiss()
+    expect(await card.evaluate(node => node.style.transform)).toBe(retained)
+    const retry = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.getByRole('button', { name: '重试保存', exact: true }).click(); await retry
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    expect(attempts[1]).toEqual(attempts[0]); expect(typeof attempts[0].items[0].expected_version).toBe('string')
+    const undo = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.getByRole('button', { name: '撤销布局', exact: true }).click(); await undo
+    await expect.poll(() => card.evaluate(node => node.style.transform)).toBe(original)
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    const redo = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.getByRole('button', { name: '重做布局', exact: true }).click(); await redo
+    await expect.poll(() => card.evaluate(node => node.style.transform)).toBe(retained)
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    await page.unroute('**/api/journal/layout')
+
+    // Both pages read the same baseline; the second writer must not overwrite it.
+    const sibling = await context.newPage()
+    try {
+      await sibling.goto('/')
+      await expect(sibling.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+      const siblingCard = sibling.locator(`[data-photo-id="${photo.id}"]`)
+      async function drag(target, targetCard, dx) {
+        const bounds = await targetCard.boundingBox()
+        const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2
+        await target.mouse.move(cx, cy); await target.mouse.down()
+        await target.mouse.move(cx + dx, cy + 15, { steps: 4 }); await target.mouse.up()
+      }
+      const updated = sibling.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+      await drag(sibling, siblingCard, 35); await updated
+      await expect(sibling.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+      const confirmed = await (await context.request.get('/api/journal')).json()
+      const remoteTransform = await siblingCard.evaluate(node => node.style.transform)
+      const conflictResponse = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 409)
+      await drag(page, card, -35); await conflictResponse
+      await expect(page.getByRole('alert').filter({ hasText: '其他页面已修改布局' })).toBeVisible()
+      await expect(page.getByRole('button', { name: '重试保存', exact: true })).toHaveCount(0)
+      const localDraft = await card.evaluate(node => node.style.transform)
+      const reload = page.getByRole('button', { name: '丢弃本页布局并重新载入', exact: true })
+      page.once('dialog', dialog => dialog.dismiss())
+      await reload.click()
+      expect(await card.evaluate(node => node.style.transform)).toBe(localDraft)
+      await expect(reload).toBeVisible()
+      const unchanged = await (await context.request.get('/api/journal')).json()
+      expect(unchanged).toEqual(confirmed)
+      page.once('dialog', dialog => dialog.accept())
+      await reload.click()
+      await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+      await expect(reload).toHaveCount(0)
+      await expect(page.getByRole('button', { name: '撤销布局', exact: true })).toBeDisabled()
+      await expect(page.getByRole('button', { name: '重做布局', exact: true })).toBeDisabled()
+      await expect.poll(() => card.evaluate(node => node.style.transform)).toBe(remoteTransform)
+      // A confirmed baseline can refresh without a beforeunload prompt.
+      await page.reload()
+      await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+      expect(await card.evaluate(node => node.style.transform)).toBe(remoteTransform)
+    } finally { await sibling.close() }
+
+    const canvas = page.getByRole('region', { name: /旅行照片画布/ })
+    const keyboardBaseline = (await (await context.request.get('/api/journal')).json()).entries[0].photos[0]
+    let keyboardWrites = 0
+    const countKeyboardWrites = request => { if (request.url().endsWith('/journal/layout') && request.method() === 'PATCH') keyboardWrites++ }
+    page.on('request', countKeyboardWrites)
+    await page.getByRole('button', { name: '多选内容', exact: true }).click()
+    await page.keyboard.press('ControlOrMeta+a')
+    const nudge = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.keyboard.press('ArrowRight')
+    const nudgeBody = (await nudge).request().postDataJSON()
+    expect(nudgeBody.items[0]).toMatchObject({ id: photo.id, x: keyboardBaseline.canvas_x + 1, expected_version: keyboardBaseline.layout_version })
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    const keyboardUndo = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.keyboard.press('ControlOrMeta+z'); await keyboardUndo
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    expect((await (await context.request.get('/api/journal')).json()).entries[0].photos[0].canvas_x).toBe(keyboardBaseline.canvas_x)
+    const keyboardRedo = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.keyboard.press('ControlOrMeta+Shift+z'); await keyboardRedo
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    const keyboardAttempts = []
+    await page.route('**/api/journal/layout', route => {
+      keyboardAttempts.push(route.request().postDataJSON())
+      if (keyboardAttempts.length === 1) return route.fulfill({ status: 503, json: { error: '键盘保存失败回归' } })
+      return route.continue()
+    })
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('alert').filter({ hasText: '键盘保存失败回归' })).toBeVisible()
+    const retryKeyboard = page.waitForResponse(r => r.url().endsWith('/journal/layout') && r.status() === 200)
+    await page.getByRole('button', { name: '重试保存', exact: true }).click(); await retryKeyboard
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    expect(keyboardAttempts[1]).toEqual(keyboardAttempts[0])
+    await page.unroute('**/api/journal/layout')
+    await canvas.focus()
+    await page.keyboard.press('f'); await expect(canvas).toBeFocused()
+    expect(keyboardWrites).toBe(5)
+    page.off('request', countKeyboardWrites)
+    await page.reload()
+    await expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
+    expect((await (await context.request.get('/api/journal')).json()).entries[0].photos[0].canvas_x).toBe(keyboardBaseline.canvas_x + 1)
+    expect((await (await context.request.get('/api/journal')).json()).entries[0].photos[0].canvas_y).toBe(keyboardBaseline.canvas_y + 1)
+  }
+
   const other = await browser.newContext({ baseURL: testInfo.project.use.baseURL })
   try {
     expect((await other.request.get(photo.url)).status()).toBe(401)

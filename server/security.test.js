@@ -10,17 +10,19 @@ import argon2 from 'argon2'
 import sharp from 'sharp'
 import { app, uploadDirectory } from './app.js'
 import { pool } from './db.js'
+import { createLayoutUser } from './layout-session.js'
 import { readZip, zipChunks } from './zip.js'
 import { collectUnusedAssets } from './asset-lifecycle.js'
 import { metricsSnapshot } from './telemetry.js'
 import { runMaintenance } from './operations.js'
+import { createLayoutPersistence } from '../src/journal/canvas/persistence.js'
 
 if (!/^footprint_security_test_[a-f0-9]{12}$/.test(process.env.MYSQL_DATABASE || '') || process.env.MYSQL_DATABASE !== process.env.SECURITY_TEST_DATABASE) throw new Error('Use npm run test:api: isolated disposable database required')
 const origin = process.env.APP_ORIGIN
 let server, base, a, b, unverified
 async function account(email, verified = true) {
   const id = randomUUID(), password = 'security-test-password-123'
-  await pool.execute('INSERT INTO users (id,email,password_hash,email_verified_at) VALUES (?,?,?,?)', [id, email, await argon2.hash(password, { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 }), verified ? new Date() : null])
+  await createLayoutUser(pool, { id, email, passwordHash: await argon2.hash(password, { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 }), emailVerifiedAt: verified ? new Date() : null })
   const response = await fetch(base + '/api/auth/login', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
   assert.equal(response.status, 200)
   const session = await response.json()
@@ -51,6 +53,295 @@ before(async () => {
   a = await account('a@example.com'); b = await account('b@example.com'); unverified = await account('unverified@example.com', false)
 })
 after(async () => { if (server) await new Promise(resolve => server.close(resolve)); await pool.end() })
+
+test('mark mutations protect structure and row versions with atomic rollback', async () => {
+  const readStructure = async user => (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [user.id]))[0][0].v
+  const initial = await readStructure(a)
+  const mark = await json(a, '/api/journal/marks', { kind: 'text', text: 'version fixture', expected_structure_version: initial })
+  const structure = await readStructure(a)
+  assert.equal(structure, String(BigInt(initial) + 1n))
+  const route = '/api/journal/marks/' + mark.id
+  const readMark = async () => (await pool.execute('SELECT rotation,text,CAST(layout_version AS CHAR) AS v FROM journal_marks WHERE id=?', [mark.id]))[0][0]
+  const body = { kind: 'text', text: 'rotated', rotation: 2, expected_structure_version: structure, expected_version: '0' }
+  const race = await Promise.all([request(a, route, body, 'PUT'), request(a, route, { ...body, rotation: 3 }, 'PUT')])
+  assert.deepEqual(race.map(r => r.status).sort(), [200, 409])
+  const saved = await readMark(); assert.equal(saved.v, '1')
+  await json(a, route, { ...body, text: 'content only', rotation: saved.rotation, expected_version: '1' }, 'PUT')
+  assert.equal((await readMark()).v, '1')
+  assert.equal((await request(b, route, { kind: 'text', text: 'foreign' }, 'PUT')).status, 404)
+  assert.equal((await request(a, route, { expected_structure_version: initial }, 'DELETE')).status, 409)
+  await pool.query("ALTER TABLE journal_marks ADD CONSTRAINT mark_write_failure CHECK (text <> 'forced-mark-failure')")
+  try {
+    assert.equal((await request(a, route, { ...body, text: 'forced-mark-failure', rotation: 9, expected_version: '1' }, 'PUT')).status, 500)
+    assert.deepEqual(await readMark(), { ...saved, text: 'content only' })
+  } finally { await pool.query('ALTER TABLE journal_marks DROP CHECK mark_write_failure') }
+  assert.equal(await readStructure(a), structure)
+  await json(a, route, { kind: 'text', text: 'legacy', rotation: 8 }, 'PUT')
+  assert.equal((await readMark()).v, '2')
+  await json(a, route, { expected_structure_version: structure }, 'DELETE')
+  assert.equal(await readMark(), undefined)
+  assert.equal(await readStructure(a), String(BigInt(structure) + 1n))
+})
+
+test('batch photo content and layout changes reject conflicts and roll back atomically', async () => {
+  const entryA = await photo(a), entryB = await photo(a), foreign = await photo(b)
+  const ids = async entry => (await pool.execute('SELECT id FROM journal_photos WHERE entry_id=?', [entry.id]))[0][0].id
+  const first = await ids(entryA), second = await ids(entryB), foreignId = await ids(foreign)
+  const structure = (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [a.id]))[0][0].v
+  const read = async () => (await pool.execute('SELECT id,canvas_x,canvas_y,rotation,components,CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE id IN (?,?) ORDER BY id', [first, second]))[0]
+  const route = '/api/journal/photos/components'
+  const body = { photo_ids: [first, second], components: [{ type: 'description', value: 'batch changed' }], expected_structure_version: structure, positions: [{ id: first, x: 10, y: 20, expected_version: '0' }, { id: second, x: 30, y: 40, expected_version: '0' }] }
+  const race = await Promise.all([request(a, route, body, 'PATCH'), request(a, route, { ...body, positions: body.positions.map(p => ({ ...p, x: p.x + 1 })) }, 'PATCH')])
+  assert.deepEqual(race.map(r => r.status).sort(), [200, 409])
+  const saved = await read(); assert.ok(saved.every(row => row.v === '1'))
+  const same = { ...body, positions: saved.map(row => ({ id: row.id, x: row.canvas_x, y: row.canvas_y, rotation: row.rotation, expected_version: row.v })) }
+  await json(a, route, same, 'PATCH'); assert.deepEqual(await read(), saved)
+  await json(a, route, { photo_ids: [first, second], components: [{ type: 'description', value: 'content only' }] }, 'PATCH')
+  assert.ok((await read()).every(row => row.v === '1'))
+  const beforeFailure = await read()
+  await pool.query('ALTER TABLE journal_photos ADD CONSTRAINT batch_photo_failure CHECK (canvas_x <> 123456)')
+  try {
+    assert.equal((await request(a, route, { ...same, components: [{ type: 'description', value: 'must roll back' }], positions: same.positions.map((p, index) => ({ ...p, x: index ? 123456 : 99 })) }, 'PATCH')).status, 500)
+    assert.deepEqual(await read(), beforeFailure)
+  } finally { await pool.query('ALTER TABLE journal_photos DROP CHECK batch_photo_failure') }
+  assert.equal((await request(a, route, { ...same, photo_ids: [first, foreignId], positions: [same.positions.find(p => p.id === first), { id: foreignId, x: 1, y: 1, expected_version: '0' }] }, 'PATCH')).status, 404)
+  assert.deepEqual(await read(), beforeFailure)
+  assert.equal((await request(a, route, { ...same, expected_structure_version: '18446744073709551615' }, 'PATCH')).status, 409)
+  await json(a, route, { ...body, expected_structure_version: undefined, positions: body.positions.map(({ expected_version: _expectedVersion, ...position }) => ({ ...position, x: position.x + 9 })) }, 'PATCH')
+  assert.ok((await read()).every(row => row.v === '2'))
+  await json(a, '/api/journal/entries/' + entryA.id, undefined, 'DELETE')
+  await json(a, '/api/journal/entries/' + entryB.id, undefined, 'DELETE')
+  await json(b, '/api/journal/entries/' + foreign.id, undefined, 'DELETE')
+})
+
+test('nested group writes protect versions and roll back positions with group failures', async () => {
+  const entryA = await photo(a), entryB = await photo(a)
+  const photoId = async entry => (await pool.execute('SELECT id FROM journal_photos WHERE entry_id=?', [entry.id]))[0][0].id
+  const first = await photoId(entryA), second = await photoId(entryB)
+  const readStructure = async () => (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [a.id]))[0][0].v
+  const readPhotos = async () => (await pool.execute('SELECT id,canvas_x,canvas_y,rotation,CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE id IN (?,?) ORDER BY id', [first, second]))[0]
+  const positions = rows => rows.map(row => ({ id: row.id, x: row.canvas_x, y: row.canvas_y, rotation: row.rotation, expected_version: row.v }))
+  const one = await json(a, '/api/journal/groups', { name: 'inner one', positions: [{ id: first, x: 10, y: 20 }] })
+  const two = await json(a, '/api/journal/groups', { name: 'inner two', positions: [{ id: second, x: 30, y: 40 }] })
+  const structure = await readStructure(), initialPhotos = await readPhotos()
+  const parent = await json(a, '/api/journal/groups', { name: 'outer', positions: positions(initialPhotos), expected_structure_version: structure })
+  assert.equal(await readStructure(), String(BigInt(structure) + 1n)); assert.deepEqual(await readPhotos(), initialPhotos)
+  assert.deepEqual(new Set(parent.child_group_ids), new Set([one.id, two.id]))
+  const route = '/api/journal/groups/' + parent.id, current = await readStructure()
+  assert.equal((await request(a, '/api/journal/groups', { name: 'partial', positions: positions(initialPhotos).slice(0, 1), expected_structure_version: current })).status, 400)
+  assert.equal((await request(b, route, { collapsed: true }, 'PATCH')).status, 404)
+  const body = { collapsed: true, positions: positions(initialPhotos).map(p => ({ ...p, x: p.x + 1 })), expected_structure_version: current }
+  const race = await Promise.all([request(a, route, body, 'PATCH'), request(a, route, { ...body, positions: body.positions.map(p => ({ ...p, x: p.x + 1 })) }, 'PATCH')])
+  assert.deepEqual(race.map(r => r.status).sort(), [200, 409])
+  assert.equal(await readStructure(), String(BigInt(current) + 1n))
+  const saved = await readPhotos(); assert.ok(saved.every(row => row.v === '2'))
+  const nextStructure = await readStructure()
+  await json(a, route, { name: 'renamed', collapsed: true, expected_structure_version: nextStructure }, 'PATCH')
+  assert.equal(await readStructure(), nextStructure)
+  assert.equal((await request(a, route, { collapsed: false, positions: positions(initialPhotos), expected_structure_version: nextStructure }, 'PATCH')).status, 409)
+  await pool.query("ALTER TABLE journal_canvas_groups ADD CONSTRAINT group_write_failure CHECK (name <> 'forced-group-failure')")
+  try {
+    assert.equal((await request(a, route, { name: 'forced-group-failure', collapsed: false, positions: positions(saved).map(p => ({ ...p, x: p.x + 10 })), expected_structure_version: nextStructure }, 'PATCH')).status, 500)
+    assert.deepEqual(await readPhotos(), saved); assert.equal(await readStructure(), nextStructure)
+    const [[group]] = await pool.execute('SELECT name,collapsed FROM journal_canvas_groups WHERE id=?', [parent.id]); assert.equal(group.name, 'renamed'); assert.equal(group.collapsed, 1)
+  } finally { await pool.query('ALTER TABLE journal_canvas_groups DROP CHECK group_write_failure') }
+  assert.equal((await request(a, '/api/journal/groups/' + one.id, { expected_structure_version: current }, 'DELETE')).status, 409)
+  await json(a, '/api/journal/groups/' + one.id, { expected_structure_version: nextStructure }, 'DELETE')
+  const [[membership]] = await pool.execute('SELECT group_id FROM journal_canvas_group_photos WHERE photo_id=?', [first]); assert.equal(membership.group_id, parent.id)
+  assert.equal(await readStructure(), String(BigInt(nextStructure) + 1n))
+  await json(a, route, undefined, 'DELETE'); await json(a, '/api/journal/groups/' + two.id, undefined, 'DELETE')
+  await json(a, '/api/journal/entries/' + entryA.id, undefined, 'DELETE'); await json(a, '/api/journal/entries/' + entryB.id, undefined, 'DELETE')
+})
+
+test('entry and deletion writes enforce structure barriers and roll back cascades', async () => {
+  const readStructure = async () => (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [a.id]))[0][0].v
+  const initial = await readStructure()
+  const textEntry = await json(a, '/api/journal/entries', { title: 'structure fixture', photos: [], expected_structure_version: initial })
+  const current = await readStructure(); assert.equal(current, String(BigInt(initial) + 1n))
+  await json(a, '/api/journal/entries/' + textEntry.id, { title: 'content only', photos: [], expected_structure_version: current }, 'PUT')
+  assert.equal(await readStructure(), current)
+  assert.equal((await request(a, '/api/journal/entries/' + textEntry.id, { title: 'stale', photos: [], expected_structure_version: initial }, 'PUT')).status, 409)
+  const photoEntry = await photo(a)
+  const [[picture]] = await pool.execute('SELECT id,url,CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE entry_id=?', [photoEntry.id])
+  const beforeEdit = await readStructure()
+  await json(a, '/api/journal/entries/' + photoEntry.id, { title: 'kept photo', photos: [{ id: picture.id }], expected_structure_version: beforeEdit }, 'PUT')
+  assert.equal(await readStructure(), beforeEdit)
+  assert.equal((await pool.execute('SELECT CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE id=?', [picture.id]))[0][0].v, picture.v)
+  await json(a, '/api/journal/entries/' + photoEntry.id, { title: 'removed photo', photos: [], expected_structure_version: beforeEdit }, 'PUT')
+  assert.equal(await readStructure(), String(BigInt(beforeEdit) + 1n))
+  assert.equal((await pool.execute('SELECT id FROM journal_photos WHERE id=?', [picture.id]))[0].length, 0)
+  await json(a, '/api/journal/entries/' + photoEntry.id, undefined, 'DELETE')
+  await json(a, '/api/journal/entries/' + textEntry.id, undefined, 'DELETE')
+
+  const notebook = await json(a, '/api/journal/notebooks', { name: 'membership fixture' })
+  const [[page]] = await pool.execute('SELECT id FROM journal_notebook_pages WHERE notebook_id=? ORDER BY sort_order LIMIT 1', [notebook.id])
+  const notebookEntry = await json(a, '/api/journal/entries', { title: 'page text', photos: [], notebook_page_id: page.id })
+  const beforeUpload = await readStructure()
+  const image = await sharp({ create: { width: 12, height: 8, channels: 3, background: '#aacccc' } }).png().toBuffer()
+  const form = new FormData()
+  form.set('data', JSON.stringify({ title: 'now photos', photos: [{ upload_index: 0 }, { upload_index: 1 }], notebook_page_id: page.id, expected_structure_version: beforeUpload }))
+  form.append('images', new Blob([image], { type: 'image/png' }), 'fixture.png')
+  form.append('images', new Blob([image], { type: 'image/png' }), 'fixture-two.png')
+  await json(a, '/api/journal/entries/' + notebookEntry.id, form, 'PUT')
+  assert.equal(await readStructure(), String(BigInt(beforeUpload) + 1n), 'new photo and removed entry membership bump once')
+  assert.equal((await pool.execute('SELECT id FROM journal_notebook_entry_items WHERE id=?', [notebookEntry.id]))[0].length, 0)
+  assert.equal((await pool.execute('SELECT i.id FROM journal_notebook_photo_items i JOIN journal_photos p ON p.id=i.id WHERE p.entry_id=? AND i.page_id=?', [notebookEntry.id, page.id]))[0].length, 2)
+  const [ordered] = await pool.execute('SELECT id,CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE entry_id=? ORDER BY sort_order', [notebookEntry.id])
+  const beforeReorder = await readStructure()
+  await json(a, '/api/journal/entries/' + notebookEntry.id, { title: 'reordered', photos: [...ordered].reverse().map(p => ({ id: p.id })), expected_structure_version: beforeReorder }, 'PUT')
+  assert.equal(await readStructure(), String(BigInt(beforeReorder) + 1n))
+  const [reordered] = await pool.execute('SELECT id,CAST(layout_version AS CHAR) AS v FROM journal_photos WHERE entry_id=? ORDER BY sort_order', [notebookEntry.id])
+  assert.deepEqual(reordered, [...ordered].reverse())
+  await json(a, '/api/journal/entries/' + notebookEntry.id, undefined, 'DELETE')
+  await json(a, '/api/journal/notebooks/' + notebook.id, undefined, 'DELETE')
+
+  const racingEntry = await json(a, '/api/journal/entries', { title: 'delete race', photos: [] })
+  const raceStructure = await readStructure()
+  const raceRoute = '/api/journal/entries/' + racingEntry.id
+  const deletionRace = await Promise.all([request(a, raceRoute, { expected_structure_version: raceStructure }, 'DELETE'), request(a, raceRoute, { expected_structure_version: raceStructure }, 'DELETE')])
+  assert.deepEqual(deletionRace.map(r => r.status).sort(), [200, 409])
+  assert.equal(await readStructure(), String(BigInt(raceStructure) + 1n))
+
+  for (const mode of ['single-photo', 'batch-photos', 'entry', 'items']) {
+    const entry = await photo(a)
+    const [[p]] = await pool.execute('SELECT id,url FROM journal_photos WHERE entry_id=?', [entry.id])
+    const structure = await readStructure()
+    const route = mode === 'single-photo' ? '/api/journal/photos/' + p.id : mode === 'batch-photos' ? '/api/journal/photos' : mode === 'entry' ? '/api/journal/entries/' + entry.id : '/api/journal/items'
+    const payload = mode === 'batch-photos' ? { photo_ids: [p.id] } : mode === 'items' ? { items: [{ kind: 'photo', id: p.id }] } : {}
+    assert.equal((await request(a, route, { ...payload, expected_structure_version: '18446744073709551614' }, 'DELETE')).status, 409)
+    assert.equal((await request(b, route, payload, 'DELETE')).status, 404)
+    await pool.execute('UPDATE journal_layout_state SET structure_version=18446744073709551615 WHERE owner_id=?', [a.id])
+    try {
+      assert.equal((await request(a, route, { ...payload, expected_structure_version: '18446744073709551615' }, 'DELETE')).status, 409)
+      assert.equal((await pool.execute('SELECT id FROM journal_entries WHERE id=?', [entry.id]))[0].length, 1)
+      assert.equal((await pool.execute('SELECT id FROM journal_photos WHERE id=?', [p.id]))[0].length, 1)
+      assert.ok((await readdir(uploadDirectory)).includes(path.basename(p.url)), 'failed deletion preserves file')
+    } finally { await pool.execute('UPDATE journal_layout_state SET structure_version=? WHERE owner_id=?', [structure, a.id]) }
+    await json(a, route, { ...payload, expected_structure_version: structure }, 'DELETE')
+    assert.equal(await readStructure(), String(BigInt(structure) + 1n))
+    assert.equal((await pool.execute('SELECT id FROM journal_entries WHERE id=?', [entry.id]))[0].length, 0)
+    assert.equal((await pool.execute('SELECT id FROM journal_photos WHERE id=?', [p.id]))[0].length, 0)
+  }
+})
+
+test('notebook membership and restore workers enforce structural barriers', async () => {
+  const structure = async () => (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [a.id]))[0][0].v
+  const book = await json(a, '/api/journal/notebooks', { name: 'structure book' })
+  const [pages] = await pool.execute('SELECT id FROM journal_notebook_pages WHERE notebook_id=? ORDER BY sort_order', [book.id])
+  const extra = await json(a, '/api/journal/notebooks/' + book.id + '/pages', {})
+  const mark = await json(a, '/api/journal/marks', { kind: 'text', text: 'membership' })
+  const item = { kind: 'mark', id: mark.id, x: 100, y: 100 }
+  const attach = '/api/journal/notebook-pages/' + pages[0].id + '/items'
+  let token = await structure()
+  assert.equal((await request(a, attach, { items: [item], expected_structure_version: '18446744073709551614' })).status, 409)
+  const race = await Promise.all([request(a, attach, { items: [item], expected_structure_version: token }), request(a, attach, { items: [item], expected_structure_version: token })])
+  assert.deepEqual(race.map(r => r.status).sort(), [200, 409])
+  assert.equal(await structure(), String(BigInt(token) + 1n)); token = await structure()
+  await json(a, '/api/journal/notebook-pages/' + extra.id + '/items', { items: [item], expected_structure_version: token })
+  await json(a, '/api/journal/notebook-items', { items: [{ ...item, x: 200 }] }, 'PATCH')
+  assert.equal(await structure(), token, 'page moves and page layout keep canvas membership')
+  await json(a, '/api/journal/notebook-pages/' + extra.id, { expected_structure_version: token }, 'DELETE')
+  assert.equal(await structure(), String(BigInt(token) + 1n)); token = await structure()
+  await json(a, attach, { items: [item], expected_structure_version: token }); token = await structure()
+  await json(a, '/api/journal/notebook-items', { items: [{ kind: 'mark', id: mark.id }], expected_structure_version: token }, 'DELETE')
+  assert.equal(await structure(), String(BigInt(token) + 1n)); token = await structure()
+  await json(a, attach, { items: [item] }); token = await structure()
+  await pool.execute('UPDATE journal_layout_state SET structure_version=18446744073709551615 WHERE owner_id=?', [a.id])
+  try {
+    assert.equal((await request(a, '/api/journal/notebooks/' + book.id, { expected_structure_version: '18446744073709551615' }, 'DELETE')).status, 409)
+    assert.equal((await pool.execute('SELECT id FROM journal_notebook_mark_items WHERE id=?', [mark.id]))[0].length, 1)
+  } finally { await pool.execute('UPDATE journal_layout_state SET structure_version=? WHERE owner_id=?', [token, a.id]) }
+  await json(a, '/api/journal/notebooks/' + book.id, { expected_structure_version: token }, 'DELETE')
+  assert.equal(await structure(), String(BigInt(token) + 1n))
+  await json(a, '/api/journal/marks/' + mark.id, undefined, 'DELETE')
+
+  const archive = async (data, expected) => {
+    const chunks = []; for await (const chunk of zipChunks([{ name: 'backup.json', data: Buffer.from(JSON.stringify({ format: 'shitu-journal-backup', version: 1, data })) }])) chunks.push(chunk)
+    const form = new FormData(); form.set('backup', new Blob([Buffer.concat(chunks)], { type: 'application/zip' }), 'restore.zip')
+    if (expected !== undefined) form.set('expected_structure_version', expected)
+    return form
+  }
+  token = await structure()
+  const emptyToken = (await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [b.id]))[0][0].v
+  await json(b, '/api/journal/restore', await archive({}, emptyToken))
+  assert.equal((await pool.execute('SELECT CAST(structure_version AS CHAR) AS v FROM journal_layout_state WHERE owner_id=?', [b.id]))[0][0].v, emptyToken)
+  assert.equal(await structure(), token)
+  const restoredId = randomUUID(), data = { marks: [{ id: restoredId, kind: 'text', text: 'worker fixture', layout_version: '999', canvas_x: 1, canvas_y: 2 }] }
+  const stale = await request(a, '/api/journal/restore', await archive(data, '18446744073709551614'))
+  assert.equal(stale.status, 409); assert.equal((await stale.json()).code, 'LAYOUT_CONFLICT')
+  assert.equal(await structure(), token)
+  await json(a, '/api/journal/restore', await archive(data, token))
+  assert.equal(await structure(), String(BigInt(token) + 1n)); token = await structure()
+  const [[restored]] = await pool.execute("SELECT id,CAST(layout_version AS CHAR) AS v FROM journal_marks WHERE owner_id=? AND text='worker fixture'", [a.id])
+  assert.notEqual(restored.id, restoredId); assert.equal(restored.v, '0')
+  await pool.execute('UPDATE journal_layout_state SET structure_version=18446744073709551615 WHERE owner_id=?', [a.id])
+  try {
+    assert.equal((await request(a, '/api/journal/restore', await archive(data, '18446744073709551615'))).status, 409)
+    assert.equal((await pool.execute("SELECT id FROM journal_marks WHERE owner_id=? AND text='worker fixture'", [a.id]))[0].length, 1)
+  } finally { await pool.execute('UPDATE journal_layout_state SET structure_version=? WHERE owner_id=?', [token, a.id]) }
+  await json(a, '/api/journal/marks/' + restored.id, undefined, 'DELETE')
+})
+
+test('runtime journal snapshot and layout routes enforce versions across legacy and conditional clients', async () => {
+  const user = await account('runtime-layout@example.com')
+  const first = await json(user, '/api/journal/marks', { kind: 'text', text: 'first runtime' })
+  const second = await json(user, '/api/journal/marks', { kind: 'text', text: 'second runtime' })
+  await pool.execute('UPDATE journal_marks SET layout_version=9007199254740995 WHERE id=?', [first.id])
+  const snapshot = await json(user, '/api/journal')
+  assert.equal(typeof snapshot.structure_version, 'string')
+  assert.equal(snapshot.marks.find(m => m.id === first.id).layout_version, '9007199254740995')
+  const item = (id, expected_version, x) => ({ kind: 'mark', id, expected_version, x, y: 20, rotation: 0 })
+  const body = { expected_structure_version: snapshot.structure_version, items: [item(first.id, '9007199254740995', 10)] }
+  const saved = await json(user, '/api/journal/layout', body, 'PATCH')
+  assert.equal(saved.items[0].layout_version, '9007199254740996')
+  assert.deepEqual(await json(user, '/api/journal/layout', body, 'PATCH'), saved, 'exact retry must not increment')
+  const legacy = await json(user, '/api/journal/layout', { items: [{ kind: 'mark', id: first.id, x: 11, y: 20 }] }, 'PATCH')
+  assert.equal(legacy.items[0].layout_version, '9007199254740997')
+  const conflict = await request(user, '/api/journal/layout', { expected_structure_version: snapshot.structure_version, items: [item(second.id, '0', 99), item(first.id, '9007199254740996', 50)] }, 'PATCH')
+  assert.equal(conflict.status, 409); assert.equal((await conflict.json()).code, 'LAYOUT_CONFLICT')
+  assert.notEqual((await pool.execute('SELECT canvas_x FROM journal_marks WHERE id=?', [second.id]))[0][0].canvas_x, 99)
+  const race = await Promise.all([request(user, '/api/journal/layout', { expected_structure_version: snapshot.structure_version, items: [item(second.id, '0', 30)] }, 'PATCH'), request(user, '/api/journal/layout', { expected_structure_version: snapshot.structure_version, items: [item(second.id, '0', 31)] }, 'PATCH')])
+  assert.deepEqual(race.map(r => r.status).sort(), [200, 409])
+  const trip = await json(user, '/api/journal/trips', { name: 'anchor change', expected_structure_version: snapshot.structure_version })
+  const afterTrip = await json(user, '/api/journal')
+  assert.equal(afterTrip.structure_version, String(BigInt(snapshot.structure_version) + 1n))
+  assert.equal((await request(user, '/api/journal/layout', { expected_structure_version: snapshot.structure_version, items: [item(first.id, '9007199254740997', 40)] }, 'PATCH')).status, 409)
+  assert.equal((await request(user, '/api/journal/trips', { name: 'stale anchor', expected_structure_version: snapshot.structure_version })).status, 409)
+  await json(user, '/api/journal/trips/' + trip.id, { name: 'name only', color: 'rose' }, 'PATCH')
+  assert.equal((await json(user, '/api/journal')).structure_version, afterTrip.structure_version)
+  await pool.execute('UPDATE journal_layout_state SET structure_version=18446744073709551615 WHERE owner_id=?', [user.id])
+  assert.equal((await request(user, '/api/journal/trips', { name: 'must roll back', expected_structure_version: '18446744073709551615' })).status, 409)
+  assert.equal((await pool.execute('SELECT id FROM journal_trips WHERE owner_id=?', [user.id]))[0].length, 1)
+})
+
+test('layout coordinator retries an acknowledged-but-lost API result before newer intent', async () => {
+  const user = await account('coordinator@example.com')
+  const mark = await json(user, '/api/journal/marks', { kind: 'text', text: 'coordinator fixture' })
+  const journal = await json(user, '/api/journal'), row = journal.marks.find(item => item.id === mark.id)
+  const position = x => ({ kind: 'mark', id: mark.id, x, y: row.canvas_y, rotation: row.rotation })
+  const bodies = []
+  const controller = createLayoutPersistence({ baseline: { structure_version: journal.structure_version, items: [{ ...position(row.canvas_x), layout_version: row.layout_version }] }, send: async body => {
+    bodies.push(body)
+    const saved = await json(user, '/api/journal/layout', body, 'PATCH')
+    if (bodies.length === 1) throw new Error('simulated lost acknowledgement after commit')
+    return saved
+  } })
+  const until = async status => {
+    const deadline = Date.now() + 5000
+    while (controller.getSnapshot().status !== status && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5))
+    assert.equal(controller.getSnapshot().status, status)
+  }
+  try {
+    controller.editLayout({ id: 'first', before: [position(row.canvas_x)], after: [position(10)] }); await until('failed')
+    controller.editLayout({ id: 'second', before: [position(10)], after: [position(20)] })
+    controller.retryLayout(); await until('saved')
+    assert.equal(bodies.length, 3); assert.equal(bodies[0], bodies[1])
+    assert.equal(bodies[2].items[0].expected_version, '1')
+    const snapshot = await json(user, '/api/journal'), saved = snapshot.marks.find(item => item.id === mark.id)
+    assert.equal(saved.canvas_x, 20); assert.equal(saved.layout_version, '2')
+    assert.equal(controller.getSnapshot().items[0].x, 20)
+  } finally { controller.dispose() }
+})
 
 test('two accounts: complete journal graph, private media, mixed writes and personal backup', async () => {
   const tripA = await json(a, '/api/journal/trips', { name: 'A private trip', owner_id: b.id })
@@ -99,6 +390,8 @@ test('two accounts: complete journal graph, private media, mixed writes and pers
   const backup = await request(a, '/api/journal/backup'); assert.equal(backup.status, 200)
   const archive = Buffer.from(await backup.arrayBuffer()), files = readZip(archive)
   const manifest = JSON.parse(files.get('backup.json'))
+  for (const table of ['entries', 'photos', 'marks']) assert.ok(manifest.data[table].every(row => !Object.hasOwn(row, 'layout_version')))
+  assert.equal(Object.hasOwn(manifest.data, 'structure_version'), false)
   assert.deepEqual(manifest.data.entries.map(e => e.id), [entryA.id])
   assert.ok(!manifest.data.trips.some(t => t.id === tripB.id))
   // A user can import a portable backup, but ownership and IDs are assigned anew.

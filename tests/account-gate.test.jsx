@@ -7,11 +7,11 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 function JournalSessionProbe() {
   const journal = useJournal(), account = useAccount()
-  return <><span>loaded-{journal.data.entries.length}</span><button onClick={() => account.accept({ user: account.user, csrfToken: 'csrf-a' })}>重新确认会话</button><button onClick={() => journal.reload().catch(() => {})}>刷新手帐</button><button onClick={() => journal.saveEntry(null, new FormData()).catch(() => {})}>保存照片</button></>
+  return <><span>loaded-{journal.data.entries.length}</span><span>layout-{journal.layout.barrierStatus}</span><button onClick={() => account.accept({ user: account.user, csrfToken: 'csrf-a' })}>重新确认会话</button><button onClick={() => journal.reload().catch(() => {})}>刷新手帐</button><button onClick={() => journal.saveEntry(null, new FormData()).catch(() => {})}>保存照片</button></>
 }
 
 it('keeps journal reads and photo saves usable after the same account session is accepted again', async () => {
-  const fetcher = vi.fn(async url => new Response(JSON.stringify(url.endsWith('/session') ? { user: { id: 'a', email: 'a@example.com' }, csrfToken: 'csrf-a' } : { entries: [{ id: 'saved-photo-entry' }] })))
+  const fetcher = vi.fn(async url => new Response(JSON.stringify(url.endsWith('/session') ? { user: { id: 'a', email: 'a@example.com' }, csrfToken: 'csrf-a' } : {structure_version:'0',trips:[],marks:[],entries:[{id:'saved-photo-entry',layout_version:'0',entry_date:'2026-10-30',title:'saved',photos:[]}]})))
   vi.stubGlobal('fetch', fetcher)
   render(<AccountGate>{() => <JournalSessionProbe />}</AccountGate>)
   await screen.findByText('loaded-1')
@@ -20,13 +20,14 @@ it('keeps journal reads and photo saves usable after the same account session is
   fetcher.mockClear()
   fireEvent.click(screen.getByRole('button', { name: '刷新手帐' }))
   expect(fetcher).toHaveBeenCalledWith('/api/journal', expect.anything())
+  await screen.findByText('layout-idle')
   fireEvent.click(screen.getByRole('button', { name: '保存照片' }))
   expect(fetcher).toHaveBeenCalledWith('/api/journal/entries', expect.objectContaining({ method: 'POST', body: expect.any(FormData), headers: { 'X-CSRF-Token': 'csrf-a' } }))
 })
 
 it('loads existing photos when StrictMode replays effects around a lazy journal', async () => {
   const DeferredJournal = lazy(async () => { await new Promise(resolve => setTimeout(resolve, 15)); return { default: JournalSessionProbe } })
-  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify(url.endsWith('/session') ? { user: { id: 'a', email: 'a@example.com' }, csrfToken: 'csrf-a' } : { entries: [{ id: 'saved-photo-entry' }] }))))
+  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify(url.endsWith('/session') ? { user: { id: 'a', email: 'a@example.com' }, csrfToken: 'csrf-a' } : {structure_version:'0',trips:[],marks:[],entries:[{id:'saved-photo-entry',layout_version:'0',entry_date:'2026-10-30',title:'saved',photos:[]}]}))))
   render(<StrictMode><Suspense fallback={<span>loading journal</span>}><AccountGate>{() => <DeferredJournal />}</AccountGate></Suspense></StrictMode>)
   expect(await screen.findByText('loaded-1')).toBeInTheDocument()
 })

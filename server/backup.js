@@ -14,10 +14,12 @@ import { MARK_COLORS, MARK_SIZES, STICKERS } from '../shared/journal-marks.js'
 import { openZipFile, zipChunks } from './zip.js'
 import { expandCanvasGroups } from '../shared/journal-groups.js'
 import { acquireRestoreSlot, runRestoreThread } from './restore-runner.js'
+import { lockLayoutStructure } from './layout-versions.js'
 
 const MAX_BACKUP_BYTES = 576 * 1024 * 1024
 const MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 const BACKUP_FORMAT = 'shitu-journal-backup'
+function withoutLayoutVersion(row) { const copy = { ...row }; delete copy.layout_version; return copy }
 const colors = ['sage', 'sand', 'sky', 'rose', 'lavender']
 const filters = ['original', 'film', 'mono']
 const moods = ['平静', '开心', '惊喜']
@@ -127,7 +129,7 @@ export function backupRoutes(router, uploadDirectory, { acquireSlot = acquireRes
       version: 1,
       exported_at: new Date().toISOString(),
       missing_files: missing,
-      data: { trips, entries, photos, marks, canvas_groups, canvas_group_photos, canvas_group_children, notebooks, notebook_pages, notebook_photo_items, notebook_mark_items, notebook_entry_items },
+      data: { trips, entries: entries.map(withoutLayoutVersion), photos: photos.map(withoutLayoutVersion), marks: marks.map(withoutLayoutVersion), canvas_groups, canvas_group_photos, canvas_group_children, notebooks, notebook_pages, notebook_photo_items, notebook_mark_items, notebook_entry_items },
     }
     const entries2 = [{ name: 'backup.json', data: Buffer.from(JSON.stringify(manifest)) }, ...photoEntries]
     // A successful export must fit the same limits as restore, including ZIP headers.
@@ -153,7 +155,7 @@ export function backupRoutes(router, uploadDirectory, { acquireSlot = acquireRes
     try {
       await new Promise((resolve, reject) => restoreUpload.single('backup')(req, res, error => error ? reject(error) : resolve()))
       if (!req.file) throw invalid('请选择备份压缩包')
-      res.json(await runRestore(req.file.path, uploadDirectory, owner, { signal: release.signal }))
+      res.json(await runRestore(req.file.path, uploadDirectory, owner, { signal: release.signal, expectedStructureVersion: req.body?.expected_structure_version }))
     } finally {
       if (req.file) await unlink(req.file.path).catch(() => {})
       await release()
@@ -161,7 +163,7 @@ export function backupRoutes(router, uploadDirectory, { acquireSlot = acquireRes
   })
 }
 
-export async function restoreArchive(filename, uploadDirectory) {
+export async function restoreArchive(filename, uploadDirectory, _ownerId, { expectedStructureVersion } = {}) {
   const archive = await openZipFile(filename, { maxBytes: MAX_BACKUP_BYTES, maxManifestBytes: MAX_MANIFEST_BYTES })
   try {
     const files = archive.files
@@ -171,7 +173,7 @@ export async function restoreArchive(filename, uploadDirectory) {
     const plan = await buildRestorePlan(manifest.data, files)
     const used = new Set(plan.fileWrites.map(file => file.source))
     for (const [name, source] of files) if (name !== 'backup.json' && !used.has(source)) await source.read()
-    await applyRestore(plan, uploadDirectory)
+    await applyRestore(plan, uploadDirectory, expectedStructureVersion)
     return { restored: { trips: plan.trips.length, entries: plan.entries.length, photos: plan.photos.length, marks: plan.marks.length, canvas_groups: plan.groups.length, notebooks: plan.notebooks.length } }
   } finally { await archive.close() }
 }
@@ -299,7 +301,7 @@ async function buildRestorePlan(data, files) {
   return { trips: tripRows, entries: entryRows, photos: photoRows, marks: markRows, groups: groupRows, groupPhotos: groupPhotoRows, groupChildren: groupChildRows, notebooks: notebookRows, pages: pageRows, itemRows, fileWrites }
 }
 
-async function applyRestore(plan, uploadDirectory) {
+async function applyRestore(plan, uploadDirectory, expectedStructureVersion) {
   const created = []
   let connection
   try {
@@ -320,6 +322,8 @@ async function applyRestore(plan, uploadDirectory) {
   try {
     connection = await pool.getConnection()
     await connection.beginTransaction()
+    await connection.execute('SELECT id FROM users WHERE id=? FOR UPDATE', [currentUserId()])
+    const structure = await lockLayoutStructure(connection, currentUserId(), expectedStructureVersion)
     for (const file of plan.fileWrites) await registerAsset({filename:file.filename,path:path.join(uploadDirectory,file.filename),size:file.size,mimetype:file.mimetype}, connection)
     await bulkInsert(connection, 'journal_trips', ['owner_id', 'id', 'name', 'region', 'color', 'canvas_x', 'canvas_y', 'created_at'], plan.trips.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_entries', ['owner_id', 'id', 'trip_id', 'entry_date', 'captured_on', 'components', 'title', 'caption', 'place_name', 'landmark_id', 'lat', 'lng', 'spot_key', 'mood', 'canvas_x', 'canvas_y', 'rotation', 'created_at', 'updated_at'], plan.entries.map(row => [currentUserId(), ...row]))
@@ -331,6 +335,7 @@ async function applyRestore(plan, uploadDirectory) {
     await bulkInsert(connection, 'journal_notebooks', ['owner_id', 'id', 'name', 'cover_url', 'cover_label', 'cover_text', 'cover_mode', 'cover_color', 'bookmark_page_id', 'last_read_page_id', 'canvas_x', 'canvas_y', 'rotation', 'created_at'], plan.notebooks.map(row => [currentUserId(), ...row]))
     await bulkInsert(connection, 'journal_notebook_pages', ['id', 'notebook_id', 'sort_order'], plan.pages)
     for (const [kind, rows] of Object.entries(plan.itemRows)) await bulkInsert(connection, `journal_notebook_${kind}_items`, ['id', 'page_id', 'x', 'y', 'rotation'], rows)
+    if (plan.trips.length || plan.entries.length || plan.photos.length || plan.marks.length || plan.groups.length || plan.notebooks.length || plan.pages.length || Object.values(plan.itemRows).some(rows => rows.length)) await structure.increment()
     await connection.commit()
   } catch (error) {
     await connection?.rollback().catch(() => {})

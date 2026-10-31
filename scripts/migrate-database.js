@@ -6,6 +6,7 @@ if (process.env.MIGRATION_MYSQL_USER) process.env.MYSQL_USER = process.env.MIGRA
 if (process.env.MIGRATION_MYSQL_PASSWORD) process.env.MYSQL_PASSWORD = process.env.MIGRATION_MYSQL_PASSWORD
 const { pool, initializeDatabase } = await import('../server/db.js')
 const { migrateOwnership } = await import('../server/migrate-ownership.js')
+const { migrateLayoutVersions } = await import('../server/migrate-layout-versions.js')
 try {
   await initializeDatabase()
   const schema = await readFile(new URL('../server/auth-schema.sql', import.meta.url), 'utf8')
@@ -13,6 +14,7 @@ try {
   const connection = await pool.getConnection()
   try {
     await migrateOwnership(connection, { legacyOwnerEmail: process.argv.find(value => value.startsWith('--legacy-owner='))?.slice(15), uploadDirectory: process.env.UPLOAD_DIRECTORY ? path.resolve(process.env.UPLOAD_DIRECTORY) : fileURLToPath(new URL('../uploads/', import.meta.url)) })
+    await migrateLayoutVersions(connection)
   } finally { connection.release() }
   console.log('数据库迁移完成。请用运行账号启动服务。')
 } catch (error) { console.error('迁移未完成：', error.message); process.exitCode = 1 }

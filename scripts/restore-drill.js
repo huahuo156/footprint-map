@@ -9,6 +9,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { restoreDrill, writeRecoveryPoint, exportDatabase, assertDrillDatabase } from '../server/system-backup.js'
+import { migrateLayoutVersions } from '../server/migrate-layout-versions.js'
 
 export function drillAdminOptions() {
   return { host: process.env.MYSQL_HOST || '127.0.0.1', port: Number(process.env.MYSQL_PORT || 3307),
@@ -74,11 +75,25 @@ export async function runSystemBackupIntegration({ adminOptions = drillAdminOpti
     await writeFile(path.join(uploads, 'real.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64'))
     await writeFile(path.join(uploads, 'unregistered.webp'), Buffer.from('unregistered files are preserved too'))
     const backupDirectory = path.join(root, 'backup')
-    await writeRecoveryPoint({ database: await exportDatabase(connection), uploadDirectory: uploads, outputDirectory: backupDirectory })
+    await migrateLayoutVersions(connection)
+    await connection.query("UPDATE journal_entries SET layout_version=9007199254740993 WHERE id='entry-a'")
+    await connection.query("UPDATE journal_layout_state SET structure_version=9007199254740995 WHERE owner_id='owner-a'")
+    const exported = await exportDatabase(connection)
+    await writeRecoveryPoint({ database: exported, uploadDirectory: uploads, outputDirectory: backupDirectory })
     const result = await restoreDrill({ backupDirectory, adminOptions: options })
     assert.equal(result.cleaned, true); assert.equal(result.images, 2)
     const [remaining] = await admin.query('SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=?', [result.database])
     assert.equal(remaining.length, 0)
+    const legacy = structuredClone(exported)
+    legacy.tables = legacy.tables.filter(table => table.name !== 'journal_layout_state')
+    for (const table of legacy.tables) {
+      table.columns = table.columns.filter(column => column !== 'layout_version')
+      for (const row of table.rows) delete row.layout_version
+      if (table.name === 'journal_migrations') table.rows = table.rows.filter(row => row.name !== 'layout-versions-v1')
+    }
+    const legacyDirectory = path.join(root, 'legacy-backup')
+    await writeRecoveryPoint({ database: legacy, uploadDirectory: uploads, outputDirectory: legacyDirectory })
+    assert.equal((await restoreDrill({ backupDirectory: legacyDirectory, adminOptions: options })).cleaned, true)
     // A valid manifest can contain an impossible FK fixture: failure must also clean its disposable target.
     const databaseFile = path.join(backupDirectory, 'database.json')
     const malformed = JSON.parse(await readFile(databaseFile, 'utf8'))
@@ -89,7 +104,7 @@ export async function runSystemBackupIntegration({ adminOptions = drillAdminOpti
     await assert.rejects(restoreDrill({ backupDirectory: invalidDirectory, adminOptions: options }), /foreign key/i)
     const [after] = await admin.query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME LIKE 'footprint_restore_drill_%'")
     assert.deepEqual(after, before)
-    console.log('System recovery: two accounts, legacy+journal, date/JSON/BIGINT, actual images, checksums and failure cleanup verified.')
+    console.log('System recovery: versioned and old schema profiles, exact layout tokens, two accounts, date/JSON/BIGINT, images and failure cleanup verified.')
     return result
   } finally {
     try { if (connection) await connection.end() }

@@ -75,12 +75,13 @@ test('rate limiting returns retry-after and bounds repeated requests', async () 
 // SQL adapter keeps the real router, Argon2, session cookies and token flow while
 // replacing only external MySQL. Unrecognized statements deliberately fail.
 function memoryDatabase() {
-  const state = { users: [], sessions: [], tokens: [] }
+  const state = { users: [], sessions: [], tokens: [], layoutStates: [] }
   const execute = async (sql, values = []) => {
     if (sql.startsWith('INSERT INTO users')) {
       if (state.users.some(user => user.email === values[1])) throw Object.assign(new Error('duplicate'), { code: 'ER_DUP_ENTRY' })
       state.users.push({ id: values[0], email: values[1], password_hash: values[2], email_verified_at: null })
-    } else if (sql.includes('FROM sessions s JOIN users')) {
+    } else if (sql.startsWith('INSERT INTO journal_layout_state')) state.layoutStates.push(values[0])
+    else if (sql.includes('FROM sessions s JOIN users')) {
       const session = state.sessions.find(session => session.token_hash === values[0] && session.expires_at > new Date())
       return [session ? [{ ...state.users.find(user => user.id === session.user_id), ...session }] : []]
     } else if (sql.startsWith('SELECT') && sql.includes('FROM users WHERE email=')) return [state.users.filter(user => user.email === values[0])]
@@ -105,6 +106,26 @@ function memoryDatabase() {
 const config = { registrationEnabled: true, smtpUrl: 'smtp://localhost', mailFrom: 'mail@example.com', appOrigin: 'https://example.com', production: true }
 const post = (value, headers = {}) => ({ ...body(value), headers: { ...body(value).headers, Origin: 'https://example.com', ...headers } })
 
+test('registration rolls back the account if layout state cannot be created', async () => {
+  const database = memoryDatabase(), connect = database.getConnection.bind(database), mail = []
+  database.getConnection = async () => {
+    const connection = await connect(), execute = connection.execute
+    connection.execute = (sql, args) => {
+      if (sql.startsWith('INSERT INTO journal_layout_state')) throw new Error('layout state unavailable')
+      return execute(sql, args)
+    }
+    return connection
+  }
+  const api = await serve(database, { config, sendMail: async message => mail.push(message) })
+  try {
+    assert.equal((await api.request('/api/auth/register', post({ email: 'a@example.com', password: 'long enough password 123' }))).status, 500)
+    assert.deepEqual(database.state.users, [])
+    assert.deepEqual(database.state.sessions, [])
+    assert.deepEqual(database.state.tokens, [])
+    assert.deepEqual(mail, [])
+  } finally { await api.close() }
+})
+
 test('register, verify, login and logout preserve only token hashes and one-time verification', async () => {
   const database = memoryDatabase(), mail = []
   const api = await serve(database, { config, sendMail: async message => mail.push(message) })
@@ -113,6 +134,7 @@ test('register, verify, login and logout preserve only token hashes and one-time
     assert.equal(response.status, 201)
     const session = await response.json(), cookie = response.headers.get('set-cookie').split(';')[0]
     assert.equal(session.user.email, 'a@example.com')
+    assert.deepEqual(database.state.layoutStates, [session.user.id])
     assert.equal(session.user.email_verified, false)
     assert.match(response.headers.get('set-cookie'), /HttpOnly/)
     assert.match(response.headers.get('set-cookie'), /Secure/)

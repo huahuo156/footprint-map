@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   canvas_y DOUBLE,
   rotation DOUBLE NOT NULL DEFAULT 0,
   legacy_checkin_id INT UNIQUE,
+  layout_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
   created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   FOREIGN KEY (trip_id) REFERENCES journal_trips(id),
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS journal_photos (
   canvas_absolute BOOLEAN NOT NULL DEFAULT FALSE,
   rotation DOUBLE NOT NULL DEFAULT 0,
   sort_order INT NOT NULL DEFAULT 0,
+  layout_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
   FOREIGN KEY (entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE,
   INDEX idx_journal_photos_entry (entry_id)
 );
@@ -81,6 +83,7 @@ CREATE TABLE IF NOT EXISTS journal_marks (
   canvas_y DOUBLE NOT NULL DEFAULT 0,
   rotation DOUBLE NOT NULL DEFAULT 0,
   captured_on DATE NOT NULL,
+  layout_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
   created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
 CREATE TABLE IF NOT EXISTS journal_notebooks (

@@ -1,3 +1,4 @@
+import { readNotebookData } from './read-notebooks.js'
 import { randomUUID } from 'node:crypto'
 import multer from 'multer'
 import { access, unlink, writeFile } from 'node:fs/promises'
@@ -6,6 +7,7 @@ import { pool } from './db.js'
 import { currentUserId } from './auth.js'
 import { assertOwnedAsset, registerAsset, normalizeImageBuffer } from './assets.js'
 import { collectUnusedAssets, reclaimAssets } from './asset-lifecycle.js'
+import { lockLayoutStructure } from './layout-versions.js'
 
 // Per-kind tables provide real source foreign keys and one page membership per item.
 const tables = { photo: 'journal_photos', mark: 'journal_marks', entry: 'journal_entries' }
@@ -96,16 +98,29 @@ export async function placeItem(connection, pageId, item) {
   numeric(item.rotation ?? 0, -20, 20)
   const [[source]] = await connection.execute(`SELECT id FROM ${table} WHERE id=? AND ${item.kind === 'photo' ? 'EXISTS (SELECT 1 FROM journal_entries e WHERE e.id=journal_photos.entry_id AND e.owner_id=?)' : 'owner_id=?'} FOR UPDATE`, [item.id, currentUserId()])
   if (!source) fail('内容已不存在', 404)
+  const [[membership]] = await connection.execute(`SELECT i.page_id FROM journal_notebook_${item.kind}_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id WHERE i.id=? AND b.owner_id=?`, [item.id, currentUserId()])
   if (item.kind === 'entry') {
     const [photos] = await connection.execute('SELECT id FROM journal_photos WHERE entry_id=? AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.id=journal_photos.entry_id AND e.owner_id=?)', [item.id, currentUserId()])
     if (photos.length) fail('请选择记录中的照片')
   }
-  if (item.kind === 'photo')
-    await connection.execute('DELETE FROM journal_canvas_group_photos WHERE photo_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_photos.group_id AND g.owner_id=?)', [item.id, currentUserId()])
+  let removedGroup = false
+  if (item.kind === 'photo') {
+    const [removed] = await connection.execute('DELETE FROM journal_canvas_group_photos WHERE photo_id=? AND EXISTS (SELECT 1 FROM journal_canvas_groups g WHERE g.id=journal_canvas_group_photos.group_id AND g.owner_id=?)', [item.id, currentUserId()])
+    removedGroup = removed.affectedRows > 0
+  }
   await connection.execute(
     `INSERT INTO journal_notebook_${item.kind}_items (id,page_id,x,y,rotation) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE page_id=VALUES(page_id),x=VALUES(x),y=VALUES(y),rotation=VALUES(rotation)`,
     [item.id, pageId, item.x, item.y, item.rotation ?? 0]
   )
+  return !membership || removedGroup
+}
+async function hasPageItems(connection, pageIds) {
+  if (!pageIds.length) return false
+  for (const kind of Object.keys(tables)) {
+    const [[row]] = await connection.execute(`SELECT i.id FROM journal_notebook_${kind}_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id WHERE p.id IN (${pageIds.map(() => '?').join(',')}) AND b.owner_id=? LIMIT 1`, [...pageIds, currentUserId()])
+    if (row) return true
+  }
+  return false
 }
 function items(value, position = true) {
   if (!Array.isArray(value) || !value.length || value.length > 500) fail('请选择内容')
@@ -135,20 +150,7 @@ async function bookPages(connection, id) {
   )
   return pages
 }
-export async function readNotebooks() {
-  const [notebooks] = await pool.query(
-    'SELECT id,name,cover_url,cover_label,cover_text,cover_mode,cover_color,bookmark_page_id,last_read_page_id,canvas_x,canvas_y,rotation FROM journal_notebooks WHERE owner_id=? ORDER BY created_at,id', [currentUserId()]
-  )
-  const [notebook_pages] = await pool.query(
-    'SELECT p.* FROM journal_notebook_pages p JOIN journal_notebooks b ON b.id=p.notebook_id WHERE b.owner_id=? ORDER BY p.notebook_id,p.sort_order,p.id', [currentUserId()]
-  )
-  const notebook_items = []
-  for (const kind of Object.keys(tables)) {
-    const [rows] = await pool.query(`SELECT i.* FROM journal_notebook_${kind}_items i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id JOIN ${tables[kind]} s ON s.id=i.id ${kind === 'photo' ? 'JOIN journal_entries e ON e.id=s.entry_id' : ''} WHERE b.owner_id=? AND ${kind === 'photo' ? 'e' : 's'}.owner_id=b.owner_id ORDER BY i.id`, [currentUserId()])
-    notebook_items.push(...rows.map((r) => ({ ...r, kind })))
-  }
-  return { notebooks: notebooks.map(book => ({ ...book, cover_label: book.cover_label ?? 'MEMO', cover_text: book.cover_text ?? '', cover_mode: book.cover_mode ?? (book.cover_url ? 'photo' : 'solid'), cover_color: book.cover_color ?? '#e3e9dd' })), notebook_pages, notebook_items }
-}
+export function readNotebooks(database = pool, ownerId = currentUserId()) { return readNotebookData(database, ownerId) }
 export function notebookRoutes(router, uploadDirectory) {
   const extensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' }
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 0 },
@@ -240,9 +242,12 @@ export function notebookRoutes(router, uploadDirectory) {
   })
   router.delete('/notebooks/:id', async (req, res) => {
     const previousCover = await transaction(async (connection) => {
-      await bookPages(connection, req.params.id)
+      const structure = await lockLayoutStructure(connection, currentUserId(), req.body?.expected_structure_version)
+      const pages = await bookPages(connection, req.params.id)
+      const changed = await hasPageItems(connection, pages.map(page => page.id))
       const [[previous]] = await connection.execute('SELECT cover_url FROM journal_notebooks WHERE id=? AND owner_id=?', [req.params.id, currentUserId()])
       await connection.execute('DELETE FROM journal_notebooks WHERE id=? AND owner_id=?', [req.params.id, currentUserId()])
+      if (changed) await structure.increment()
       return previous.cover_url
     })
     await reclaimAssets(uploadDirectory, [previousCover])
@@ -298,9 +303,11 @@ export function notebookRoutes(router, uploadDirectory) {
   })
   router.delete('/notebook-pages/:id', async (req, res) => {
     await transaction(async (connection) => {
+      const structure = await lockLayoutStructure(connection, currentUserId(), req.body?.expected_structure_version)
       const p = await requirePage(connection, req.params.id)
       const pages = await bookPages(connection, p.notebook_id)
       if (pages.length <= 2) fail('至少保留两页')
+      const changed = await hasPageItems(connection, [req.params.id])
       await connection.execute('UPDATE journal_notebooks SET bookmark_page_id=IF(bookmark_page_id=?,NULL,bookmark_page_id),last_read_page_id=IF(last_read_page_id=?,NULL,last_read_page_id) WHERE id=? AND owner_id=?', [req.params.id, req.params.id, p.notebook_id, currentUserId()])
       await connection.execute('DELETE FROM journal_notebook_pages WHERE id=? AND EXISTS (SELECT 1 FROM journal_notebooks b WHERE b.id=journal_notebook_pages.notebook_id AND b.owner_id=?)', [req.params.id, currentUserId()])
       for (const [index, page] of pages.filter((p) => p.id !== req.params.id).entries())
@@ -308,14 +315,18 @@ export function notebookRoutes(router, uploadDirectory) {
           index,
           page.id, currentUserId()
         ])
+      if (changed) await structure.increment()
     })
     res.json({ deleted: req.params.id })
   })
   router.post('/notebook-pages/:id/items', async (req, res) => {
     const list = items(req.body.items)
     await transaction(async (connection) => {
+      const structure = await lockLayoutStructure(connection, currentUserId(), req.body.expected_structure_version)
       await requirePage(connection, req.params.id)
-      for (const item of list) await placeItem(connection, req.params.id, item)
+      let changed = false
+      for (const item of list) if (await placeItem(connection, req.params.id, item)) changed = true
+      if (changed) await structure.increment()
     })
     res.json({ saved: list.length })
   })
@@ -323,6 +334,7 @@ export function notebookRoutes(router, uploadDirectory) {
     router[method]('/notebook-items', async (req, res) => {
       const list = items(req.body.items, method === 'patch')
       await transaction(async (connection) => {
+        const structure = method === 'delete' ? await lockLayoutStructure(connection, currentUserId(), req.body.expected_structure_version) : null
         for (const i of list) {
           const table = `journal_notebook_${i.kind}_items`
           const [[row]] = await connection.execute(`SELECT i.page_id FROM ${table} i JOIN journal_notebook_pages p ON p.id=i.page_id JOIN journal_notebooks b ON b.id=p.notebook_id WHERE i.id=? AND b.owner_id=? FOR UPDATE`, [
@@ -341,6 +353,7 @@ export function notebookRoutes(router, uploadDirectory) {
             ])
           else await connection.execute(`DELETE FROM ${table} WHERE id=? AND EXISTS (SELECT 1 FROM journal_notebook_pages p JOIN journal_notebooks b ON b.id=p.notebook_id WHERE p.id=${table}.page_id AND b.owner_id=?)`, [i.id, currentUserId()])
         }
+        if (structure) await structure.increment()
       })
       res.json({ saved: list.length })
     })

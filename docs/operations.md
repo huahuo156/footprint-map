@@ -19,7 +19,11 @@
 6. 将 API 切换到仅具 SELECT / INSERT / UPDATE / DELETE 权限的运行账号。`MIGRATION_MYSQL_USER` 和 `MIGRATION_MYSQL_PASSWORD` 仅供迁移和建号使用。
 7. 启动 API，检查登录、照片读取和个人备份，再逐步恢复访问。
 
-空数据库先执行 `npm run db:migrate`，随后创建账号。API 启动仅检查 `ownership-v1` 标记，不执行 DDL。旧 `checkins` 只在首次迁移按省份导入，原记录保留；Supabase 数据不自动导入。
+空数据库先执行 `npm run db:migrate`，随后创建账号。API 启动检查 ownership、限流表及布局版本的迁移状态、结构和账号状态行，不执行 DDL。旧 `checkins` 只在首次迁移按省份导入，原记录保留；Supabase 数据不自动导入。
+
+布局版本升级同样需停服务并先创建完整恢复点，再运行 `db:migrate`。迁移为记录、照片、标注添加 `layout_version`，创建并回填每账号的 `journal_layout_state`，完成后写入 `layout-versions-v1` 标记；可重复执行，已有版本值保留。注册与 `db:create-user` 在同一事务中创建账号和布局状态。
+
+运行中的 GET `/api/journal` 已使用一致性快照，返回字符串结构及行版本；PATCH `/api/journal/layout` 已支持条件写入和严格同值重试，见[布局协议](layout-protocol.md)。当前前端已接入保存协调器、布局撤销/重做、失败保留与原样重试，以及刷新/结构操作屏障。升级时关闭旧页面并同时更新服务端与客户端。无令牌旧请求仍被兼容并递增版本，但仍可能无条件覆盖，不承诺自动跨页合并或离线同步。刷新会丢失未确认的内存编辑和历史；离开提示不能替代草稿备份。手札封面位置仍走独立接口，不纳入首期布局历史。
 
 ## 账号与邮件
 

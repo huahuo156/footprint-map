@@ -13,6 +13,8 @@ const server = app.listen(0, '127.0.0.1')
 await new Promise(resolve => server.once('listening', resolve))
 const base = `http://127.0.0.1:${server.address().port}`
 const fixture = { trips: [], marks: [], canvas_groups: [], entries: [{ id: 'entry', entry_date: '2026-10-26', photos: [{ id: 'photo', url: '/journal-demo/west-lake.jpg', components: [{ type: 'place', value: { name: '武汉市' } }] }] }], notebooks: [{ id: 'book', name: '沿途拾光', cover_mode: 'solid', cover_color: '#e3e9dd', canvas_x: 0, canvas_y: 0 }], notebook_pages: [{ id: 'page', notebook_id: 'book', sort_order: 0 }], notebook_items: [] }
+fixture.structure_version = '0'
+for (const entry of fixture.entries) { entry.layout_version = '0'; for (const photo of entry.photos) photo.layout_version = '0' }
 const browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined })
 const results = [], errors = []
 try {

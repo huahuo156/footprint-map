@@ -59,5 +59,5 @@ app.use((error, _req, res, next) => {
   if (res.headersSent) return next(error)
   const status = error instanceof multer.MulterError || error.code === 'ER_NO_REFERENCED_ROW_2' ? 400 : error.status || 500
   if (status >= 500) console.error('API request failed', { code: error.code || 'INTERNAL', name: error.name })
-  res.status(status).json({ error: status >= 500 ? '数据库或服务异常，请查看后端日志' : error.message, ...(error.code === 'INVALID_IMAGES' ? { code: error.code, invalidFiles: error.invalidFiles } : {}) })
+  res.status(status).json({ error: status >= 500 ? '数据库或服务异常，请查看后端日志' : error.message, ...(['LAYOUT_CONFLICT', 'LAYOUT_MIGRATION_REQUIRED', 'INVALID_LAYOUT'].includes(error.code) ? { code: error.code } : {}), ...(error.code === 'INVALID_IMAGES' ? { code: error.code, invalidFiles: error.invalidFiles } : {}) })
 })

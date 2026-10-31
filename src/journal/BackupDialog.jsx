@@ -5,7 +5,7 @@ import { localDate } from './model'
 import { apiFetch, journalBackupUrl } from '../lib/api'
 
 // 手帐备份：导出 ZIP（照片 + 数据），或把之前的备份合并还原回来。
-export default function BackupDialog({ onClose, onRestored }) {
+export default function BackupDialog({ onClose, onRestore, onRestored }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState('')
   const fileInput = useRef(null)
   async function exportBackup() {
@@ -30,10 +30,7 @@ export default function BackupDialog({ onClose, onRestored }) {
     if (!window.confirm('还原会把备份里的照片、旅程和手札合并到当前手帐，现有内容全部保留。要继续吗？')) return
     setBusy(true); setError(''); setResult('')
     try {
-      const body = new FormData(); body.append('backup', file)
-      const response = await apiFetch('/journal/restore', { method: 'POST', body })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error || '还原失败，请重试。')
+      const data = await onRestore(file)
       const counts = data.restored || {}
       setResult(`已还原 ${counts.photos ?? 0} 张照片、${counts.entries ?? 0} 条记录、${counts.marks ?? 0} 个标注、${counts.notebooks ?? 0} 本手札。现有内容没有变化。`)
       await onRestored?.()

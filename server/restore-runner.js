@@ -36,17 +36,17 @@ export async function acquireRestoreSlot(owner, { database = pool, slots = Numbe
   } catch (error) { await release(); throw error }
 }
 
-export function runRestoreThread(filename, directory, ownerId, { signal } = {}) {
+export function runRestoreThread(filename, directory, ownerId, { signal, expectedStructureVersion } = {}) {
   if (signal?.aborted) return Promise.reject(Object.assign(new Error('还原锁连接中断，请重试。'), { status: 503 }))
   incrementMetric('restore_started'); incrementMetric('restore_active')
   const task = new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./restore-worker.js', import.meta.url), {
-      workerData: { filename, directory, ownerId }, resourceLimits: { maxOldGenerationSizeMb: 512 },
+      workerData: { filename, directory, ownerId, expectedStructureVersion }, resourceLimits: { maxOldGenerationSizeMb: 512 },
     })
     const abort = () => { worker.terminate().then(() => reject(Object.assign(new Error('还原锁连接中断，请重试。'), { status: 503 }))) }
     signal?.addEventListener('abort', abort, { once: true })
     const timer = setTimeout(() => { worker.terminate().then(() => reject(Object.assign(new Error('还原超时，请稍后重试。'), { status: 503 }))) }, 30 * 60000)
-    worker.once('message', message => message.ok ? resolve(message.result) : reject(Object.assign(new Error(message.error), { status: message.status || 500 })))
+    worker.once('message', message => message.ok ? resolve(message.result) : reject(Object.assign(new Error(message.error), { status: message.status || 500, code: message.code })))
     worker.once('error', () => reject(Object.assign(new Error('还原工作线程异常，请稍后重试。'), { status: 503 })))
     worker.once('exit', code => {
       clearTimeout(timer); signal?.removeEventListener('abort', abort)

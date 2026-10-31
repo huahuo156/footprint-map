@@ -13,7 +13,8 @@ try {
   const { app } = await import('../server/app.js')
   server.on('request', app)
   const hash = await argon2.hash('disposable-browser-password-123', { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 })
-  for (const project of ['desktop', 'mobile']) for (const name of ['a', 'b']) await pool.execute('INSERT INTO users (id,email,password_hash,email_verified_at) VALUES (?,?,?,NOW(3))', [randomUUID(), `${project}-${name}@example.com`, hash])
+  const { createLayoutUser } = await import('../server/layout-session.js')
+  for (const project of ['desktop', 'mobile']) for (const name of ['a', 'b']) await createLayoutUser(pool, { id: randomUUID(), email: `${project}-${name}@example.com`, passwordHash: hash, emailVerifiedAt: new Date() })
   const child = spawn(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.config.js'], { stdio: 'inherit', env: { ...process.env, E2E_BASE_URL: baseURL } })
   process.exitCode = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', code => resolve(code ?? 1)) })
 } finally {

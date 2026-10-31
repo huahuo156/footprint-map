@@ -5,6 +5,11 @@ CREATE TABLE IF NOT EXISTS users (
   email_verified_at DATETIME(3) NULL,
   created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
+CREATE TABLE IF NOT EXISTS journal_layout_state (
+  owner_id CHAR(36) PRIMARY KEY,
+  structure_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash CHAR(64) PRIMARY KEY,
   user_id CHAR(36) NOT NULL,

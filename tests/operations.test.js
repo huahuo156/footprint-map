@@ -4,6 +4,7 @@ import { mkdtemp, writeFile, utimes, access, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import express from 'express'
+import { get } from 'node:http'
 vi.mock('../server/db.js', () => ({ pool: { getConnection: vi.fn(() => { throw new Error('real pool forbidden') }) } }))
 vi.mock('../server/asset-lifecycle.js', () => ({ collectUnusedAssets: vi.fn(async () => ({ deleted: 2, retained: 1 })) }))
 import { collectUnusedAssets } from '../server/asset-lifecycle.js'
@@ -91,14 +92,19 @@ it('reports disk failures and configured low disk thresholds as fixed warning co
   vi.unstubAllEnvs()
 })
 it('hides an unconfigured endpoint and requires an exact bearer token', async () => {
+  // listen(0) can select a port forbidden by Fetch's browser-oriented port list.
+  // This is a server HTTP test, so use HTTP directly for the random local port.
+  const request = (url, options) => new Promise((resolve, reject) => {
+    get(url, options, response => { response.resume(); resolve(response) }).on('error', reject)
+  })
   async function serve(token) { const app = express(); app.use(createOperationsRouter({ database: database(), uploadDirectory: await directory(), token })); const s = app.listen(0, '127.0.0.1'); servers.push(s); await new Promise(r => s.once('listening', r)); return `http://127.0.0.1:${s.address().port}/status` }
-  expect((await fetch(await serve('short'))).status).toBe(404)
+  expect((await request(await serve('short'))).statusCode).toBe(404)
   const token = 'a'.repeat(32), url = await serve(token)
-  expect((await fetch(url)).status).toBe(401)
-  expect((await fetch(url, { headers: { authorization: `Bearer ${token}x` } })).status).toBe(401)
-  const response = await fetch(url, { headers: { authorization: `Bearer ${token}` } })
-  expect(response.status).toBe(200)
-  expect(response.headers.get('cache-control')).toContain('no-store')
+  expect((await request(url)).statusCode).toBe(401)
+  expect((await request(url, { headers: { authorization: `Bearer ${token}x` } })).statusCode).toBe(401)
+  const response = await request(url, { headers: { authorization: `Bearer ${token}` } })
+  expect(response.statusCode).toBe(200)
+  expect(response.headers['cache-control']).toContain('no-store')
 })
 it('runs scheduled failures safely and provides an idempotent stop', async () => {
   vi.useFakeTimers()

@@ -28,6 +28,10 @@
     "test:security": "node --test server/auth.test.js && npm test -- tests/assets-security.test.js tests/ownership-migration.test.js tests/private-api-boundary.test.js tests/ownership.test.js tests/ownership-routes.test.js",
     "test:api": "node scripts/test-security-db.js",
     "test:smoke": "npm run build && node scripts/publication-ui-smoke.mjs",
+    "test:canvas-ui": "npm run build && node scripts/canvas-ui-smoke.mjs",
+    "test:canvas-perf": "npm run build && node scripts/canvas-image-performance.mjs",
+    "test:layout-migration": "node scripts/test-layout-version-migration.js",
+    "test:layout-lifecycle": "node scripts/test-layout-lifecycle.js",
     "test:e2e": "npm run build && node scripts/test-security-db.js --e2e"
   },
   "dependencies": {

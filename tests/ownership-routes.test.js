@@ -25,6 +25,7 @@ async function server() {
 }
 function database(handler) {
   db.run = vi.fn(async (sql,args=[]) => {
+    if (sql.startsWith('SELECT') && sql.includes('FROM journal_layout_state')) return [[{structure_version:'0'}]]
     // Queries against private roots/photos must bind a user identity.
     if (/^(SELECT|UPDATE|DELETE)/.test(sql) && /journal_(?:trips|entries|marks|photos|canvas_groups|notebooks)/.test(sql)) {
       expect(sql).toContain('owner_id'); expect(args).toContain('owner-a')
@@ -39,7 +40,7 @@ test('mixed account layout changes roll back without committing any item', async
   expect(result.status).toBe(404); expect(db.connection.rollback).toHaveBeenCalledOnce(); expect(db.connection.commit).not.toHaveBeenCalled()
 })
 test('mixed photo deletion rejects the batch before deleting', async () => {
-  database(sql => sql.startsWith('SELECT DISTINCT') ? [[{entry_id:own}]] : sql.startsWith('SELECT id,url') ? [[{id:own,url:'/journal-demo/x.jpg'}]] : [[]])
+  database(sql => sql.includes('FROM journal_layout_state') ? [[{structure_version:'0'}]] : sql.startsWith('SELECT DISTINCT') ? [[{entry_id:own}]] : sql.startsWith('SELECT id,url') ? [[{id:own,url:'/journal-demo/x.jpg'}]] : [[]])
   const url = await server(); const result = await fetch(url+'/photos',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({photo_ids:[own,foreign]})})
   expect(result.status).toBe(404); expect(db.connection.rollback).toHaveBeenCalledOnce(); expect(db.run.mock.calls.some(([sql])=>sql.startsWith('DELETE'))).toBe(false)
 })
@@ -47,10 +48,16 @@ test('trip insert ignores supplied owner and binds current account', async () =>
   database(sql => sql.includes('COUNT') ? [[{total:0}]] : sql.startsWith('INSERT') ? [{affectedRows:1}] : [[{id:own,name:'trip'}]])
   const url = await server(); const result = await fetch(url+'/trips',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'trip',owner_id:'forged'})})
   expect(result.status).toBe(201); const [sql,args] = db.run.mock.calls.find(([sql])=>sql.startsWith('INSERT')); expect(sql).toContain('owner_id');expect(args[0]).toBe('owner-a');expect(args).not.toContain('forged')
+  expect(db.run.mock.calls.filter(([sql]) => sql.startsWith('UPDATE journal_layout_state'))).toHaveLength(1)
+})
+test('trip creation rejects stale structure before inserting', async () => {
+  database(sql => sql.includes('COUNT') ? [[{total:0}]] : sql.startsWith('SELECT') ? [[{id:own}]] : [{affectedRows:1}])
+  const url = await server(); const result = await fetch(url + '/trips', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'stale',expected_structure_version:'2'})})
+  expect(result.status).toBe(409); expect(db.run.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(false)
 })
 test('private journal and notebook snapshot scopes all reads', async () => {
   database(() => [[]]); const url=await server(); const result=await fetch(url+'/'); expect(result.status).toBe(200)
-  for(const [sql,args] of db.run.mock.calls) {expect(sql).toContain('owner_id');expect(args).toContain('owner-a')}
+  for(const [sql,args] of db.run.mock.calls.filter(([sql]) => sql.startsWith('SELECT'))) {expect(sql).toContain('owner_id');expect(args).toContain('owner-a')}
 })
 test('restore gate is released after missing upload errors', async () => {
   database(() => [[]]);const url=await server()
@@ -73,6 +80,14 @@ test('restore assigns session owner and replaces forged root ids', async () => {
   database(() => [[]]);const url=await server();const result=await fetch(url+'/restore',{method:'POST',body:await restoreBody({trips:[{id:own,name:'restored',owner_id:'forged'}]})})
   expect(result.status).toBe(200)
   const [sql,args]=db.run.mock.calls.find(([sql])=>sql.startsWith('INSERT INTO journal_trips'));expect(sql).toContain('owner_id');expect(args[0]).toBe('owner-a');expect(args).not.toContain(own);expect(args).not.toContain('forged')
+})
+test('restore rejects a stale multipart structure token before inserting', async () => {
+  database(() => [[]]); const url = await server()
+  const form = await restoreBody({ trips: [{ id: own, name: 'stale restore' }] })
+  form.set('expected_structure_version', '2')
+  const result = await fetch(url + '/restore', { method: 'POST', body: form })
+  expect(result.status).toBe(409)
+  expect(db.run.mock.calls.some(([sql]) => sql.startsWith('INSERT'))).toBe(false)
 })
 test('restore rejects reading references to a page in another notebook', async () => {
   database(() => [[]]);const url=await server();const result=await fetch(url+'/restore',{method:'POST',body:await restoreBody({notebooks:[{id:own,name:'one',bookmark_page_id:foreign},{id:'cccccccc-cccc-cccc-cccc-cccccccccccc',name:'two'}],notebook_pages:[{id:foreign,notebook_id:'cccccccc-cccc-cccc-cccc-cccccccccccc',sort_order:0}]})})

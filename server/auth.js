@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { Router } from 'express'
 import argon2 from 'argon2'
 import { pool } from './db.js'
+import { createLayoutUser } from './layout-session.js'
 import { sendMail as defaultSendMail } from './mail.js'
 
 const context = new AsyncLocalStorage()
@@ -136,7 +137,7 @@ export function createAuthRouter({ database = pool, sendMail = defaultSendMail, 
     if (!config.registrationEnabled || !mailReady()) throw failure(503, '注册暂未开放，请等待管理员配置邮件服务')
     const email = emailInput(req.body?.email), password = passwordInput(req.body?.password)
     const user = { id: randomUUID(), email, email_verified_at: null }
-    try { await database.execute('INSERT INTO users (id,email,password_hash) VALUES (?,?,?)', [user.id, email, await passwordHash(password)]) }
+    try { await createLayoutUser(database, { id: user.id, email, passwordHash: await passwordHash(password) }) }
     catch (error) { if (error.code === 'ER_DUP_ENTRY') throw failure(409, '该邮箱无法注册，请尝试登录或找回密码'); throw error }
     await issueToken(user, 'verify')
     res.status(201).json(await createSession(user, res))

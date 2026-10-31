@@ -1,6 +1,7 @@
 import { markDimensions } from '../../shared/journal-marks'
 import { hasComponentContent } from '../../shared/journal-components'
 import { expandCanvasGroups } from '../../shared/journal-groups.js'
+export { zoomAt } from './canvas/camera.js'
 
 export const PALETTES = ['sage', 'sand', 'sky', 'rose', 'lavender']
 export const CANVAS_GROUP_METRICS = { padding: 16, header: 48, minWidth: 280, coverWidth: 280, coverHeight: 200 }
@@ -153,10 +154,6 @@ export function buildCanvas(data, imageSizes = {}, avoidOverlaps = true) {
     obstacles.push(cardBounds(item))
   }
   return { groups, items, headers }
-}
-export function zoomAt(camera, scale, point) {
-  const ratio = scale / camera.scale
-  return { ...camera, scale, x: point.x - (point.x - camera.x) * ratio, y: point.y - (point.y - camera.y) * ratio }
 }
 export function planPhotoImport(count, center, obstacles = [], dimensions = []) {
   const columns = Math.min(24, Math.ceil(Math.sqrt(count))), rows = Math.ceil(count / columns), occupied = [...obstacles]

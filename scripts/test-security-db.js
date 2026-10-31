@@ -32,6 +32,7 @@ try {
     const schema = await readFile(new URL('../server/auth-schema.sql', import.meta.url), 'utf8')
     for (const sql of schema.split(';').filter(value => value.trim())) await pool.query(sql)
     const { migrateOwnership } = await import('../server/migrate-ownership.js')
+    const { migrateLayoutVersions } = await import('../server/migrate-layout-versions.js')
     const connection = await pool.getConnection()
     try {
       const oldTrip = randomUUID(), designated = randomUUID(), firstSignup = randomUUID()
@@ -50,6 +51,7 @@ try {
       const [[trip]] = await connection.execute('SELECT owner_id FROM journal_trips WHERE id=?', [oldTrip])
       const [[asset]] = await connection.execute('SELECT owner_id FROM assets WHERE storage_key=?', ['legacy-orphan.png'])
       assert.equal(trip.owner_id, designated); assert.equal(asset.owner_id, designated)
+      await migrateLayoutVersions(connection)
       console.log('Legacy migration: explicit account required, no first-signup claim, repeat-safe.')
     } finally { connection.release() }
   } finally { await pool.end() }
