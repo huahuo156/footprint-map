@@ -14,6 +14,8 @@
 
 当前是多账号初版，生产运行边界和升级步骤见 [运行与迁移说明](docs/operations.md)。
 
+2026-10-31 开发检查点：画布大图库优化的桌面500张子集已验收，实验开关仍默认关闭；完整矩阵和发布验收未结束。[总体进度与暂停位置](docs/verification/2026-10-31-stage-checkpoint.md)。
+
 ## 界面预览
 
 以下为实际生产构建在模拟 API 下的截图，仅使用仓库示例资料；不代表线上部署或真实用户数据。
@@ -102,6 +104,8 @@ npm run dev
 | `npm run test:api` | 创建随机临时 MySQL 库和图片目录，执行真实接口集成测试后清理 |
 | `npm run test:e2e` | 在独立临时 MySQL 库中，用真实 API 检查桌面/手机登录、上传、私有图片、手札、备份还原与退出 |
 | `npm run test:smoke` | 使用模拟 API 检查桌面/手机深浅主题、版图和阅读器焦点 |
+| `npm run test:image-resources` | 在原生浏览器中用合成 API 检查可选资源池的请求合并、解码、会话重置、源删除与清理，不连接个人数据库 |
+| `npm run test:canvas-residency` | 合成500/2000张资料的原生浏览器驻留检查，覆盖桌面/平板、缓存开关、封面总预算、选择与概览入口 |
 | `npm run test:canvas-ui` | 使用模拟 API 和真实浏览器检查桌面/触屏平板的拖动取消、框选、快捷键隔离、多指输入与布局提交 |
 | `npm run test:layout-migration` | 在显式指定的隔离 MySQL 上验证布局版本迁移；需设置 `LAYOUT_TEST_MYSQL_PORT`、`LAYOUT_TEST_MYSQL_PASSWORD`，可选 `LAYOUT_TEST_MYSQL_USER`；只创建和清理随机测试库 |
 | `npm run test:layout-lifecycle` | 使用同样的显式隔离 MySQL 配置，验证真实迁移、CLI 建号和重复执行；只创建和清理随机测试库 |

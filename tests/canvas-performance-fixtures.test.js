@@ -1,7 +1,23 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { createCanvasFixture, imageDimensions, imagePixels } from './fixtures/canvas-images.js'
-import { parsePerformanceOptions, performanceCases, percentile, summarizeSamples, summarizeCases, installCanvasReadinessProbe } from '../scripts/lib/canvas-performance.mjs'
+import { parsePerformanceOptions, performanceCases, percentile, summarizeSamples, summarizeCases, installCanvasReadinessProbe, warmReturnTargets } from '../scripts/lib/canvas-performance.mjs'
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks() })
+it('chooses distinct bounded fixture regions for a native A/B/A revisit', () => {
+  const photos = createCanvasFixture(500).entries[0].photos
+  const targets = warmReturnTargets(photos, { width: 1440, height: 900 }, 1.65888)
+  expect(targets.map(t => t.name)).toEqual(['warmReturnA', 'warmReturnB', 'warmReturn'])
+  expect(targets[0].x).toBe(targets[2].x)
+  expect((targets[1].x - targets[0].x) * 1.65888).toBeGreaterThan(1440 * 2)
+  for (const target of targets) expect(photos.some(p => p.canvas_x === target.x && p.canvas_y === target.y)).toBe(true)
+})
+it('counts only the complete dedicated revisit group as warm traffic', () => {
+  const sample = phases => ({ count: 100, profile: 'desktop', theme: 'light', phases: phases.map(([name, repeats]) => ({ name, repeatedMediaRequests: repeats, dom: {}, frames: [], metrics: {} })), network: { requests: 20, uniqueUrls: 10 }, memory: [] })
+  const legacy = [['panB', 90], ['panReturn', 80]]
+  expect(summarizeCases([sample(legacy)])[0].warmRepeatedMediaRequests.samples).toBe(0)
+  expect(summarizeCases([sample([...legacy, ['warmReturnA', 3], ['warmReturnB', 4], ['warmReturn', 5]])])[0].warmRepeatedMediaRequests.median).toBe(12)
+  expect(summarizeCases([sample([['warmReturnA', 0], ['warmReturnB', 0]])])[0].warmRepeatedMediaRequests.samples).toBe(0)
+  expect(summarizeCases([sample([['warmReturnA', 0], ['warmReturnB', 0], ['warmReturn', 0]])])[0].warmRepeatedMediaRequests.median).toBe(0)
+})
 it('records first operability independently of the document load event', async () => {
   document.body.innerHTML = '<div class="j-layout-status"><span role="status">正在准备布局</span></div><div class="j-canvas-controls"><button aria-pressed="false">多选内容</button></div><div class="j-canvas"></div>'
   const stop = installCanvasReadinessProbe()
@@ -61,5 +77,20 @@ it('builds the full 60-case matrix with five independent runs', () => {
 it('accepts bounded smoke overrides and rejects misleading/invalid options', () => {
   const options = parsePerformanceOptions(['--baseline', '--counts=100', '--runs=1', '--profiles=desktop', '--themes=light', '--stress-ms=0'])
   expect(performanceCases(options)).toEqual([{ count: 100, profile: 'desktop', theme: 'light', run: 1 }])
-  for (const args of [['--runs=0'], ['--runs=100'], ['--counts=999999'], ['--profiles=phone'], ['--themes=blue'], ['--compare'], ['--unknown']]) expect(() => parsePerformanceOptions(args)).toThrow()
+  for (const args of [['--runs=0'], ['--runs=100'], ['--counts=999999'], ['--profiles=phone'], ['--themes=blue'], ['--unknown']]) expect(() => parsePerformanceOptions(args)).toThrow()
+})
+
+it('accepts comparison mode with five-run defaults and bounded smoke overrides', () => {
+  expect(parsePerformanceOptions(['--compare']).compare).toBe(true)
+  expect(parsePerformanceOptions(['--compare']).runs).toBe(5)
+  expect(parsePerformanceOptions(['--compare', '--runs=1']).runs).toBe(1)
+  expect(() => parsePerformanceOptions(['--compare', '--baseline'])).toThrow()
+})
+it('separates repeat and whole-path reductions and marks zero baselines unavailable', async () => {
+  const { compareSummaries } = await import('../scripts/lib/canvas-performance.mjs')
+  const item = (requests, repeat) => ({ key: '100/desktop/light', runs: 5, mediaRequests: { median: requests }, repeatedMediaRequests: { median: repeat } })
+  const result = compareSummaries([item(100, 50)], [item(60, 20)], [item(40, 5)])[0]
+  expect(result.cachedVsResidency.repeatedMediaRequests.reductionPercent).toBe(75)
+  expect(result.cachedVsOld.mediaRequests.reductionPercent).toBe(60)
+  expect(compareSummaries([item(0, 0)], [item(0, 0)], [item(0, 0)])[0].cachedVsResidency.repeatedMediaRequests).toMatchObject({ reductionPercent: null, status: 'N/A' })
 })

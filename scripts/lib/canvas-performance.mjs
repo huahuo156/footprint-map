@@ -25,6 +25,7 @@ export function parsePerformanceOptions(args) {
   const options = { counts: [100, 500, 2000], runs: 5, profiles: ['desktop', 'tablet'], themes: ['light', 'dark'], stressMs: 600000, pathMs: 400 }
   for (const arg of args) {
     if (arg === '--baseline') continue
+    if (arg === '--compare') { options.compare = true; continue }
     const [key, value] = arg.split('=')
     if (key === '--counts') options.counts = value?.split(',').map(Number)
     else if (key === '--runs') options.runs = Number(value)
@@ -32,17 +33,25 @@ export function parsePerformanceOptions(args) {
     else if (key === '--themes') options.themes = value?.split(',')
     else if (key === '--stress-ms') options.stressMs = Number(value)
     else if (key === '--path-ms') options.pathMs = Number(value)
-    else throw new Error(`Unsupported performance option: ${arg}; --compare requires the future cache implementation`)
+    else throw new Error(`Unsupported performance option: ${arg}`)
   }
   if (!options.counts?.length || !options.counts.every(n => Number.isInteger(n) && n >= 8 && n <= 2000) || new Set(options.counts).size !== options.counts.length) throw new Error('Invalid counts')
   if (!Number.isInteger(options.runs) || options.runs < 1 || options.runs > 10) throw new Error('Invalid runs')
   if (!options.profiles?.length || !options.profiles.every(p => ['desktop', 'tablet'].includes(p)) || new Set(options.profiles).size !== options.profiles.length) throw new Error('Invalid profiles')
   if (!options.themes?.length || !options.themes.every(t => ['light', 'dark'].includes(t)) || new Set(options.themes).size !== options.themes.length) throw new Error('Invalid themes')
   if (!Number.isInteger(options.stressMs) || options.stressMs < 0 || options.stressMs > 600000 || !Number.isInteger(options.pathMs) || options.pathMs < 100 || options.pathMs > 2000) throw new Error('Invalid measurement duration')
+  if (options.compare && args.includes('--baseline')) throw new Error('Choose baseline or compare')
   return options
 }
 export function performanceCases(options) {
   return options.counts.flatMap(count => options.profiles.flatMap(profile => options.themes.flatMap(theme => Array.from({ length: options.runs }, (_, run) => ({ count, profile, theme, run: run + 1 })))))
+}
+// Use real photo centers, keeping small fixtures inside their world bounds.
+export function warmReturnTargets(photos, _viewport, _scale) {
+  const left = Math.min(...photos.map(p => p.canvas_x)), right = Math.max(...photos.map(p => p.canvas_x))
+  const nearest = x => photos.reduce((best, p) => Math.abs(p.canvas_x - x) + Math.abs(p.canvas_y) < Math.abs(best.canvas_x - x) + Math.abs(best.canvas_y) ? p : best)
+  const a = nearest(left), b = nearest(right)
+  return [['warmReturnA', a], ['warmReturnB', b], ['warmReturn', a]].map(([name, photo]) => ({ name, x: photo.canvas_x, y: photo.canvas_y }))
 }
 export function summarizeCases(cases) {
   const groups = new Map()
@@ -57,8 +66,22 @@ export function summarizeCases(cases) {
     panFrameP95Ms: summarizeSamples(values.map(v => percentile(v.phases.filter(p => p.name.startsWith('pan')).flatMap(p => p.frames), .95))),
     visible95Ms: summarizeSamples(values.map(v => v.visible95Ms)),
     mediaRequests: summarizeSamples(values.map(v => (v.shortNetwork || v.network).requests)),
+    warmRepeatedMediaRequests: summarizeSamples(values.map(v => { const phases = ['warmReturnA', 'warmReturnB', 'warmReturn'].map(name => v.phases.find(p => p.name === name)); return phases.every(p => Number.isFinite(p?.repeatedMediaRequests)) ? phases.reduce((sum, p) => sum + p.repeatedMediaRequests, 0) : null })),
     repeatedMediaRequests: summarizeSamples(values.map(v => { const n = v.shortNetwork || v.network; return n.requests - n.uniqueUrls })),
     maxJsHeapBytes: summarizeSamples(values.map(v => { const samples = v.phases.filter(p => p.name !== 'stress').map(p => p.metrics.JSHeapUsedSize).filter(Number.isFinite); return samples.length ? Math.max(...samples) : null })),
     maxBrowserWorkingSetBytes: summarizeSamples(values.map(v => { const samples = v.memory.filter(m => !m.phase.startsWith('stress')).map(m => m.workingSetBytes); return samples.length ? Math.max(...samples) : null })),
+  }))
+}
+
+// Positive percentages mean less work in the candidate; unavailable denominators stay missing.
+export function compareSummaries(old, residency, cached) {
+  const relative = (baseline, candidate) => Object.fromEntries(Object.keys(candidate || {}).filter(key => candidate[key]?.median !== undefined).map(key => {
+    const before = baseline?.[key]?.median, after = candidate[key].median
+    const available = Number.isFinite(before) && before > 0 && Number.isFinite(after)
+    return [key, { baseline: before ?? null, candidate: after, reductionPercent: available ? (before - after) / before * 100 : null, status: available ? 'measured' : 'N/A' }]
+  }))
+  return cached.map(candidate => ({ key: candidate.key, runs: candidate.runs,
+    cachedVsResidency: relative(residency.find(v => v.key === candidate.key), candidate),
+    cachedVsOld: relative(old.find(v => v.key === candidate.key), candidate),
   }))
 }

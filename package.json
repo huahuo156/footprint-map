@@ -29,10 +29,12 @@
     "test:api": "node scripts/test-security-db.js",
     "test:smoke": "npm run build && node scripts/publication-ui-smoke.mjs",
     "test:canvas-ui": "npm run build && node scripts/canvas-ui-smoke.mjs",
+    "test:image-resources": "node scripts/image-resource-ui-smoke.mjs",
     "test:canvas-perf": "npm run build && node scripts/canvas-image-performance.mjs",
     "test:layout-migration": "node scripts/test-layout-version-migration.js",
     "test:layout-lifecycle": "node scripts/test-layout-lifecycle.js",
-    "test:e2e": "npm run build && node scripts/test-security-db.js --e2e"
+    "test:e2e": "npm run build && node scripts/test-security-db.js --e2e",
+    "test:canvas-residency": "node scripts/canvas-residency-ui-smoke.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

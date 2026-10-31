@@ -31,3 +31,7 @@ test-results/
 
 # 本地规划文件
 .zcode
+
+# 本机代理日志与工具笔记，不随项目分发
+.superpowers/
+.workbuddy/

@@ -450,3 +450,11 @@ body { margin: 0; background: var(--j-bg); color: var(--j-ink); }
 }
 
 .j-layout-status { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .55rem 1rem; }
+
+/* Quiet local-entry rows keep photographs visually primary at low zoom. */
+.j-residency-overview { z-index:50; position:absolute; left:0; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px; width:220px; padding:10px 12px; border:1px solid var(--j-line); border-radius:4px; background:var(--j-paper); color:var(--j-muted); text-align:left; cursor:pointer; box-shadow:none; }
+.j-residency-overview:hover { color:var(--j-ink); border-color:var(--j-muted); }
+.j-residency-overview:focus-visible { outline:2px solid var(--j-accent,#315a48); outline-offset:4px; }
+.j-image-placeholder { display:block; width:100%; background:var(--j-bg); color:var(--j-muted); object-fit:contain; }
+.j-island-images>.j-image-placeholder { position:absolute; top:24px; left:35px; width:270px; height:250px; border:12px solid var(--j-paper); transform:rotate(-2deg); }
+.j-group-cover-images>.j-image-placeholder { width:88px; height:94px; }

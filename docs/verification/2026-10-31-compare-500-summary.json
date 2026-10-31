@@ -1,0 +1,1555 @@
+{
+  "source": "test-results\\canvas-performance\\compare-1793447560644\\report.json",
+  "options": {
+    "counts": [
+      500
+    ],
+    "runs": 5,
+    "profiles": [
+      "desktop"
+    ],
+    "themes": [
+      "light"
+    ],
+    "stressMs": 0,
+    "pathMs": 400,
+    "compare": true
+  },
+  "gates": [
+    {
+      "key": "500/desktop/light",
+      "name": "repeatMediaReductionPercent",
+      "status": "N/A",
+      "actual": null,
+      "limit": 80
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "panFrameP95Ms",
+      "actual": 6.200000000000728,
+      "limit": 32,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "editableMs",
+      "actual": 418.69999999552965,
+      "limit": 600,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "visible95Ms",
+      "actual": 956.3999999985099,
+      "limit": 1500,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "maxBrowserWorkingSetBytes",
+      "actual": 693997568,
+      "limit": 681574400,
+      "status": "missed"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "panFrameRegressionMs",
+      "actual": 0,
+      "limit": 2,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "overviewImages",
+      "actual": 0,
+      "limit": 48,
+      "status": "met"
+    },
+    {
+      "name": "2000TenMinuteStress",
+      "status": "incomplete"
+    }
+  ],
+  "summary": [
+    {
+      "key": "500/desktop/light",
+      "runs": 5,
+      "cachedVsResidency": {
+        "editableMs": {
+          "baseline": 414.70000000298023,
+          "candidate": 398.29999999701977,
+          "reductionPercent": 3.954666025040416,
+          "status": "measured"
+        },
+        "overviewImages": {
+          "baseline": 0,
+          "candidate": 0,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "panFrameP95Ms": {
+          "baseline": 6.200000000000273,
+          "candidate": 6.200000000000273,
+          "reductionPercent": 0,
+          "status": "measured"
+        },
+        "visible95Ms": {
+          "baseline": 517.5,
+          "candidate": 516.5,
+          "reductionPercent": 0.1932367149758454,
+          "status": "measured"
+        },
+        "mediaRequests": {
+          "baseline": 68,
+          "candidate": 51,
+          "reductionPercent": 25,
+          "status": "measured"
+        },
+        "warmRepeatedMediaRequests": {
+          "baseline": 0,
+          "candidate": 0,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "repeatedMediaRequests": {
+          "baseline": 18,
+          "candidate": 3,
+          "reductionPercent": 83.33333333333334,
+          "status": "measured"
+        },
+        "maxJsHeapBytes": {
+          "baseline": 21998560,
+          "candidate": 27560804,
+          "reductionPercent": -25.284582263566342,
+          "status": "measured"
+        },
+        "maxBrowserWorkingSetBytes": {
+          "baseline": 632401920,
+          "candidate": 684888064,
+          "reductionPercent": -8.29949156384598,
+          "status": "measured"
+        }
+      },
+      "cachedVsOld": {
+        "editableMs": {
+          "baseline": 406,
+          "candidate": 398.29999999701977,
+          "reductionPercent": 1.8965517248719785,
+          "status": "measured"
+        },
+        "overviewImages": {
+          "baseline": 499,
+          "candidate": 0,
+          "reductionPercent": 100,
+          "status": "measured"
+        },
+        "panFrameP95Ms": {
+          "baseline": 6.200000000000273,
+          "candidate": 6.200000000000273,
+          "reductionPercent": 0,
+          "status": "measured"
+        },
+        "visible95Ms": {
+          "baseline": 538.7999999970198,
+          "candidate": 516.5,
+          "reductionPercent": 4.138827022483874,
+          "status": "measured"
+        },
+        "mediaRequests": {
+          "baseline": 499,
+          "candidate": 51,
+          "reductionPercent": 89.77955911823648,
+          "status": "measured"
+        },
+        "warmRepeatedMediaRequests": {
+          "baseline": 0,
+          "candidate": 0,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "repeatedMediaRequests": {
+          "baseline": 0,
+          "candidate": 3,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "maxJsHeapBytes": {
+          "baseline": 47023740,
+          "candidate": 27560804,
+          "reductionPercent": 41.389595978541905,
+          "status": "measured"
+        },
+        "maxBrowserWorkingSetBytes": {
+          "baseline": 866918400,
+          "candidate": 684888064,
+          "reductionPercent": 20.99740137018663,
+          "status": "measured"
+        }
+      }
+    }
+  ],
+  "variants": {
+    "old": {
+      "build": {
+        "indexSha256": "1ae6b35fb2ed6ac8d7d577dbdd3ba9b6b7f494f7977ad9c2f9ee485cafa59266",
+        "assets": [
+          {
+            "file": "AddMemory-DyF4WBdw.js",
+            "bytes": 4630,
+            "sha256": "3470f0d89084351c8c24278d51281adac2f65d8a8ab606fe2da2528364b72183"
+          },
+          {
+            "file": "BackupDialog-BGSQKbd-.js",
+            "bytes": 3717,
+            "sha256": "9e477f341eacc308a3d4f34558aaa104f9f4052697820bc855af1ba56006207b"
+          },
+          {
+            "file": "BatchItemDelete-B0s3YOlb.js",
+            "bytes": 1756,
+            "sha256": "e63fb96b5fef05fd9478dc041eb3cf6473e56cce383fe01eb318832279d51ef4"
+          },
+          {
+            "file": "BatchPhotoEditor-uxS74Ovr.js",
+            "bytes": 795,
+            "sha256": "3f8a95a12156ab7140dad4f6786e376dbd2784b0b9de5335d24a05966ee2272c"
+          },
+          {
+            "file": "EntryEditor-AAPGexDG.js",
+            "bytes": 19087,
+            "sha256": "cedb90194f502ec2de96d5479fdf16741c2f9fe3a318e9441957da3c55b3dd2b"
+          },
+          {
+            "file": "JournalImage-DMPEOfgA.js",
+            "bytes": 17021,
+            "sha256": "86f6edad9ee626ffc329d3715478f4056b525789d8ca9b19ca1837e190dfcc12"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "JournalPage-BhdDyFo_.js",
+            "bytes": 94694,
+            "sha256": "726442d619535d49ceae2d6ed6719db9498473f80ce1c3d990955510571baa54"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-eXPGeDZ-.js",
+            "bytes": 3998,
+            "sha256": "9de2ee2692355db2749a21d23201f68aae99a09d9bbba8999a8468c20c9a468b"
+          },
+          {
+            "file": "NotebookReader-DPwG32vu.js",
+            "bytes": 18266,
+            "sha256": "6ad7aac88e1a6b2944b3820ab0071668a8243150695b43c01b47b5096c33b459"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookSettings-B_utjK6Y.js",
+            "bytes": 6478,
+            "sha256": "d63c0ecd3e4c8565b61ec2aee7ab0782afd146c24219d75353dfd42263d0251d"
+          },
+          {
+            "file": "PhotoViewer-BXMtVJTy.js",
+            "bytes": 4119,
+            "sha256": "5fde89f935e5fc37ee9236bb90a7247ef372a2e338fc5a85573dcbdf9134c61e"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-DzCXvpCb.js",
+            "bytes": 804437,
+            "sha256": "96ccd42fc8b9723d4556d525f32ba3259356b41f214e76f95d66bb38219fb489"
+          },
+          {
+            "file": "WestLakeScene-t41ikppg.js",
+            "bytes": 461559,
+            "sha256": "70aa760f0e746d935ecdadb1c6cd4271c8e824fae459a453611256d368b8d109"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "index-C1BEl7Io.js",
+            "bytes": 234323,
+            "sha256": "c2dbb24642b531324ee66dcb577f9bf6f38b4646fb789203bd796f4af7d139c5"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "80d6965995859a839d524703d38391dcd1a72cc3b5bdffd079877e30994c7e75",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "1931d5b025a23f10ec1c7c87322192b7823c09de81d09a56e02e2b37c41e2eaa"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 406,
+            "worst": 420.09999999403954
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 499,
+            "worst": 499
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000273
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 538.7999999970198,
+            "worst": 969.9000000059605
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 499,
+            "worst": 499
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 47023740,
+            "worst": 49285196
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 866918400,
+            "worst": 875671552
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 420.09999999403954,
+          "visible95Ms": 538.7999999970198,
+          "network": {
+            "requests": 499,
+            "uniqueUrls": 499,
+            "completedEncodedBytes": 20084397,
+            "peakLogicalRequests": 447,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 486604800,
+              "privateBytes": 306270208
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 729522176,
+              "privateBytes": 590114816
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 870449152,
+              "privateBytes": 820420608
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 395.5,
+          "visible95Ms": 543.8999999985099,
+          "network": {
+            "requests": 499,
+            "uniqueUrls": 499,
+            "completedEncodedBytes": 20084397,
+            "peakLogicalRequests": 447,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 508772352,
+              "privateBytes": 319234048
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 727126016,
+              "privateBytes": 589451264
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 866918400,
+              "privateBytes": 819294208
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 401.1000000014901,
+          "visible95Ms": 524.4000000059605,
+          "network": {
+            "requests": 499,
+            "uniqueUrls": 499,
+            "completedEncodedBytes": 20084397,
+            "peakLogicalRequests": 447,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 484913152,
+              "privateBytes": 306995200
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 742576128,
+              "privateBytes": 609370112
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 865189888,
+              "privateBytes": 816836608
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 406,
+          "visible95Ms": 535.8999999985099,
+          "network": {
+            "requests": 499,
+            "uniqueUrls": 499,
+            "completedEncodedBytes": 20084397,
+            "peakLogicalRequests": 447,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 504606720,
+              "privateBytes": 315576320
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 747327488,
+              "privateBytes": 616767488
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 875671552,
+              "privateBytes": 827777024
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 416.1000000014901,
+          "visible95Ms": 969.9000000059605,
+          "network": {
+            "requests": 499,
+            "uniqueUrls": 499,
+            "completedEncodedBytes": 20084397,
+            "peakLogicalRequests": 447,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 485318656,
+              "privateBytes": 308301824
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 735195136,
+              "privateBytes": 599810048
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 852328448,
+              "privateBytes": 807522304
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        }
+      ]
+    },
+    "residency": {
+      "build": {
+        "indexSha256": "55a176d1b14427f0b014994d07f46460524c00c3e40af75ea87eae7ab14819de",
+        "assets": [
+          {
+            "file": "AddMemory-B8oBC0Vm.js",
+            "bytes": 4630,
+            "sha256": "6f0be3e26f0688f236d6af95cac0e3ca8ad05418134b8cd3c824f7a3e54806dd"
+          },
+          {
+            "file": "BackupDialog-D9dQmSpQ.js",
+            "bytes": 3717,
+            "sha256": "820c60cb8cc286c13687c24b32a5958543be32be2b94d28ea881f47982e6b051"
+          },
+          {
+            "file": "BatchItemDelete-DXT3fWZh.js",
+            "bytes": 1756,
+            "sha256": "a44c7689c1142c32210d91ac2bda75028ab528e8357d45abd2a134ecaf756da9"
+          },
+          {
+            "file": "BatchPhotoEditor-BRxvnbq5.js",
+            "bytes": 795,
+            "sha256": "5b754596f3793e82230e903fc8e1a0c9ad085bbbeaf4d1c05fe97311de8d0f32"
+          },
+          {
+            "file": "EntryEditor-CCx3Q7Eo.js",
+            "bytes": 19087,
+            "sha256": "e42971ce8cf7d62ed3c1469668e1c83b0a1cb4d458aa8535d7d3e4593ef43e58"
+          },
+          {
+            "file": "JournalImage-BIJrSHWK.js",
+            "bytes": 17021,
+            "sha256": "93abc28fcc5623d33012178d6c6aeb4b97f3fb4498ff696d271a2931656111e8"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "JournalPage-CgCdcouL.js",
+            "bytes": 94694,
+            "sha256": "bbaa859bb155dc5e811d65ad3c43727d5f6fe723c83591e2916d38c42bcb3eeb"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-DCyGkh3I.js",
+            "bytes": 3998,
+            "sha256": "f81b07da64c9277698f6c2dbd5e0f820b5bd9b946bdf96942b6e69735cbc61ca"
+          },
+          {
+            "file": "NotebookReader-DH5QlwpH.js",
+            "bytes": 18266,
+            "sha256": "1ce76a2fa56be91a277f377e0b98d0cf9186ce276cdc2556afa8c9de43fc1d54"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookSettings-BPFQP2uo.js",
+            "bytes": 6478,
+            "sha256": "af38e0e280106af3281f4b1482ba638a4887b81b71b5276ee4d9e09ff3446aec"
+          },
+          {
+            "file": "PhotoViewer-Dr3R3jLV.js",
+            "bytes": 4119,
+            "sha256": "f503fbb21e454317022739a42e36ec3c7c8b33376bf2b88527a4a39400c6bd09"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-DYWTyRTr.js",
+            "bytes": 804437,
+            "sha256": "626e0974355c76c556a34a5454fda98842bc06d59941d14236ea3074891e7c18"
+          },
+          {
+            "file": "WestLakeScene-Bfg6cK6E.js",
+            "bytes": 461559,
+            "sha256": "36f39bb5d375aa226879acdb242e5a01720861e117481b1b983485660c52b2d6"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "index-CiZxq4HB.js",
+            "bytes": 234323,
+            "sha256": "89ed928fc58a8b544eb43b1e16fa4f8dda144fe6c7a16916d8f7076d80f3bfbf"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "80d6965995859a839d524703d38391dcd1a72cc3b5bdffd079877e30994c7e75",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "1931d5b025a23f10ec1c7c87322192b7823c09de81d09a56e02e2b37c41e2eaa"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 414.70000000298023,
+            "worst": 422.5
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000273
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 517.5,
+            "worst": 960.8999999985099
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 68,
+            "worst": 68
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 18,
+            "worst": 18
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 21998560,
+            "worst": 27459716
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 632401920,
+            "worst": 637661184
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 414.70000000298023,
+          "visible95Ms": 504.6000000014901,
+          "network": {
+            "requests": 68,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 2726360,
+            "peakLogicalRequests": 42,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 480092160,
+              "privateBytes": 295124992
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 528089088,
+              "privateBytes": 338829312
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 637661184,
+              "privateBytes": 506605568
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 404,
+          "visible95Ms": 506,
+          "network": {
+            "requests": 68,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 2726360,
+            "peakLogicalRequests": 42,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 495636480,
+              "privateBytes": 293744640
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 528400384,
+              "privateBytes": 331603968
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 632401920,
+              "privateBytes": 498253824
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 422.5,
+          "visible95Ms": 957.5999999940395,
+          "network": {
+            "requests": 68,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 2726360,
+            "peakLogicalRequests": 42,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 472825856,
+              "privateBytes": 287338496
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 525279232,
+              "privateBytes": 332914688
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 632520704,
+              "privateBytes": 498450432
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 410,
+          "visible95Ms": 517.5,
+          "network": {
+            "requests": 50,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 2001306,
+            "peakLogicalRequests": 30,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 480346112,
+              "privateBytes": 295649280
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 528003072,
+              "privateBytes": 338333696
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 628625408,
+              "privateBytes": 483516416
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 420.6000000014901,
+          "visible95Ms": 960.8999999985099,
+          "network": {
+            "requests": 68,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 2726360,
+            "peakLogicalRequests": 42,
+            "failedRequests": 0,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 474394624,
+              "privateBytes": 288563200
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 524779520,
+              "privateBytes": 331083776
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 631967744,
+              "privateBytes": 500809728
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.199999999999818,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        }
+      ]
+    },
+    "cached": {
+      "build": {
+        "indexSha256": "d8da6074e4a0f7f430b974b2d412c97315b1bbd15f5065817978bf17cdc7594e",
+        "assets": [
+          {
+            "file": "AddMemory-DiWQx_eO.js",
+            "bytes": 4630,
+            "sha256": "ca28188db7a177641571ce99bf2f0bb32555a76fc3cab255783b9ef9cde8f4f3"
+          },
+          {
+            "file": "BackupDialog-DNHun_6M.js",
+            "bytes": 3717,
+            "sha256": "5f4004e699dc4f2ddc2c684fc317ea0971ed2ebb198c4daf2ef4847da1fd4a57"
+          },
+          {
+            "file": "BatchItemDelete-D8Bu76oI.js",
+            "bytes": 1756,
+            "sha256": "83311603a5ad3ce762dd862f9fb7f98009d729f6ee1696c2fcf37f2205b6a154"
+          },
+          {
+            "file": "BatchPhotoEditor-Xc9adBpw.js",
+            "bytes": 795,
+            "sha256": "5ff3a2c419cc9d7e0542c694e5af1f5c92c1886c26278156c636aa425872af0a"
+          },
+          {
+            "file": "EntryEditor-BpUQ_drr.js",
+            "bytes": 19087,
+            "sha256": "e888606540b884ed143052bc967989df47eb1cdb7b75593d1b8922685267c26b"
+          },
+          {
+            "file": "JournalImage-BINzXyQ3.js",
+            "bytes": 17021,
+            "sha256": "43aebe4a03e0d1e9c602c436bc9e8751962a7f6f8464f7cf31602022a90e04fe"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "JournalPage-DTcdoOH8.js",
+            "bytes": 94694,
+            "sha256": "1c7f2355fbcf810551660c913d6884f2d6950a20829713e7fdc8dadc2cc22133"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-BeEsrzxu.js",
+            "bytes": 3998,
+            "sha256": "188e1dc3d7c4a600ecf1cca23f74a5ad23015f2bebc34291e1e71397f3a2236b"
+          },
+          {
+            "file": "NotebookReader-DYc328qI.js",
+            "bytes": 18266,
+            "sha256": "e55840b221ef11833e2a6aa86d530ccd8101bcf4a22bab4cb3383ce6ac361dca"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookSettings-td2BemTj.js",
+            "bytes": 6478,
+            "sha256": "c48f07612f7c385ed9bf17cc35c65a0865cd2213009f8259676b5ebe5fcb06d3"
+          },
+          {
+            "file": "PhotoViewer-DGg6dxJx.js",
+            "bytes": 4119,
+            "sha256": "5ac6f26705ffd6a4879ea3befe7e904cbf53722647d6f41e28a2a35349f82fd9"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-DiwF1w6u.js",
+            "bytes": 804437,
+            "sha256": "b745e0d28f4aa4800c3ebca10085e4074ed5b01bc5f836547d703e06d535d256"
+          },
+          {
+            "file": "WestLakeScene-BO5Cavgf.js",
+            "bytes": 461559,
+            "sha256": "a4484b7b24fd435fcb065dad33cd9265de05f0a76dfa0e2b234be50172945144"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "index-CblycU6r.js",
+            "bytes": 234323,
+            "sha256": "02b5ed7fac1090c5005edf4557d964ea68a59e87b808c669995d071c9b424a5e"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "80d6965995859a839d524703d38391dcd1a72cc3b5bdffd079877e30994c7e75",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "1931d5b025a23f10ec1c7c87322192b7823c09de81d09a56e02e2b37c41e2eaa"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 398.29999999701977,
+            "worst": 418.69999999552965
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000728
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 516.5,
+            "worst": 956.3999999985099
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 51,
+            "worst": 52
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 3,
+            "worst": 3
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 27560804,
+            "worst": 35330432
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 684888064,
+            "worst": 693997568
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 397.40000000596046,
+          "visible95Ms": 518.4000000059605,
+          "network": {
+            "requests": 51,
+            "uniqueUrls": 48,
+            "completedEncodedBytes": 1880661,
+            "peakLogicalRequests": 8,
+            "failedRequests": 4,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 495620096,
+              "privateBytes": 308903936
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 559104000,
+              "privateBytes": 368058368
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 684830720,
+              "privateBytes": 536526848
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.199999999999818,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 398.29999999701977,
+          "visible95Ms": 514.2999999970198,
+          "network": {
+            "requests": 52,
+            "uniqueUrls": 51,
+            "completedEncodedBytes": 1933802,
+            "peakLogicalRequests": 8,
+            "failedRequests": 4,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 492597248,
+              "privateBytes": 299864064
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 556036096,
+              "privateBytes": 355827712
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 679661568,
+              "privateBytes": 516956160
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 394.09999999403954,
+          "visible95Ms": 511.5,
+          "network": {
+            "requests": 51,
+            "uniqueUrls": 48,
+            "completedEncodedBytes": 1880661,
+            "peakLogicalRequests": 8,
+            "failedRequests": 4,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 513114112,
+              "privateBytes": 316096512
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 554967040,
+              "privateBytes": 361431040
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 684888064,
+              "privateBytes": 528449536
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 398.70000000298023,
+          "visible95Ms": 516.5,
+          "network": {
+            "requests": 51,
+            "uniqueUrls": 48,
+            "completedEncodedBytes": 1793869,
+            "peakLogicalRequests": 8,
+            "failedRequests": 6,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 516952064,
+              "privateBytes": 317992960
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 565354496,
+              "privateBytes": 368193536
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 693997568,
+              "privateBytes": 533520384
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.199999999999818,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 418.69999999552965,
+          "visible95Ms": 956.3999999985099,
+          "network": {
+            "requests": 52,
+            "uniqueUrls": 50,
+            "completedEncodedBytes": 1900009,
+            "peakLogicalRequests": 8,
+            "failedRequests": 5,
+            "remainingRequests": 0
+          },
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 511778816,
+              "privateBytes": 312492032
+            },
+            {
+              "phase": "overview",
+              "processCount": 9,
+              "workingSetBytes": 561598464,
+              "privateBytes": 366333952
+            },
+            {
+              "phase": "idle",
+              "processCount": 9,
+              "workingSetBytes": 688238592,
+              "privateBytes": 532221952
+            }
+          ],
+          "panFrames": [
+            {
+              "name": "panA",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panB",
+              "frameP95Ms": 6.200000000000273,
+              "repeatedMediaRequests": 0
+            },
+            {
+              "name": "panReturn",
+              "frameP95Ms": 6.200000000000728,
+              "repeatedMediaRequests": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

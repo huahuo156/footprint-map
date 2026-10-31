@@ -1,4 +1,4 @@
-// P0 baseline only: production UI, synthetic media and explicit mock transport.
+// Production baseline and three-variant comparison: production UI, synthetic media and explicit mock transport.
 import express from 'express'
 import sharp from 'sharp'
 import { chromium, expect } from '@playwright/test'
@@ -6,20 +6,64 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, readdir, mkdtemp } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 import { createCanvasFixture, imagePixels, imageDimensions } from '../tests/fixtures/canvas-images.js'
-import { parsePerformanceOptions, performanceCases, percentile, summarizeCases, installCanvasReadinessProbe } from './lib/canvas-performance.mjs'
+import { parsePerformanceOptions, performanceCases, percentile, summarizeCases, installCanvasReadinessProbe, compareSummaries, warmReturnTargets } from './lib/canvas-performance.mjs'
 
 const options = parsePerformanceOptions(process.argv.slice(2)), cases = performanceCases(options)
-const output = path.resolve('test-results/canvas-performance', `baseline-${Date.now()}`)
+const output = process.env.CANVAS_PERF_OUTPUT || path.resolve('test-results/canvas-performance', `${options.compare ? 'compare' : 'baseline'}-${Date.now()}`)
 await mkdir(output, { recursive: true })
 const run = promisify(execFile), hash = data => createHash('sha256').update(data).digest('hex')
-const index = await readFile('dist/index.html'), assets = []
-for (const file of (await readdir('dist/assets')).filter(name => /\.(js|css)$/.test(name)).sort()) {
-  const data = await readFile(path.join('dist/assets', file)); assets.push({ file, bytes: data.length, sha256: hash(data) })
+if (options.compare) {
+  const buildRoot = await mkdtemp(path.join(os.tmpdir(), 'canvas-perf-builds-'))
+  const comparison = { schema: 2, mode: 'compare', options, buildRoot, startedAt: new Date().toISOString(), variants: [], failures: [], summary: [], gates: [] }
+  const save = () => writeFile(path.join(output, 'report.json'), JSON.stringify(comparison, null, 2))
+  try {
+    for (const [name, residency, cache] of [['old', false, false], ['residency', true, false], ['cached', true, true]]) {
+      const buildDir = path.join(buildRoot, name), childOutput = path.join(output, name)
+      const env = { ...process.env, VITE_CANVAS_IMAGE_RESIDENCY: String(residency), VITE_CANVAS_IMAGE_CACHE: String(cache), CANVAS_PERF_BUILD_DIR: buildDir, CANVAS_PERF_OUTPUT: childOutput }
+      console.log(`Building ${name}: residency=${residency} cache=${cache}`)
+      const built = await run(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--configLoader', 'runner', '--outDir', buildDir], { env, windowsHide: true, maxBuffer: 16 * 1024 * 1024 })
+      await writeFile(path.join(output, `${name}-build.log`), built.stdout + built.stderr)
+      comparison.variants.push({ name, flags: { residency, cache }, buildDir, report: path.join(childOutput, 'report.json') }); await save()
+      await run(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2).filter(arg => arg !== '--compare'), '--baseline'], { env, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }).then(async result => { await writeFile(path.join(output, `${name}-run.log`), result.stdout + result.stderr) })
+      comparison.variants.at(-1).data = JSON.parse(await readFile(path.join(childOutput, 'report.json'), 'utf8')); await save()
+    }
+    const [old, residency, cached] = comparison.variants.map(v => v.data)
+    assert.deepEqual(old.mediaManifest, residency.mediaManifest); assert.deepEqual(old.mediaManifest, cached.mediaManifest)
+    comparison.summary = compareSummaries(old.summary, residency.summary, cached.summary)
+    const gate = (key, name, actual, limit, enough = true, direction = 'max') => comparison.gates.push({ key, name, actual, limit, status: !enough || !Number.isFinite(actual) ? 'incomplete' : (direction === 'min' ? actual >= limit : actual <= limit) ? 'met' : 'missed' })
+    for (const item of comparison.summary) {
+      const current = cached.summary.find(v => v.key === item.key), previous = old.summary.find(v => v.key === item.key)
+      const [count, profile] = item.key.split('/'), enough = current.runs >= 5
+      const reduction = item.cachedVsResidency.warmRepeatedMediaRequests
+      if (reduction.status === 'N/A') comparison.gates.push({ key: item.key, name: 'repeatMediaReductionPercent', status: 'N/A', actual: null, limit: 80 })
+      else gate(item.key, 'repeatMediaReductionPercent', reduction.reductionPercent, 80, enough, 'min')
+      if (count === '500') {
+        gate(item.key, 'panFrameP95Ms', current.panFrameP95Ms.worst, 32, enough)
+        gate(item.key, 'editableMs', current.editableMs.worst, 600, enough)
+        gate(item.key, 'visible95Ms', current.visible95Ms.worst, 1500, enough)
+        gate(item.key, 'maxBrowserWorkingSetBytes', current.maxBrowserWorkingSetBytes.worst, (profile === 'desktop' ? 650 : 640) * 1024 ** 2, enough)
+        const baseline = previous.panFrameP95Ms.median
+        gate(item.key, 'panFrameRegressionMs', current.panFrameP95Ms.median - baseline, Math.max(baseline * .2, 2), enough && Number.isFinite(baseline))
+      }
+      gate(item.key, 'overviewImages', current.overviewImages.worst, profile === 'desktop' ? 48 : 24, enough)
+    }
+    comparison.gates.push({ name: '2000TenMinuteStress', status: cached.cases.some(c => c.count === 2000 && c.stress?.durationMs >= 600000) ? 'measured' : 'incomplete' })
+    comparison.acceptance = 'Raw frontend comparison only; application resource invariants, backend cold/warm, React/model timing and physical-device acceptance require separate evidence.'
+    comparison.finishedAt = new Date().toISOString()
+  } catch (error) { comparison.failures.push({ error: error.stack || String(error), stdout: error.stdout, stderr: error.stderr }); process.exitCode = 1 }
+  await save(); console.log(`Canvas comparison report: ${path.join(output, 'report.json')}`)
+  process.exit(process.exitCode || 0)
+}
+const buildDir = process.env.CANVAS_PERF_BUILD_DIR || path.resolve('dist')
+const index = await readFile(path.join(buildDir, 'index.html')), assets = []
+for (const file of (await readdir(path.join(buildDir, 'assets'))).filter(name => /\.(js|css)$/.test(name)).sort()) {
+  const data = await readFile(path.join(buildDir, 'assets', file)); assets.push({ file, bytes: data.length, sha256: hash(data) })
 }
 const report = {
   schema: 1, mode: 'baseline', options, startedAt: new Date().toISOString(), build: { indexSha256: hash(index), assets,
@@ -32,7 +76,7 @@ const media = new Map()
 sharp.concurrency(1)
 for (let id = 0; id < Math.max(...options.counts); id++) {
   const dimensions = imageDimensions(id)
-  const bytes = await sharp(imagePixels(id), { raw: { ...dimensions, channels: 3 } }).webp({ quality: 78, effort: 3 }).toBuffer()
+  const bytes = await sharp(imagePixels(id), { raw: { ...dimensions, channels: 3 } }).resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true }).webp({ quality: 78, effort: 3 }).toBuffer()
   media.set(`/uploads/perf-image-${id}.webp`, bytes)
   report.mediaManifest.push({ id, ...dimensions, bytes: bytes.length, sha256: hash(bytes) })
   if ((id + 1) % 100 === 0) console.log(`Synthetic images prepared ${id + 1}/${Math.max(...options.counts)}`)
@@ -85,8 +129,8 @@ app.get('/uploads/:file', (req, res) => {
   const timer = setTimeout(() => { if (!res.destroyed) res.set({ 'Cache-Control': 'private, no-store', 'Content-Type': 'image/webp' }).send(bytes) }, 20)
   res.once('close', () => clearTimeout(timer))
 })
-app.use(express.static(path.resolve('dist')))
-app.get('/{*path}', (_req, res) => res.sendFile(path.resolve('dist/index.html')))
+app.use(express.static(buildDir))
+app.get('/{*path}', (_req, res) => res.sendFile(path.join(buildDir, 'index.html')))
 const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve))
 const baseURL = `http://127.0.0.1:${server.address().port}`
 const writeReport = async () => { report.summary = summarizeCases(report.cases); await writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)) }
@@ -141,7 +185,11 @@ async function runCase(config, doStress) {
       })
       const metrics = Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(item => [item.name, item.value]))
       const { frames, longTasks, durationMs, ...counts } = dom
-      phases.push({ name, durationMs, dom: counts, frames, frameP95Ms: percentile(frames, .95), longTasks, metrics, mediaRequests: attempts.size - phaseNetworkStart, cumulativeMediaRequests: attempts.size })
+      const urls = [...attempts.values()], known = new Set(urls.slice(0, phaseNetworkStart))
+      let repeatedMediaRequests = 0
+      for (const url of urls.slice(phaseNetworkStart)) { if (known.has(url)) repeatedMediaRequests++; known.add(url) }
+      phases.push({ name, repeatedMediaRequests, durationMs, dom: counts, frames, frameP95Ms: percentile(frames, .95), longTasks, metrics, mediaRequests: attempts.size - phaseNetworkStart, cumulativeMediaRequests: attempts.size })
+      if (name.startsWith('warmReturn')) phases.at(-1).requestedMediaUrls = urls.slice(phaseNetworkStart)
     }
     const sampleMemory = async name => { const value = await processMemory(browserSession); if (value) memory.push({ phase: name, ...value }) }
     const ready = () => expect(page.getByLabel('布局保存状态').getByRole('status')).toHaveText('已保存')
@@ -152,22 +200,47 @@ async function runCase(config, doStress) {
     await page.waitForFunction(() => {
       const region = document.querySelector('.j-canvas').getBoundingClientRect()
       const visible = [...document.querySelectorAll('.j-canvas img')].filter(node => { const b = node.getBoundingClientRect(); return b.right > region.left && b.left < region.right && b.bottom > region.top && b.top < region.bottom })
-      return visible.length > 0 && visible.filter(node => node.complete && node.naturalWidth > 0).length / visible.length >= .95
+      // Loading resource placeholders are also intended display consumers; excluding
+      // them would report 95% readiness as soon as the first cached img appears.
+      const failed = [...document.querySelectorAll('.j-canvas .j-image-failed')].filter(node => { const b = node.getBoundingClientRect(); return b.right > region.left && b.left < region.right && b.bottom > region.top && b.top < region.bottom })
+      return visible.length > 0 && visible.filter(node => node.complete && node.naturalWidth > 0).length / (visible.length + failed.length) >= .95
     })
     const visible95Ms = await page.evaluate(() => performance.now())
+    assert.equal(await page.locator('.j-canvas .j-image-failed[aria-label*="暂时无法显示"]').count(), 0, 'Synthetic thumbnail errors must not count as readiness')
     await page.waitForTimeout(200); await take('cold'); await sampleMemory('cold')
-    async function pan(dx) {
+    async function pan(dx, dy = 0, duration = options.pathMs, steps = 8) {
       const box = await canvas.boundingBox(), x = box.x + box.width / 2, y = box.y + box.height / 2
-      const segments = Math.ceil(Math.abs(dx) / (box.width * .35))
+      const segments = Math.max(1, Math.ceil(Math.max(Math.abs(dx) / (box.width * .35), Math.abs(dy) / (box.height * .35))))
       await canvas.focus(); await page.keyboard.down('Space')
       for (let segment = 0; segment < segments; segment++) {
         await page.mouse.move(x, y); await page.mouse.down()
-        for (let step = 1; step <= 8; step++) { await page.mouse.move(x + dx / segments * step / 8, y); await page.waitForTimeout(options.pathMs / segments / 8) }
+        for (let step = 1; step <= steps; step++) { await page.mouse.move(x + dx / segments * step / steps, y + dy / segments * step / steps); await page.waitForTimeout(duration / segments / steps) }
         await page.mouse.up()
       }
       await page.keyboard.up('Space')
     }
     for (const [name, dx] of [['panA', 900], ['panB', -1800], ['panReturn', 900]]) { await begin(name); await pan(dx); await take(name) }
+    // Native center zoom and mouse panning only. Read the live transform after
+    // every move: zoom scales the camera translation as well as photo positions.
+    await begin('warmReturnA')
+    for (let step = 0; step < 4; step++) await page.getByRole('button', { name: '放大画布', exact: true }).click()
+    const cameraSnapshot = () => page.evaluate(() => {
+      const region = document.querySelector('.j-canvas'), matrix = new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.j-world')).transform)
+      return { x: matrix.e - region.clientWidth / 2, y: matrix.f - region.clientHeight / 2, scale: matrix.a, width: region.clientWidth, height: region.clientHeight }
+    })
+    const returnCamera = await cameraSnapshot()
+    const targets = warmReturnTargets(scenario.journal.entries.flatMap(entry => entry.photos), returnCamera, returnCamera.scale)
+    for (const target of targets) {
+      if (target.name !== 'warmReturnA') await begin(target.name)
+      const camera = await cameraSnapshot()
+      await pan(-target.x * camera.scale - camera.x, -target.y * camera.scale - camera.y, 350, 2)
+      await page.waitForTimeout(500)
+      await take(target.name)
+      phases.at(-1).camera = await cameraSnapshot()
+      phases.at(-1).worldTarget = target
+      phases.at(-1).photos = await canvas.locator('[data-photo-id]').evaluateAll(nodes => nodes.map(node => ({ id: node.dataset.photoId, source: node.querySelector('img')?.getAttribute('src') })))
+    }
+    await sampleMemory('warmReturnEnd')
     await begin('overview'); await page.getByRole('button', { name: '查看全部旅程', exact: true }).click(); await page.waitForTimeout(500); await take('overview'); await sampleMemory('overview')
     async function editAndFold() {
       await page.getByRole('button', { name: '多选内容', exact: true }).click()
@@ -185,7 +258,12 @@ async function runCase(config, doStress) {
       }
       await canvas.focus()
     }
-    await begin('editFold'); await editAndFold(); await take('editFold')
+    await begin('editFold'); await editAndFold(); await take('editFold'); await sampleMemory('editFoldEnd')
+    // Frame-all can aggregate every photo at low zoom. Reveal the central photos
+    // through the same native controls in every variant before testing dragging.
+    // Keep this outside the measured warm-pan and drag/undo phases.
+    for (let step = 0; step < 8; step++) await page.getByRole('button', { name: '放大画布', exact: true }).click()
+    await page.waitForTimeout(200)
     await begin('dragUndo')
     const grouped = new Set(scenario.journal.canvas_groups.flatMap(group => group.photo_ids))
     const candidates = await canvas.locator('[data-kind="photo"]').evaluateAll(nodes => {
@@ -199,14 +277,14 @@ async function runCase(config, doStress) {
     await expect.poll(() => scenario.layoutWrites).toBe(beforeDrag + 1); await ready()
     await canvas.focus(); await page.keyboard.press('ControlOrMeta+z'); await ready()
     await expect.poll(() => scenario.layoutWrites).toBe(beforeDrag + 2)
-    assert.equal(row.canvas_x, origin.x); assert.equal(row.canvas_y, origin.y); await take('dragUndo')
+    assert.equal(row.canvas_x, origin.x); assert.equal(row.canvas_y, origin.y); await take('dragUndo'); await sampleMemory('dragUndoEnd')
     await begin('conflictRecovery')
     await page.getByRole('button', { name: '多选内容', exact: true }).click(); await page.keyboard.press('ControlOrMeta+a')
     scenario.injectConflict = true; await page.keyboard.press('ArrowRight')
     const recover = page.getByRole('button', { name: '丢弃本页布局并重新载入', exact: true }); await expect(recover).toBeVisible()
     page.once('dialog', dialog => dialog.accept()); await recover.click(); await ready()
     assert.equal(scenario.conflictResponses, 1); await expect(recover).toHaveCount(0)
-    await canvas.focus(); await page.keyboard.press('Escape'); await take('conflictRecovery')
+    await canvas.focus(); await page.keyboard.press('Escape'); await take('conflictRecovery'); await sampleMemory('conflictRecoveryEnd')
     await begin('idle'); await page.waitForTimeout(200); await take('idle'); await sampleMemory('idle')
     const shortNetwork = { requests: attempts.size, uniqueUrls: new Set(attempts.values()).size, completedEncodedBytes: encodedBytes, peakLogicalRequests: peakRequests, failedRequests, remainingRequests: activeRequests.size }
     if (config.run === 1) await page.screenshot({ path: path.join(output, `${config.count}-${config.profile}-${config.theme}.png`) })
