@@ -43,7 +43,7 @@ describe('journal layout and navigation', () => {
     expect(itemsInRectangle(items, { x: 150, y: 150 }, { x: -150, y: -150 })).toEqual(['a', 'mark', 'note'])
     expect(itemsInRectangle(items, { x: -150, y: -150 }, { x: 650, y: 150 })).toEqual(['a', 'b', 'mark', 'note'])
   })
-  it('keeps loose annotations visible without inventing a trip and avoids photos and each other', () => {
+  it('keeps loose annotations visible without inventing a trip and allows stickers to overlap text', () => {
     const data = materializeJournal({ trips: [], entries: [], marks: [
       { id: 'text', kind: 'text', text: '慢慢走\n停一停', size: 'large', canvas_x: 0, canvas_y: 0, captured_on: '2026-05-01' },
       { id: 'sticker', kind: 'sticker', sticker: 'flower', size: 'large', canvas_x: 0, canvas_y: 0, captured_on: '2026-05-01' },
@@ -51,7 +51,8 @@ describe('journal layout and navigation', () => {
     const model = buildCanvas(data)
     expect(model.groups).toHaveLength(0)
     expect(model.items.map(item => item.kind)).toEqual(['mark', 'mark'])
-    expect(intersects(cardBounds(model.items[0]), cardBounds(model.items[1]))).toBe(false)
+    expect(model.items[1]).toMatchObject({ x: 0, y: 0 })
+    expect(intersects(cardBounds(model.items[0]), cardBounds(model.items[1]))).toBe(true)
     expect(model.items[0].height).toBeGreaterThan(100)
     expect(groupByDay(data.entries)[0].entries).toHaveLength(2)
   })

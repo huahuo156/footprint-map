@@ -1,0 +1,21 @@
+name: 功能建议
+description: 描述旅行记录中遇到的具体困难
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与困难
+      description: 在完成什么事情时遇到了什么问题？当前如何处理？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 希望达成的结果
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 可选方案与参考
+      description: 可提供脱敏示例或链接，不必预先确定技术实现。

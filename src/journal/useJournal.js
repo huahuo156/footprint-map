@@ -1,126 +1,199 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createJournalTrip, deleteJournalEntry, deleteJournalPhoto, deleteJournalPhotos, deleteJournalItems, deleteJournalMark, fetchJournal, saveJournalEntry, saveJournalLayout, saveJournalMark, updatePhotoComponents } from '../lib/api'
-import { materializeJournal } from './components'
-import { buildCanvas, cardBounds, planPhotoImport } from './model'
+import * as api from '../lib/api'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { buildCanvas, layoutCanvasGroups, planPhotoImport } from './model'
+import { canvasData } from './notebooks'
+import { prepareNotebookEntry } from './notebookImport'
+import { canvasHeaders, canvasObstacles, collisionItems, planCanvasRepair } from './canvasCollision'
 import { importPhotoFiles, readPhotoDimensions } from './importPhotos'
-import { saveCanvasGroup, deleteCanvasGroup } from '../lib/api'
-import { saveNotebook, saveNotebookReading, deleteNotebook, addNotebookPage, reorderNotebookPages, deleteNotebookPage, moveNotebookItems, returnNotebookItems } from '../lib/api'
+import { useLayoutPersistence } from './canvas/useLayoutPersistence.js'
 
-export function useJournal() {
-  const [data, setData] = useState({ trips: [], entries: [], marks: [] })
-  const [loading, setLoading] = useState(true), [error, setError] = useState('')
-  const readingQueues = useRef(new Map())
-  const reload = useCallback(async signal => {
-    const journal = await fetchJournal(signal)
-    setData(journal); setError('')
-    return journal
-  }, [])
-  useEffect(() => {
-    const controller = new AbortController()
-    reload(controller.signal).catch(error => { if (error.name !== 'AbortError') setError(error.message) }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
-    return () => controller.abort()
-  }, [reload])
-  async function createTrip(values) {
-    const trip = await createJournalTrip(values)
-    setData(previous => ({ ...previous, trips: [...previous.trips, trip] }))
-    return trip
+const EMPTY = { trips: [], entries: [], marks: [] }
+const key = item => `${item.kind}:${item.id}`
+function rows(journal) {
+  return new Map([...(journal.marks || []).map(row => [`mark:${row.id}`, row]), ...journal.entries.flatMap(row => [[`entry:${row.id}`, row], ...row.photos.map(photo => [`photo:${photo.id}`, photo])])])
+}
+function baseline(journal) {
+  const sources = rows(journal)
+  return { structure_version: journal.structure_version, items: buildCanvas(canvasData(journal), {}, false).items.map(item => {
+    const id = item.kind === 'entry' ? item.entry.record_id || item.id : item.id
+    return { id, kind: item.kind, x: item.x - (item.kind === 'photo' ? 0 : item.anchor.x), y: item.y - (item.kind === 'photo' ? 0 : item.anchor.y), rotation: item.rotation || 0, layout_version: sources.get(`${item.kind}:${id}`).layout_version }
+  }) }
+}
+function overlay(journal, snapshot, origin) {
+  if (!snapshot.items.length) return journal
+  const versions = new Map((snapshot.versions || []).map(item => [key(item), item.layout_version])), sources = rows(journal), updates = new Map()
+  for (const item of snapshot.items) {
+    const before = origin.get(key(item)), row = sources.get(key(item))
+    if (!before || !row) continue
+    if (before.x !== item.x || before.y !== item.y || before.rotation !== item.rotation || versions.get(key(item)) !== row.layout_version)
+      updates.set(key(item), { canvas_x: item.x, canvas_y: item.y, rotation: item.rotation, layout_version: versions.get(key(item)), ...(item.kind === 'photo' ? { canvas_absolute: 1 } : {}) })
   }
-  async function saveEntry(id, form) {
-    const saved = await saveJournalEntry(id, form)
-    try { await reload() } catch { setError('这一页已保存，列表暂未刷新，请稍后点击重试。') }
-    return saved
-  }
-  async function deleteEntry(id) { await deleteJournalEntry(id); setData(previous => ({ ...previous, entries: previous.entries.filter(entry => entry.id !== id) })) }
-  async function deletePhoto(id) {
-    await deleteJournalPhoto(id)
-    setData(previous => ({ ...previous, entries: previous.entries.flatMap(entry => {
-      if (!entry.photos.some(photo => photo.id === id)) return [entry]
-      const photos = entry.photos.filter(photo => photo.id !== id)
-      return photos.length ? [{ ...entry, photos }] : []
-    }) }))
-  }
-  async function saveLayout(item) {
-    return saveLayouts([item])
-  }
-  async function saveLayouts(items) {
-    const updates = new Map(items.map(item => [item.id, { canvas_x: item.x, canvas_y: item.y, rotation: item.rotation, ...(item.kind === 'photo' ? { canvas_absolute: 1 } : {}) }]))
-    setData(previous => ({ ...previous, marks: (previous.marks || []).map(mark => ({ ...mark, ...updates.get(mark.id) })), entries: previous.entries.map(entry => ({ ...entry, ...updates.get(entry.id), photos: entry.photos.map(photo => ({ ...photo, ...updates.get(photo.id) })) })) }))
-    try { await saveJournalLayout(items) } catch (error) { await reload().catch(() => {}); throw error }
-  }
-  async function saveGroup(id, values) {
-    const saved = await saveCanvasGroup(id, values), positions = new Map((values.positions || []).map(photo => [photo.id, photo]))
-    setData(previous => ({ ...previous,
-      canvas_groups: id ? (previous.canvas_groups || []).map(group => group.id === id ? { ...group, ...saved } : group) : [...(previous.canvas_groups || []).map(group => saved.child_group_ids.includes(group.id) ? { ...group, parent_id: saved.id } : group), saved],
-      entries: previous.entries.map(entry => ({ ...entry, photos: entry.photos.map(photo => {
-        const position = positions.get(photo.id)
-        return position ? { ...photo, canvas_x: position.x, canvas_y: position.y, rotation: position.rotation, canvas_absolute: 1 } : photo
-      }) })),
-    }))
-    await reload().catch(() => setError('色块已保存，列表暂未刷新，请点击重试。'))
-  }
-  async function removeGroup(id) {
-    await deleteCanvasGroup(id)
-    setData(previous => {
-      const removed = (previous.canvas_groups || []).find(group => group.id === id)
-      return { ...previous, canvas_groups: (previous.canvas_groups || []).filter(group => group.id !== id).map(group => ({ ...group,
-        parent_id: group.parent_id === id ? removed?.parent_id || null : group.parent_id,
-        ...(group.id === removed?.parent_id ? { direct_photo_ids: [...(group.direct_photo_ids || []), ...(removed.direct_photo_ids || [])] } : {}),
-      })) }
+  return { ...journal, marks: (journal.marks || []).map(row => ({ ...row, ...updates.get(`mark:${row.id}`) })), entries: journal.entries.map(row => ({ ...row, ...updates.get(`entry:${row.id}`), photos: row.photos.map(photo => ({ ...photo, ...updates.get(`photo:${photo.id}`) })) })) }
+}
+
+export function useJournal(userId = 'mounted-journal') {
+  const account = useMemo(() => ({ guard: api.captureApiSession(), reading: new Map(), readingVersions: new Map(), readingConfirmed: new Map(), readingPending: new Map(), readingDesired: new Map(), readingRevision: new Map(), readSnapshots: new WeakMap(), readEpoch: 0, sequence: 0, initialLoad: 0 }), [userId])
+  const [store, setStore] = useState({ account, data: EMPTY, loading: true, error: '' })
+  const server = useRef({ account, data: EMPTY, origin: new Map() })
+  const send = useCallback((body, { signal }) => { account.guard(); return api.request('/journal/layout', { method: 'PATCH', body: JSON.stringify(body), signal }) }, [account])
+  const layout = useLayoutPersistence({ sessionKey: account, send }), layoutRef = useRef(layout)
+  layoutRef.current = layout
+  const data = store.account === account ? overlay(store.data, layout, server.current.account === account ? server.current.origin : new Map()) : EMPTY
+  function setError(error) { setStore(previous => previous.account === account ? { ...previous, error } : previous) }
+  function commit(journal) {
+    account.guard()
+    const revision = account.readSnapshots.get(journal) ?? account.readEpoch
+    const notebooks = (journal.notebooks || []).map(book => {
+      const values = {}
+      for (const field of ['bookmark_page_id', 'last_read_page_id']) {
+        const id = book.id + ':' + field
+        if (account.readingPending.has(id)) values[field] = account.readingDesired.get(id)
+        else if ((account.readingRevision.get(id) || 0) > revision) values[field] = account.readingConfirmed.get(id)
+        else account.readingConfirmed.set(id, book[field])
+      }
+      return { ...book, ...values }
     })
-    await reload().catch(() => setError('分组已解除，列表暂未刷新，请点击重试。'))
+    server.current = { account, data: journal, origin: new Map(baseline(journal).items.map(item => [key(item), item])) }
+    setStore({ account, data: { ...journal, notebooks }, loading: false, error: '' })
   }
-  async function saveMark(id, values) {
-    const saved = await saveJournalMark(id, values)
-    try { await reload() } catch { setError('标注已保存，列表暂未刷新，请点击重试。') }
-    return saved
+  async function fetchSnapshot(signal, guard) {
+    const revision = account.readEpoch
+    const journal = await api.fetchJournal(signal); guard(); account.guard()
+    account.readSnapshots.set(journal, revision)
+    return journal
   }
-  async function deleteMark(id) { await deleteJournalMark(id); setData(previous => ({ ...previous, marks: (previous.marks || []).filter(mark => mark.id !== id) })) }
-  async function batchEditPhotos(ids, parts, positions) {
-    await updatePhotoComponents(ids, parts, positions)
-    await reload()
+  async function read(signal, guard) {
+    let journal = await fetchSnapshot(signal, guard)
+    const repair = planCanvasRepair(journal, server.current.account === account ? server.current.data : null)
+    try {
+    for (let index = 0; index < repair.items.length; index += 500) {
+      const sources = rows(journal)
+      await send({ expected_structure_version: journal.structure_version, items: repair.items.slice(index, index + 500).map(item => ({ ...item, expected_version: sources.get(key(item)).layout_version })) }, { signal })
+      guard(); journal = await fetchSnapshot(signal, guard)
+    }
+    for (const book of repair.notebooks) {
+      await api.request('/journal/notebooks/' + book.id, { method: 'PATCH', signal, body: JSON.stringify({ canvas_x: book.canvas_x, canvas_y: book.canvas_y }) }); guard()
+    }
+    if (repair.notebooks.length) journal = await fetchSnapshot(signal, guard)
+    } catch (error) { throw Object.assign(error, { journal, message: '自动避让位置未保存，请点击重试。' + error.message }) }
+    return journal
   }
-  async function deletePhotos(ids) {
-    await deleteJournalPhotos(ids)
-    const removed = new Set(ids)
-    setData(previous => ({ ...previous, entries: previous.entries.flatMap(entry => {
-      if (!entry.photos.some(photo => removed.has(photo.id))) return [entry]
-      const photos = entry.photos.filter(photo => !removed.has(photo.id))
-      return photos.length ? [{ ...entry, photos }] : []
-    }) }))
+  async function reload(options) {
+    account.guard()
+    const context = layoutRef.current.captureSession()
+    let journal
+    if (layoutRef.current.getSnapshot().status === 'loading') {
+      const sequence = ++account.initialLoad
+      const guard = () => { context.guard(); if (sequence !== account.initialLoad) throw new DOMException('已有更新的手帐读取', 'AbortError') }
+      try { journal = await read(context.signal, guard); guard(); layoutRef.current.replaceBaseline(baseline(journal)) }
+      catch (error) { guard(); if (error.journal) setStore({ account, data: error.journal, loading: false, error: error.message }); throw error }
+    } else {
+      await layoutRef.current.reloadBaseline(async ({ signal, guard }) => { journal = await read(signal, guard); return baseline(journal) }, { discardConflict: options?.discard === true })
+    }
+    context.guard(); commit(journal); return journal
   }
-  async function deleteItems(items) {
-    await deleteJournalItems(items)
-    const photoIds = new Set(items.filter(item => item.kind === 'photo').map(item => item.id)), entryIds = new Set(items.filter(item => item.kind === 'entry').map(item => item.id)), markIds = new Set(items.filter(item => item.kind === 'mark').map(item => item.id))
-    setData(previous => ({ ...previous, marks: (previous.marks || []).filter(mark => !markIds.has(mark.id)), entries: previous.entries.flatMap(entry => {
-      if (entryIds.has(entry.id)) return []
-      if (!entry.photos.some(photo => photoIds.has(photo.id))) return [entry]
-      const photos = entry.photos.filter(photo => !photoIds.has(photo.id))
-      return photos.length ? [{ ...entry, photos }] : []
-    }) }))
+  const reloadRef = useRef(reload); reloadRef.current = reload
+  useEffect(() => {
+    const context = layoutRef.current.captureSession()
+    reloadRef.current().catch(error => {
+      try { context.guard(); if (error.name !== 'AbortError') setStore(previous => ({ ...previous, account, loading: false, error: error.message })) } catch { /* expired mount */ }
+    })
+  }, [account])
+  useEffect(() => {
+    const warn = event => { try { const snapshot = layoutRef.current.getSnapshot(); if (snapshot.hasUnconfirmed || snapshot.barrierStatus !== 'idle') { event.preventDefault(); event.returnValue = '' } } catch { /* unmounted session */ } }
+    window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn)
+  }, [account])
+
+  async function mutate(action) {
+    account.guard()
+    const context = layoutRef.current.captureSession()
+    let journal = server.current.data, result
+    await layoutRef.current.runStructureOperation(async ({ signal, guard }) => {
+      account.guard()
+      const snapshot = layoutRef.current.getSnapshot(), versions = new Map((snapshot.versions || []).map(item => [key(item), item.layout_version]))
+      async function request(path, method, values = {}) {
+        guard(); account.guard()
+        const sources = rows(journal)
+        const enrich = value => ({ ...value, expected_structure_version: journal.structure_version,
+          ...(value.positions ? { positions: value.positions.map(p => ({ ...p, expected_version: versions.get(`photo:${p.id}`) || sources.get(`photo:${p.id}`)?.layout_version })) } : {}),
+          ...(path.startsWith('/marks/') && method === 'PUT' ? { expected_version: versions.get(`mark:${path.split('/').at(-1)}`) || sources.get(`mark:${path.split('/').at(-1)}`)?.layout_version } : {}) })
+        let body
+        if (values instanceof FormData) {
+          body = new FormData(); values.forEach((value, name) => body.append(name, value))
+          if (body.has('data')) body.set('data', JSON.stringify(enrich(JSON.parse(body.get('data')))))
+          else body.set('expected_structure_version', journal.structure_version)
+        } else body = JSON.stringify(enrich(values))
+        const saved = await api.request('/journal' + path, { method, body, signal }); guard()
+        journal = await fetchSnapshot(signal, guard); versions.clear()
+        return saved
+      }
+      result = await action({ request, guard, signal, journal })
+      journal = await read(signal, guard)
+      return baseline(journal)
+    })
+    context.guard(); commit(journal); return result
   }
-  async function importPhotos(files, position, onProgress) {
-    if (!files.length || files.length > 500) throw new Error('一次可导入 1 至 500 张照片。')
-    const dimensions = await readPhotoDimensions(files)
-    const model = buildCanvas(materializeJournal(data)), positions = planPhotoImport(files.length, position || { x: 0, y: 0 }, [...model.headers, ...model.items.map(item => cardBounds(item.kind === 'photo' ? { ...item, width: 280, height: 326 } : item))], dimensions)
-    try { return await importPhotoFiles(files, positions, onProgress) }
-    finally { await reload().catch(() => setError('请重试刷新列表，已导入的照片会保留。')) }
+  function saveLayouts(items) {
+    account.guard()
+    const snapshot = layoutRef.current.getSnapshot(), previous = new Map(snapshot.items.map(item => [key(item), item]))
+    layoutRef.current.editLayout({ id: globalThis.crypto.randomUUID(), before: items.map(item => previous.get(key(item))), after: items })
   }
-  async function changeNotebook(id, values) { const result = await saveNotebook(id, values); await reload(); return result }
+  async function importPhotos(files, position, onProgress, pageId) {
+    if (!files.length || files.length > 500) throw new Error('一次可导入1至500张照片。')
+    return mutate(async ({ request, guard, journal }) => {
+      const dimensions = await readPhotoDimensions(files); guard()
+      let positions
+      if (pageId) {
+        const probe = new FormData(); probe.set('data', JSON.stringify({ components: [], photos: files.map((_, upload_index) => ({ upload_index, components: [] })) }))
+        positions = JSON.parse(prepareNotebookEntry(probe, pageId, journal, dimensions).get('data')).photos.map(photo => ({ x: photo.canvas_x, y: photo.canvas_y }))
+      } else {
+        const model = buildCanvas(canvasData(journal), {}, false), items = collisionItems(model.items)
+        positions = planPhotoImport(files.length, position || { x: 0, y: 0 }, canvasObstacles({ items, groups: layoutCanvasGroups(journal.canvas_groups || [], items), notebooks: journal.notebooks, headers: canvasHeaders(model) }), dimensions)
+      }
+      return importPhotoFiles(files, positions, onProgress, (_id, body) => {
+        if (pageId) { const values = JSON.parse(body.get('data')); values.notebook_page_id = pageId; body.set('data', JSON.stringify(values)) }
+        return request('/entries', 'POST', body)
+      })
+    })
+  }
   async function changeNotebookReading(id, values) {
-    setData(previous => ({ ...previous, notebooks:(previous.notebooks || []).map(book => book.id === id ? {...book,...values} : book) }))
-    const queue = readingQueues.current.get(id) || { tail:Promise.resolve(), failed:false }
-    const pending = queue.tail.catch(()=>{}).then(()=>saveNotebookReading(id, values))
-    queue.tail = pending
-    readingQueues.current.set(id,queue)
-    try { return await pending }
-    catch(error) { queue.failed = true; throw error }
-    finally { if (queue.tail === pending) { readingQueues.current.delete(id); if (queue.failed) await reload().catch(()=>{}) } }
+    account.guard()
+    const sequence = ++account.sequence
+    for (const field of Object.keys(values)) { account.readingVersions.set(id + ':' + field, sequence); account.readingPending.set(id + ':' + field, sequence); account.readingDesired.set(id + ':' + field, values[field]) }
+    setStore(previous => {
+      if (previous.account !== account) return previous
+      return { ...previous, data: { ...previous.data, notebooks: (previous.data.notebooks || []).map(book => {
+        if (book.id !== id) return book
+        return { ...book, ...values }
+      }) } }
+    })
+    const prior = account.reading.get(id) || Promise.resolve()
+    const pending = prior.catch(() => {}).then(() => { account.guard(); return api.saveNotebookReading(id, values) })
+    account.reading.set(id, pending)
+    try {
+      const result = await pending; account.guard()
+      const revision = ++account.readEpoch
+      for (const [field, value] of Object.entries(values)) { const key = id + ':' + field; account.readingConfirmed.set(key, value); account.readingRevision.set(key, revision); if (account.readingPending.get(key) === sequence) account.readingPending.delete(key) }
+      return result
+    }
+    catch (error) {
+      for (const field of Object.keys(values)) if (account.readingPending.get(id + ':' + field) === sequence) account.readingPending.delete(id + ':' + field)
+      setStore(previous => previous.account === account ? { ...previous, data: { ...previous.data, notebooks: (previous.data.notebooks || []).map(book => book.id === id ? { ...book, ...Object.fromEntries(Object.keys(values).filter(field => account.readingVersions.get(id + ':' + field) === sequence).map(field => [field, account.readingConfirmed.get(id + ':' + field)])) } : book) } } : previous)
+      setError(error.message); throw error
+    }
+    finally { if (account.reading.get(id) === pending) account.reading.delete(id) }
   }
-  async function removeNotebook(id) { await deleteNotebook(id); await reload() }
-  async function createPage(id, afterId) { const result = await addNotebookPage(id, afterId); await reload(); return result }
-  async function reorderPages(id, ids) { await reorderNotebookPages(id, ids); await reload() }
-  async function removePage(id) { await deleteNotebookPage(id); await reload() }
-  async function moveToPage(id, items) { await moveNotebookItems(id, items); await reload() }
-  async function returnToCanvas(items) { await returnNotebookItems(items); await reload() }
-  return { data, loading, error, reload, createTrip, saveEntry, deleteEntry, deletePhoto, deletePhotos, deleteItems, saveLayout, saveLayouts, saveGroup, removeGroup, saveMark, deleteMark, importPhotos, batchEditPhotos, changeNotebook, changeNotebookReading, removeNotebook, createPage, reorderPages, removePage, moveToPage, returnToCanvas }
+  const write = (path, method, values) => mutate(({ request }) => request(path, method, values))
+  return { data, layout, loading: store.account !== account || store.loading, error: store.account === account ? store.error : '', reload,
+    saveLayout: item => saveLayouts([item]), saveLayouts,
+    createTrip: values => write('/trips', 'POST', values), saveEntry: (id, body) => write('/entries' + (id ? '/' + id : ''), id ? 'PUT' : 'POST', body), deleteEntry: id => write('/entries/' + id, 'DELETE'),
+    deletePhoto: id => write('/photos/' + id, 'DELETE'), deletePhotos: ids => write('/photos', 'DELETE', { photo_ids: ids }), deleteItems: items => write('/items', 'DELETE', { items }),
+    saveGroup: (id, values) => write('/groups' + (id ? '/' + id : ''), id ? 'PATCH' : 'POST', values), removeGroup: id => write('/groups/' + id, 'DELETE'),
+    saveMark: (id, values) => write('/marks' + (id ? '/' + id : ''), id ? 'PUT' : 'POST', values), deleteMark: id => write('/marks/' + id, 'DELETE'),
+    batchEditPhotos: (ids, parts, positions) => write('/photos/components', 'PATCH', { photo_ids: ids, components: parts, positions }), importPhotos,
+    changeNotebook: (id, values) => write('/notebooks' + (id ? '/' + id : ''), id ? 'PATCH' : 'POST', values), changeNotebookReading, removeNotebook: id => write('/notebooks/' + id, 'DELETE'),
+    createPage: (id, afterId) => write('/notebooks/' + id + '/pages', 'POST', { after_id: afterId }), reorderPages: (id, ids) => write('/notebooks/' + id + '/pages', 'PATCH', { page_ids: ids }), removePage: id => write('/notebook-pages/' + id, 'DELETE'),
+    moveToPage: (id, items) => write('/notebook-pages/' + id + '/items', 'POST', { items }), returnToCanvas: items => write('/notebook-items', 'DELETE', { items: items.map(({ id, kind }) => ({ id, kind })) }),
+    restoreBackup: file => { const body = new FormData(); body.append('backup', file); return write('/restore', 'POST', body) },
+  }
 }

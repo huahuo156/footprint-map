@@ -1,95 +1,178 @@
 # 拾途 · 私人旅行手帐
 
-画布支持主题手帐本：点击「创建手札」设置名称和封面，手札本身可以在画布上拖动。手札默认在最顶层全屏打开，从右上角「添加与整理」使用原来的添加窗口直接导入。内页与画布共用照片组件、评语、文字、贴纸和编辑器。
+用照片、文字与贴纸记录旅程，在自由画布、足迹版图和主题手札中整理回忆。支持桌面和手机、深浅主题，以及按账号隔离的私人内容。
 
-每页提供 1200 × 1600 的排版空间，自动避让已有内容，支持放大查看。拖动页角或使用方向键翻页，底部只显示页码；「＋ → 整理内页」可以调整顺序或删除纸页。删除纸页、解除手札会把内容还给画布，不删除照片和文字。新增数据库表在启动时自动创建，既有记录保留。
+## 功能
 
-手札正文前有一张扉页，沿用名称与封面寄语；未写寄语时自然留白，不占用正文页码。再次打开会接着上次阅读的位置。正文上沿有一条细书签：轻点夹住当前页，再点取下；翻到别页后点击书签会回到夹住的位置。书签随手札保存，调整内页顺序后仍指向原页。
+- **自由画布**：拖动、缩放、多选与批量编辑，照片、文字、贴纸和可嵌套折叠的色块共同排版，布局自动保存。
+- **足迹版图**：使用本地中国行政区数据展示照片地点、到访统计与地点聚焦；支持城市名称、照片 GPS 和可选的高德地点搜索。
+- **主题手札**：自定义封面、扉页、内页布局、书签与阅读进度；通过浏览器打印导出 PDF。
+- **照片导入**：单次编辑最多 20 张，批量导入最多 500 张，分批保存；读取 JPG EXIF 日期与 GPS，支持逐张组件、滤镜和焦点。
+- **备份还原**：导出当前账号的手帐 ZIP，包含展示照片、封面与布局；还原合并为新内容，重复导入会产生副本。
+- **账号体系**：邮箱登录、验证、找回和修改密码；服务端会话、资源归属校验和私有图片读取。注册默认关闭。
+- **示例与场景**：内置示例手帐；西湖相关照片可进入按需加载的专属 3D 场景。
 
-封面默认字样为 MEMO，可以在「名称与封面」改为任意文字或留空隐藏。封面支持 6 张本地内置摄影、自定义上传、纯色、纯文字，名称和寄语会同步预览。上传封面独立保存，不会加入内页照片；内置摄影的作者与来源见 public/notebook-covers/Attribution.md。折叠色块展开时会自动避让同级色块，整组照片一起移动并保存。
+当前是多账号初版，生产运行边界和升级步骤见 [运行与迁移说明](docs/operations.md)。
 
-直接打开即可使用，无需注册或登录。React + Vite 前端，Node.js + Express 后端，Docker MySQL 8.4 保存手帐，上传照片保存在本地 `uploads/`。
+2026-10-31 开发检查点：画布大图库优化的桌面500张子集已验收，实验开关仍默认关闭；完整矩阵和发布验收未结束。[总体进度与暂停位置](docs/verification/2026-10-31-stage-checkpoint.md)。
 
-桌面首页是可以拖动、缩放的自由画布：远处看旅程照片组，点击或靠近后展开照片和文字，单击照片查看大图。拖动照片松手后会避让其他照片和旅程名称，位置保存到 MySQL；视角单独保存在当前浏览器。桌面不再使用时间轴或全国地图。
+## 界面预览
 
-桌面照片按原图比例自适应宽高，完整显示横图、竖图和小图。点「多选内容」框选照片后，使用「添加色块分组」设置组名和颜色；拖动色块标题可以移动整组，刷新后保留。色块随组内照片的位置和尺寸自动包围，点击「编辑」可改名、换色或解除分组；解除分组保留照片。每张照片同时属于一个色块分组，分组与旅程信息独立。
+以下为实际生产构建在模拟 API 下的截图，仅使用仓库示例资料；不代表线上部署或真实用户数据。
 
-手机首页按日期展示照片和文字，用不同地点的浅色块区分内容，只记录日期，没有小时网格，也不加载 3D 场景。可以只写一句话，也可以一次添加最多 20 张照片，每张不超过 10MB，支持 JPG / PNG / WebP。
+| 足迹版图（桌面） | 手札阅读（手机） |
+| --- | --- |
+| ![桌面足迹版图与地点照片](docs/screenshots/atlas-desktop.png) | ![手机深色主题手札阅读器](docs/screenshots/reader-mobile.png) |
 
-添加时先放照片，再自由添加日期、地点、旅程、描述、心情和标题组件。组件可以移除、拖动或用上下按钮调整顺序；不需要填写任何组件也能保存。同一次上传的多张照片自动同步组件内容、增删和顺序，后续追加的照片也会带上已编辑的内容。保存后可分别编辑每张照片，也可用「也给其他照片加上」补齐相同组件，其他照片已有的内容会保留。照片也可以拖入或粘贴，滤镜和焦点仍按每张照片单独调整，收在「调整照片」里。
+截图来自 `npm run test:smoke`；可以在本地启动后使用内置示例体验。当前没有承诺长期可用的公共演示站。
 
-没有旅程的照片直接散放在画布上；没有日期组件的记录按留下当天进入手机日记，照片详情不额外显示日期。只写文字时，添加描述组件即可。删除单张照片会保留同批的其他照片。
+## 技术栈
 
-先导入、后整理：在「留下一刻 → 照片」点击「批量导入，稍后整理」，一次可选 1 至 500 张照片。程序每 20 张保存一批，显示进度，照片先按不重叠的位置放到画布；中断后保留已完成的批次，可重试剩余照片。普通添加编辑窗口仍为每页最多 20 张。
+React 19、Vite、Tailwind CSS、Three.js；Node.js 24+、Express、MySQL 8.4。MySQL 由 Docker Compose 提供；图片默认存储在本地 `uploads/`，由 API 鉴权读取。
 
-上传 JPG 时自动读取 EXIF 拍摄日期与 GPS，每张照片分别预填；地点会离线匹配 10 公里内最近的 `landmarks` 景点，未匹配时仍保留原始坐标，不向第三方发送位置。普通添加和最多 500 张的批量导入都支持。手动填写的内容优先；修改共同描述、心情等不会覆盖每张照片自己的日期和坐标。无 EXIF、PNG/WebP 或损坏的元数据会正常跳过，仍可手工填写。
+## 本地启动
 
-在手帐顶部点击「备份与还原」，即可一键下载包含原始照片、封面与 `backup.json` 的 ZIP，保存旅程、逐张照片组件、文字贴纸、嵌套色块、画布布局、手札及内页位置、书签和阅读进度。还原会以新编号合并到当前手帐，不覆盖现有内容；重复导入会生成副本。ZIP 导出和还原上限均为 1GB（还原时解压后的总量也不能超过 1GB），不支持 ZIP64。超过上限时会明确提示，需使用数据库卷和 `uploads/` 目录备份。导出若发现磁盘照片缺失，会提示数量并写入清单，请补回原始文件后重新备份。
+需要 Node.js 24+、npm 和已启动的 Docker（Windows 使用 Docker Desktop 的 Linux 容器）。以下命令使用 PowerShell 7。
 
-打开一本手札，点击「导出 PDF」查看留念册预览，包含封面、扉页和按顺序排列的全部内页（包括空白页），保留照片、文字、贴纸、滤镜和纸页布局。等照片加载完成后点「打印 / 保存为 PDF」，在浏览器打印窗口选择“另存为 PDF”，使用 A4 纸张，关闭页眉和页脚；需要时开启背景图形。此功能使用浏览器打印，无需安装服务端 PDF 工具。
+```powershell
+npm ci
+Copy-Item .env.example .env
+```
 
-桌面点「多选内容」后，照片、文字和贴纸均可点击、Shift 点选或拖动空白框选，按住空格拖动可继续漫游。点「编辑照片信息」即可跨上传批次统一修改所选照片的日期、地点、旅程、描述、心情或标题；只覆盖主动添加的项目，没添加的保留原值，添加后留空表示移除该项。点「删除选中内容」可混合删除照片、文字和贴纸，确认框会分别列出数量，未选内容保留。支持 Ctrl / Command + A 全选（最多 500 项）、Escape 退出。拖动排好的照片和批量编辑的照片使用绝对画布坐标，修改日期或旅程不会重排这些照片。
+编辑 `.env`，设置 `MYSQL_PASSWORD` 和 `MYSQL_ROOT_PASSWORD`。已有 `.env` 时保留原配置并按示例补充字段。
 
-照片、文字与贴纸统一从「留下一刻」进入，在添加窗口顶部切换，切换时保留本次尚未保存的草稿。文字以带底色的便笺显示，深色模式也与画布区分；贴纸提供 12 款小花、叶子、咖啡、飞机等简单图案。可以选择颜色、大小和角度，拖动摆放，单击再次编辑或删除；无需照片、地点或旅程。标注独立保存到 MySQL 的 `journal_marks`，手机端按留下当天展示，也能添加和编辑。
+```powershell
+npm run db:up
+```
 
-西湖是目前支持的专属 3D 景点，从包含西湖记录的旅程进入。场景只显示这段旅程中关联西湖的照片，实际湖岸、高程和渲染代码均在点击后加载。照片固定在侧栏，有具体位置时通过编号与场景对应，不会盖住地图。其他景点保留照片浏览。
+**新空库**先迁移，再创建已由运维确认邮箱归属的账号：
 
-未关联旅程的西湖照片也可以从照片详情进入场景，此时只展示未归入旅程的西湖照片。
+```powershell
+npm run db:migrate
+$env:INITIAL_USER_PASSWORD = Read-Host '设置账号密码（12–128 字符）' -MaskInput
+npm run db:create-user -- --email=you@example.com
+Remove-Item Env:INITIAL_USER_PASSWORD
+npm run dev
+```
 
-空手帐可以点「看看示例手帐」体验设计。示例有明确标记，与个人记录分开，不会写入 MySQL；照片和场景数据已随项目保存，可离线展示。
+打开终端显示的前端地址，默认 [http://localhost:5173](http://localhost:5173)，用刚创建的账号登录。`APP_ORIGIN` 必须与实际浏览器来源一致。
 
-## 本地开发
+**已有资料的数据库**先阅读 [历史数据迁移流程](docs/operations.md#历史数据迁移)，明确旧资料所属账号后再迁移。服务启动只检查迁移状态，不自动修改表结构。
 
-需要 Node.js 24+ 和已启动的 Docker Desktop（Linux 容器）。
+## 配置
 
-1. 安装依赖：npm install
-2. 首次使用复制配置：Copy-Item .env.example .env，设置 MYSQL_PASSWORD 和 MYSQL_ROOT_PASSWORD；已有 .env 时保留配置。
-3. 启动数据库：npm run db:up
-4. 启动前后端：npm run dev
-5. 打开 Vite 输出的地址，通常为 http://localhost:5173。
+完整模板见 [.env.example](.env.example)。数据库密码、SMTP 凭据和高德 Key 仅供后端使用，禁止放入 `VITE_*` 变量。
 
-`npm run dev` 同时启动 API（127.0.0.1:3001）和 Vite；Vite 代理 `/api` 与 `/uploads`。数据库默认绑定 127.0.0.1:3307。API 启动时创建缺失的数据表，并导入景点基础资料，之后不会覆盖已有手帐。
+| 配置 | 用途 |
+| --- | --- |
+| `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` | 默认 `127.0.0.1:3307`，数据库 `footprint_map` |
+| `MYSQL_USER` / `MYSQL_PASSWORD` | API 的数据库凭据 |
+| `MYSQL_ROOT_PASSWORD` | Compose 首次初始化数据库与本地隔离测试 |
+| `APP_ORIGIN` | 浏览器来源，默认 `http://localhost:5173`，无尾部斜线 |
+| `API_HOST` / `API_PORT` | API 默认监听 `127.0.0.1:3001` |
+| `AMAP_WEB_SERVICE_KEY` | 可选，高德 **Web 服务** 类型 Key；未配置时仍可手动填写地点 |
+| `AUTH_REGISTRATION_ENABLED` | 默认 `false`；启用前配置并验证 `SMTP_URL`、`MAIL_FROM` |
+| `UPLOAD_DIRECTORY` | 可选，私有图片目录；默认 `uploads/`，迁移与运行必须一致 |
+| `MIGRATION_MYSQL_USER` / `MIGRATION_MYSQL_PASSWORD` | 可选，独立迁移与建号凭据 |
+| `MYSQL_SSL_CA` | 可选，跨主机 MySQL 的 TLS CA PEM |
+| `TRUST_PROXY_HOPS` | 可选，按实际反向代理拓扑设置 |
+| `TEST_MYSQL_ADMIN_USER` / `TEST_MYSQL_ADMIN_PASSWORD` | 隔离测试凭据，缺省使用 root / `MYSQL_ROOT_PASSWORD` |
 
-Docker Hub 下载失败时，将 .env 中 MYSQL_IMAGE 设置为 public.ecr.aws/docker/library/mysql:8.4，再运行 npm run db:up。本次环境已使用此镜像成功下载 MySQL。
+高德请求由后端代理，Key 不下发到浏览器。照片展示文件经解码、旋转校正、缩放及去元数据处理，**不另外保存原图**；需要原图时请独立留存。地点组件仍可保存用户选择的 GPS 信息。
 
 ## 常用命令
 
-- npm run dev:api / npm run dev:web：分别启动后端或前端。
-- npm run db:down：停止 MySQL，保留数据。
-- npm run build，然后 npm start：API 同时提供构建后的页面，访问 http://127.0.0.1:3001。
-- npm test：前端单元测试。
-- npm run test:api：真实 MySQL 集成测试，请指定独立测试库（MYSQL_PORT=3308，MYSQL_DATABASE 名称包含 test）后运行；包含封面上传及旧表迁移测试，会重建测试库中的手帐表。
-- npm run lint：静态检查。
-- npm run test:e2e：构建正式页面后，用真实 MySQL 和 Edge / Chromium 验证上传、编辑、位置保存、手机布局、3D、删除及示例隔离。Windows 使用已安装的 Edge；其他平台首次运行需 `npx playwright install chromium`。验收数据会自动清理。
+| 命令 | 用途 |
+| --- | --- |
+| `npm run dev` | 同时运行 API 与 Vite，代理 `/api`、`/uploads` |
+| `npm run dev:api` / `npm run dev:web` | 分别启动后端或前端 |
+| `npm run build` | 生成前端 `dist/` |
+| `npm start` | API 提供构建后的页面，默认 [http://127.0.0.1:3001](http://127.0.0.1:3001) |
+| `npm run db:up` / `npm run db:down` | 启动 / 停止 MySQL，保留持久卷 |
+| `npm run db:migrate` | 显式执行数据库迁移 |
+| `npm run assets:gc -- --dry-run` | 预览超过 24 小时的未引用图片与待重试删除任务 |
+| `npm run assets:gc` | 回收上述图片并释放容量；保留仍被照片或封面引用的文件 |
+| `npm run maintenance -- --dry-run` | 预览过期会话、邮件凭据、限流记录和遗留文件清理 |
+| `npm run maintenance` | 手动执行维护；正常服务每小时自动执行一次 |
+| `npm run ops:check` | 检查受保护的运维状态，容量或错误告警时返回非零退出码 |
+| `npm run backup:system -- --offline --out <新目录>` | 停写维护窗口创建完整恢复点 |
+| `npm run backup:verify -- <目录>` / `npm run backup:drill -- <目录>` | 校验恢复点 / 在随机隔离数据库中演练恢复 |
+| `npm run check:bundle` | 检查真实构建依赖图和首屏分包预算 |
+| `npm run lint` | 静态检查 |
+| `npm test` | 前端、模型和 API 边界单元测试 |
+| `npm run test:security` | 身份 HTTP 测试及所有权、私有资源回归，使用数据库/邮件替身 |
+| `npm run test:api` | 创建随机临时 MySQL 库和图片目录，执行真实接口集成测试后清理 |
+| `npm run test:e2e` | 在独立临时 MySQL 库中，用真实 API 检查桌面/手机登录、上传、私有图片、手札、备份还原与退出 |
+| `npm run test:smoke` | 使用模拟 API 检查桌面/手机深浅主题、版图和阅读器焦点 |
+| `npm run test:image-resources` | 在原生浏览器中用合成 API 检查可选资源池的请求合并、解码、会话重置、源删除与清理，不连接个人数据库 |
+| `npm run test:canvas-residency` | 合成500/2000张资料的原生浏览器驻留检查，覆盖桌面/平板、缓存开关、封面总预算、选择与概览入口 |
+| `npm run test:canvas-ui` | 使用模拟 API 和真实浏览器检查桌面/触屏平板的拖动取消、框选、快捷键隔离、多指输入与布局提交 |
+| `npm run test:layout-migration` | 在显式指定的隔离 MySQL 上验证布局版本迁移；需设置 `LAYOUT_TEST_MYSQL_PORT`、`LAYOUT_TEST_MYSQL_PASSWORD`，可选 `LAYOUT_TEST_MYSQL_USER`；只创建和清理随机测试库 |
+| `npm run test:layout-lifecycle` | 使用同样的显式隔离 MySQL 配置，验证真实迁移、CLI 建号和重复执行；只创建和清理随机测试库 |
 
-## 在手机上使用
+`test:api` 和 `test:e2e` 需要数据库建库权限，自动生成随机测试库与临时图片目录，结束后清理，不访问个人手帐数据库。浏览器测试在 Windows 使用 Edge，其他平台使用 Playwright Chromium（首次执行 `npx playwright install chromium`）。真实浏览器失败截图和追踪写入 `test-results/real-e2e/`，模拟检查截图写入 `test-results/ui-smoke/`，均不进入版本控制。
 
-手机与电脑连接同一局域网。在 `.env` 中设置 `API_HOST=0.0.0.0`，运行 `npm run build` 后 `npm start`，手机访问 `http://电脑的局域网IP:3001`。默认仍只监听本机；手机页面与电脑使用同一份 MySQL 数据和照片。
+`test:api` 还包含完整系统恢复演练，覆盖双账号、旧表与手帐关系、日期/JSON/大整数及图片哈希。监控配置见 [监控与维护](docs/monitoring.md)，停写条件和恢复点权限见 [恢复演练](docs/recovery.md)。
 
-手机浏览器的自动定位需要安全上下文，普通局域网 HTTP 不一定允许定位；地点可以直接填写。通过 HTTPS 部署或在本机开发时可使用浏览器定位。
+CI 见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，在临时 MySQL 服务上执行静态检查、单元测试、安全测试、真实 API 测试、依赖审计和浏览器冒烟测试。
 
-## 数据和调试
+真实浏览器用例位于 `tests/e2e-real/`，由专用配置收集。`server/` 的旧单用户测试和 `tests/e2e/` 的旧场景尚未统一更新账号夹具，不会混入当前验证入口；不要对个人数据库直接运行旧测试。
 
-旅程、手帐、照片元数据分别保存在 `journal_trips`、`journal_entries`、`journal_photos`。照片顺序、裁剪焦点、滤镜、具体位置和画布坐标会保存。组件及排列顺序保存为 MySQL JSON，每张照片有独立的组件数组；未选择旅程和心情时不会自动赋值。留下当天使用 MySQL DATE，避免时区换日。启动时自动迁移已有表，旧记录的内容会保留，并可在编辑时转换为组件。
+## 构建运行与手机访问
 
-旧 `checkins` 会在首次升级时按省份导入手帐，导入标记保存在 `journal_migrations`，重复启动不重复导入，也不删除旧记录。系统无需账号或个人资料；头像入口、资料编辑页面和相关接口已移除，旧版攻略仍可访问，旧资料地址会返回首页。
+```powershell
+npm run build
+npm start
+```
 
-MySQL 数据保存在 Compose 的 `mysql_data` 持久卷，图片保存在 `uploads/`。个人手帐可以直接使用界面的 ZIP 备份与还原；完整部署备份（包括旧版攻略、旧打卡和系统表）仍需同时保存数据库卷和 `uploads/`。`docker compose down` 不删除数据；带 `-v` 会删除数据库卷。不要在已有数据库卷上随意修改 `.env` 中的数据库用户名或密码，容器初始化变量仅在空卷首次启动时生效。
+本地构建运行时，将 `APP_ORIGIN` 改为 `http://127.0.0.1:3001`。手机与电脑连接同一局域网时，设置 `API_HOST=0.0.0.0`，把 `APP_ORIGIN` 改为 `http://电脑局域网IP:3001`，重启 API 后从手机访问该地址。浏览器定位需要安全上下文，局域网 HTTP 下可手工填写地点。
 
-备份接口：`GET /api/journal/backup` 下载 ZIP；`POST /api/journal/restore` 以 multipart 字段 `backup` 上传 ZIP，成功返回 `restored` 数量统计。还原先校验 ZIP 校验和、JSON 格式及引用完整性，再事务写入，失败时回滚并清理本次新文件。缺少原图的备份会拒绝还原，以避免误以为已恢复完整。
+生产环境使用 HTTPS 和 `NODE_ENV=production`，设置准确的来源、代理和数据库权限，详见 [运行说明](docs/operations.md)。
 
-手帐接口：`GET /api/journal`，`POST /api/journal/trips`，`POST / PUT / DELETE /api/journal/entries/:id`（创建时不带 id），`DELETE /api/journal/photos/:id`，`PATCH /api/journal/layout`。上传和手帐写入在同一事务流程中处理，失败会清理本次临时照片；删除照片或记录会清理不再被引用的上传图片。
+升级此版本需先停服务，备份后运行 `npm run db:migrate` 创建共享限流表，再重新构建并启动。所有 API 实例必须连接同一 MySQL 主库、共用图片目录，并使用相同的 `RESTORE_CONCURRENCY`（默认 2）；不需要 Redis。图片校验和还原在独立工作线程处理，每个账号同时最多一个还原。当前 HTTP 请求会等待任务结果，任务不提供持久化排队或断点续传。
 
-文字和贴纸接口：`POST /api/journal/marks`，`PUT / DELETE /api/journal/marks/:id`；查询结果在 `GET /api/journal` 的 `marks` 数组中，拖动位置沿用 `PATCH /api/journal/layout` 的 `kind: "mark"`。
+画布首页按需加载版图、阅读器、编辑器与备份窗口；地图地理数据不再随首页下载。当前手帐入口分包约 61kB（gzip 21kB），可选地图包约 802kB，首次打开版图时仍需加载。
 
-批量修改接口：`PATCH /api/journal/photos/components`，传入 `photo_ids`、待修改的 `components` 和可选的世界坐标 `positions`。跨记录修改在同一个 MySQL 事务中完成，目标不存在或参数无效时全部回滚；不修改未选照片、裁剪和滤镜。
+## 数据与备份
 
-批量删除接口：`DELETE /api/journal/photos`，传入 `photo_ids`（最多 500 个）。同一事务中删除所选照片及因照片删空的记录，保留有其他照片的记录，成功后清理不再引用的上传文件；任一目标不存在时全部回滚。
+- 手帐保存在 MySQL `journal_*` 表，账号、会话和图片归属由服务端维护。
+- 数据库位于 Compose 的 `mysql_data` 卷，图片位于 `uploads/` 或 `UPLOAD_DIRECTORY`。
+- 界面下载单个 ZIP，归档与解压总量上限 **576MiB**，覆盖 512MiB 账号图片容量并预留清单空间；清单最多 16MiB，单图最多 10MiB，不支持 ZIP64。
+- 浏览器直接下载，服务端逐文件读取与还原，不把整包加载进内存；兼容旧版 ZIP。还原仍受账号剩余容量限制，失败时回滚并清理新文件。
+- 更换封面、删除手札或照片后自动回收没有任何引用的图片；长时间未关联的上传及失败删除任务通过 `assets:gc` 维护。
+- 完整部署备份需同时保存数据库和图片目录，并验证恢复。`docker compose down -v` 会删除数据库卷。
+- 旧打卡通过显式迁移导入手帐；旧攻略、打卡、点赞等 API 返回 410，原始资料仍保留。
 
-混合删除接口：`DELETE /api/journal/items`，传入 `items: [{ id, kind }]`，`kind` 支持 `photo`、`mark`（文字纸卡或贴纸）和 `entry`（纯文字记录），共最多 500 项。混合删除也在同一事务中处理，目标不存在则全部回滚。含照片的记录不能通过 `entry` 整条删除，以免误删未选照片。
+## 目录
 
-可用任意 MySQL 客户端连接 127.0.0.1:3307，数据库和凭据见 .env。健康检查：GET /api/health。后端仅监听本机地址，适合本地个人使用。
+```text
+src/auth/         账号界面与会话状态
+src/journal/      自由画布、手札、版图与导入
+src/data/         离线地理数据与来源说明
+src/lib/          API 客户端
+server/           API、权限、图片、备份与数据库迁移
+shared/           前后端共用逻辑
+scripts/          迁移、建号、数据准备与验证入口
+tests/            单元测试与浏览器场景
+public/           示例照片、封面与 3D 场景资源
+docs/             当前运行与迁移文档
+```
 
-原 Supabase 的登录、OAuth、存储及边缘函数已移除。现有 Supabase 数据不会自动导入 MySQL。
+## 数据和素材来源
 
-景点数据沿用原项目的数据集，来源：https://github.com/marksui/China-Travel-Map，保存在 `server/landmarks.sql`。示例照片来源见 `public/journal-demo/ATTRIBUTION.md`，西湖场景数据来源见 `public/scenes/ATTRIBUTION.md`。
+- 景点数据：[China-Travel-Map](https://github.com/marksui/China-Travel-Map)，本地文件 `server/landmarks.sql`。
+- 地理边界与城市中心：[地理数据来源说明](src/data/china-boundary-attribution.md)。
+- 示例照片：[来源声明](public/journal-demo/ATTRIBUTION.md)。
+- 手札封面：[来源声明](public/notebook-covers/Attribution.md)。
+- 西湖场景：[来源声明](public/scenes/ATTRIBUTION.md)。
+
+## 开发、发布与参与
+
+- [架构与代码入口](docs/architecture.md) · [贡献指南](CONTRIBUTING.md)
+- [发布检查与验收记录模板](docs/release-checklist.md) · [变更记录](CHANGELOG.md)
+- [M0 验证记录](docs/verification/2026-10-29-m0.md) · [长期开发计划](docs/superpowers/plans/2026-10-29-long-term-development.md)
+- [安全报告流程](SECURITY.md)（GitHub 私密报告已启用）
+
+目前为早期多账号版本，稳定发布、生产部署和完整验收状态以对应记录为准。生产安装暂按 [运行说明](docs/operations.md)、[监控](docs/monitoring.md) 和 [恢复](docs/recovery.md) 手动完成；应用镜像和一体化生产部署属于后续阶段。
+
+项目自有代码采用 [MIT](LICENSE)。第三方依赖、照片及地理数据保留各自许可；已核对的声明与公开分发前待确认事项见 [第三方说明](docs/third-party-notices.md)。

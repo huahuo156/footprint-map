@@ -5,7 +5,7 @@ import { readPhotoExif } from '../src/lib/exif'
 
 vi.mock('../src/journal/Modal', () => ({ default: ({ children }) => <div role="dialog">{children}</div> }))
 vi.mock('../src/journal/JournalImage', () => ({ default: ({ src, alt }) => <img src={src} alt={alt} /> }))
-vi.mock('../src/lib/api', () => ({ fetchLandmarks: vi.fn(async () => []) }))
+vi.mock('../src/lib/api', () => ({ fetchLandmarks: vi.fn(async () => []), searchPlaces: vi.fn(async () => ({ places: [] })) }))
 vi.mock('../src/lib/exif', async importOriginal => ({ ...(await importOriginal()), readPhotoExif: vi.fn(async () => null) }))
 
 beforeEach(() => {

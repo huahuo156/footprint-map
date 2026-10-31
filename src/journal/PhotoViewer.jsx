@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, MapPin, Pencil, Trash2 } from 'lucide-react'
 import Modal from './Modal'
-import JournalImage from './JournalImage'
+import JournalImage, { thumbnailSource } from './JournalImage'
 import MemoryComponents from './MemoryComponents'
 import { imageFilter, isWestLake } from './model'
 
 export default function PhotoViewer({ selection, data, onClose, onEdit, onDelete, onScene, demo, mobile }) {
   const entry = data.entries.find(item => item.id === selection.entryId)
   const [photoId, setPhotoId] = useState(selection.photoId), [confirm, setConfirm] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [loadedPhoto, setLoadedPhoto] = useState(null)
   const all = data.entries.filter(item => item.trip_id === entry?.trip_id).flatMap(item => item.photos.map(photo => ({ ...photo, entry: item })))
   const photo = all.find(item => item.id === photoId)
   const current = photo?.entry || entry, trip = data.trips.find(item => item.id === current?.trip_id)
@@ -25,7 +26,10 @@ export default function PhotoViewer({ selection, data, onClose, onEdit, onDelete
   }
   return <Modal title={current.components != null ? '这一刻' : trip?.name || '旅行记忆'} onClose={onClose} className="j-viewer" busy={busy}>
     {current.components == null && <div className="j-viewer-date">{current.entry_date.replaceAll('-', ' / ')}</div>}
-    {photo && <div className="j-viewer-photo"><JournalImage key={photo.id} src={photo.url} alt={current.place_name || current.caption || '旅行照片'} loading="eager" style={{ filter: imageFilter(photo.image_filter) }} /></div>}
+    {photo && <div className="j-viewer-photo">
+      {loadedPhoto !== photo.id && thumbnailSource(photo.url) !== photo.url && <JournalImage key={photo.id + '-small'} className="j-viewer-thumbnail" src={photo.url} alt="" aria-hidden="true" loading="eager" style={{ filter: imageFilter(photo.image_filter) }} />}
+      <JournalImage key={photo.id} fullSize className="j-viewer-original" src={photo.url} alt={current.place_name || current.caption || '旅行照片'} loading="eager" onLoad={() => setLoadedPhoto(photo.id)} onError={() => setLoadedPhoto(photo.id)} style={{ opacity: loadedPhoto === photo.id ? 1 : 0, filter: imageFilter(photo.image_filter) }} />
+    </div>}
     <div className={'j-viewer-copy ' + (!photo ? 'is-note' : '')}>
       {current.components != null ? <MemoryComponents entry={current} trips={data.trips} /> : <>{current.place_name && <div className="j-place"><MapPin />{current.place_name}</div>}
       {current.title && current.title !== current.place_name && current.title !== current.caption && <h3>{current.title}</h3>}

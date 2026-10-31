@@ -1,4 +1,4 @@
-import { fetchLandmarks, saveJournalEntry } from '../lib/api'
+import { captureApiSession, fetchLandmarks, saveJournalEntry } from '../lib/api'
 import { exifComponents, readPhotoExif } from '../lib/exif'
 
 export async function readPhotoDimensions(files) {
@@ -21,6 +21,7 @@ export async function readPhotoDimensions(files) {
 // A failed request saves none of its chunk. Remove only explicitly rejected files,
 // then submit the valid remainder; a service/network failure keeps that remainder.
 export async function importPhotoFiles(files, positions, onProgress, save = saveJournalEntry) {
+  const guard = captureApiSession()
   const rejectedFiles = [], pending = []
   let importedCount = 0
   for (const [index, file] of files.entries()) {
@@ -39,12 +40,15 @@ export async function importPhotoFiles(files, positions, onProgress, save = save
       // Read only this upload batch: 500 photos must not allocate 500 EXIF buffers together.
       const unread = chunk.filter(item => item.components === undefined)
       const exifs = await Promise.all(unread.map(({ file }) => readPhotoExif(file).catch(() => null)))
+      guard()
       if (exifs.some(exif => exif?.lat != null)) landmarks ??= await fetchLandmarks().catch(() => [])
+      guard()
       unread.forEach((item, index) => { item.components = exifComponents(exifs[index], landmarks || []) })
       chunk.forEach(({ file }) => body.append('images', file))
       body.append('data', JSON.stringify({ components: [], photos: chunk.map(({ position, components }, index) => ({ upload_index: index, components, canvas_x: position.x, canvas_y: position.y })) }))
       try {
         await save(null, body)
+        guard()
         pending.splice(0, chunk.length); importedCount += chunk.length
       } catch (error) {
         const rejected = error.status === 400 && error.code === 'INVALID_IMAGES' && Array.isArray(error.invalidFiles) ? error.invalidFiles : []

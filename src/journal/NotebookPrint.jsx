@@ -54,10 +54,10 @@ export default function NotebookPrint({ book, data, onClose }) {
       <button type="button" className="j-button" onClick={onClose}><X />关闭预览</button>
     </header>
     <div className="nb-print-pages">
-      {sheet('cover', <div className="nb-print-cover"><NotebookCover book={book} pageCount={pages.length} /></div>)}
+      {sheet('cover', <div className="nb-print-cover"><NotebookCover fullSize book={book} pageCount={pages.length} /></div>)}
       {sheet('title', <div className="nb-flyleaf nb-print-title"><h2 className={book.name.length > 40 ? 'is-long' : ''}>{book.name}</h2>{book.cover_text && <p className={book.cover_text.length > 180 ? 'is-long' : ''}>{book.cover_text}</p>}</div>)}
       {pages.map((page, index) => sheet(page.id, <>
-        {pageItems(data, page.id, imageSizes).map(item => <CanvasItem key={item.kind + item.id} item={item} trips={data.trips} componentLimit={Infinity} onImageLoad={loaded} />)}
+        {pageItems(data, page.id, imageSizes).map(item => <CanvasItem fullSize key={item.kind + item.id} item={item} trips={data.trips} componentLimit={Infinity} onImageLoad={loaded} />)}
         <span className="nb-print-folio">{index + 1}</span>
       </>))}
     </div>

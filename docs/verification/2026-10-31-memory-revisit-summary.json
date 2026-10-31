@@ -1,0 +1,3484 @@
+{
+  "source": "test-results\\canvas-performance\\compare-1793448793019\\report.json",
+  "options": {
+    "counts": [
+      500
+    ],
+    "runs": 5,
+    "profiles": [
+      "desktop"
+    ],
+    "themes": [
+      "light"
+    ],
+    "stressMs": 0,
+    "pathMs": 400,
+    "compare": true
+  },
+  "gates": [
+    {
+      "key": "500/desktop/light",
+      "name": "repeatMediaReductionPercent",
+      "actual": 100,
+      "limit": 80,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "panFrameP95Ms",
+      "actual": 6.200000000000728,
+      "limit": 32,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "editableMs",
+      "actual": 415.59999999403954,
+      "limit": 600,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "visible95Ms",
+      "actual": 968,
+      "limit": 1500,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "maxBrowserWorkingSetBytes",
+      "actual": 674185216,
+      "limit": 681574400,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "panFrameRegressionMs",
+      "actual": 0,
+      "limit": 2,
+      "status": "met"
+    },
+    {
+      "key": "500/desktop/light",
+      "name": "overviewImages",
+      "actual": 0,
+      "limit": 48,
+      "status": "met"
+    },
+    {
+      "name": "2000TenMinuteStress",
+      "status": "incomplete"
+    }
+  ],
+  "summary": [
+    {
+      "key": "500/desktop/light",
+      "runs": 5,
+      "cachedVsResidency": {
+        "editableMs": {
+          "baseline": 398.69999999552965,
+          "candidate": 408.8999999985099,
+          "reductionPercent": -2.558314522973313,
+          "status": "measured"
+        },
+        "overviewImages": {
+          "baseline": 0,
+          "candidate": 0,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "panFrameP95Ms": {
+          "baseline": 6.200000000000273,
+          "candidate": 6.200000000000273,
+          "reductionPercent": 0,
+          "status": "measured"
+        },
+        "visible95Ms": {
+          "baseline": 521,
+          "candidate": 936.5,
+          "reductionPercent": -79.75047984644914,
+          "status": "measured"
+        },
+        "mediaRequests": {
+          "baseline": 106,
+          "candidate": 70,
+          "reductionPercent": 33.9622641509434,
+          "status": "measured"
+        },
+        "warmRepeatedMediaRequests": {
+          "baseline": 21,
+          "candidate": 0,
+          "reductionPercent": 100,
+          "status": "measured"
+        },
+        "repeatedMediaRequests": {
+          "baseline": 42,
+          "candidate": 0,
+          "reductionPercent": 100,
+          "status": "measured"
+        },
+        "maxJsHeapBytes": {
+          "baseline": 33446416,
+          "candidate": 28137656,
+          "reductionPercent": 15.872433088196955,
+          "status": "measured"
+        },
+        "maxBrowserWorkingSetBytes": {
+          "baseline": 640577536,
+          "candidate": 665702400,
+          "reductionPercent": -3.9222205881412613,
+          "status": "measured"
+        }
+      },
+      "cachedVsOld": {
+        "editableMs": {
+          "baseline": 396.1000000014901,
+          "candidate": 408.8999999985099,
+          "reductionPercent": -3.2315071943881883,
+          "status": "measured"
+        },
+        "overviewImages": {
+          "baseline": 499,
+          "candidate": 0,
+          "reductionPercent": 100,
+          "status": "measured"
+        },
+        "panFrameP95Ms": {
+          "baseline": 6.200000000000273,
+          "candidate": 6.200000000000273,
+          "reductionPercent": 0,
+          "status": "measured"
+        },
+        "visible95Ms": {
+          "baseline": 530.9000000059605,
+          "candidate": 936.5,
+          "reductionPercent": -76.39856846665772,
+          "status": "measured"
+        },
+        "mediaRequests": {
+          "baseline": 575,
+          "candidate": 70,
+          "reductionPercent": 87.82608695652175,
+          "status": "measured"
+        },
+        "warmRepeatedMediaRequests": {
+          "baseline": 0,
+          "candidate": 0,
+          "reductionPercent": null,
+          "status": "N/A"
+        },
+        "repeatedMediaRequests": {
+          "baseline": 76,
+          "candidate": 0,
+          "reductionPercent": 100,
+          "status": "measured"
+        },
+        "maxJsHeapBytes": {
+          "baseline": 38969872,
+          "candidate": 28137656,
+          "reductionPercent": 27.796385884972885,
+          "status": "measured"
+        },
+        "maxBrowserWorkingSetBytes": {
+          "baseline": 863371264,
+          "candidate": 665702400,
+          "reductionPercent": 22.895001518141793,
+          "status": "measured"
+        }
+      }
+    }
+  ],
+  "variants": {
+    "old": {
+      "build": {
+        "indexSha256": "349657915b873f0a5221f9093ab7b2db225aca060dcc65d6718112b2f1855d3f",
+        "assets": [
+          {
+            "file": "AddMemory-Biscub6A.js",
+            "bytes": 4630,
+            "sha256": "f02e90667cd5ea318059448eaa58a94c67d999674e428cfb8d76a7f151959870"
+          },
+          {
+            "file": "BackupDialog-CNXaMfK1.js",
+            "bytes": 3717,
+            "sha256": "abd34e9968ccc425697dd2904ebd3e91ce032e345dc845e531155720786ba2cf"
+          },
+          {
+            "file": "BatchItemDelete-nV4P_Fj4.js",
+            "bytes": 1756,
+            "sha256": "679b55c85fa1e1ef4e50753f8f982b567d02a7814c3a6af6ea05da76ab49acaa"
+          },
+          {
+            "file": "BatchPhotoEditor-DVCNNaOt.js",
+            "bytes": 795,
+            "sha256": "be89f32a8051b9d865c70f964ebb54d01221f20f11f0e15adf4b366e85315d2a"
+          },
+          {
+            "file": "EntryEditor-0078MK56.js",
+            "bytes": 19087,
+            "sha256": "1c7f5f19546cac124a1861af7957ae9c280b46bca2b147bae09471a9ddf5a97b"
+          },
+          {
+            "file": "JournalImage-2kodhnwN.js",
+            "bytes": 17070,
+            "sha256": "e5fbfcff683f34e4b540667e1cfd5fc97c77762d228bbca43a32bfc00e2e633c"
+          },
+          {
+            "file": "JournalPage-3py27wjk.js",
+            "bytes": 94694,
+            "sha256": "0d1f3815b57853b3ce5f129b6af7c2cd2f8cf00e2dd424a9fbf629ddc651dd9e"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-HdD4wY75.js",
+            "bytes": 3998,
+            "sha256": "456d8c4f3b88e5bc353ee3039d0e3d773dc0a25f2ad8eeb0fb6d650f32c81dcb"
+          },
+          {
+            "file": "NotebookReader-B6tXG1Vp.js",
+            "bytes": 18266,
+            "sha256": "84e67e6a343ddf4003be05f768c7c73209c00658cc9f5f1ee8982fcd98320ed8"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookSettings-B3OIOo1b.js",
+            "bytes": 6478,
+            "sha256": "d3dd76500e02957578c555890090c9948d6cff948a1a73ba241a07ef9f7bdcb4"
+          },
+          {
+            "file": "PhotoViewer-DpBjTP3-.js",
+            "bytes": 4119,
+            "sha256": "1e7bac9939d4050f02c2d6ea77585e835786e921ae0d4160610acb42bdc01968"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-C3cmpZHC.js",
+            "bytes": 804437,
+            "sha256": "a098937b6c6f207a6696e4488a38159ef426ec3611e54709aff0a93adb75338e"
+          },
+          {
+            "file": "WestLakeScene-CVpGDNB4.js",
+            "bytes": 461559,
+            "sha256": "517fc1094bf1e1a3d10eacfe1a12e568a27d5378069f6092ad084f60e641cd99"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "index-BZCTwghf.js",
+            "bytes": 234323,
+            "sha256": "d39cc7a93f1af7b3cb787453971f74ad345610569916272ea8739e6bfffebebb"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "317118da76e7168b126a96c41938ae956c1f66001afced09791281e2fbbf093f",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "6085b8efe6d21db45af9e9f63f1026ad15b416c16f2ed4d55542787e2f9506dc"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 396.1000000014901,
+            "worst": 427.5
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 499,
+            "worst": 499
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000273
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 530.9000000059605,
+            "worst": 566.2999999970198
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 575,
+            "worst": 575
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 76,
+            "worst": 76
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 38969872,
+            "worst": 50324044
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 863371264,
+            "worst": 874237952
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 427.5,
+          "visible95Ms": 566.2999999970198,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 487100416,
+              "privateBytes": 303747072
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 563417088,
+              "privateBytes": 439709696
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 734740480,
+              "privateBytes": 645062656
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 807641088,
+              "privateBytes": 731996160
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 828411904,
+              "privateBytes": 784146432
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 863371264,
+              "privateBytes": 846364672
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 851185664,
+              "privateBytes": 845586432
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-210.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-211.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-209.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-255.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-208.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-254.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-207.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-230.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-253.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-228",
+                  "source": "/uploads/perf-image-228.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-229",
+                  "source": "/uploads/perf-image-229.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-274",
+                  "source": "/uploads/perf-image-274.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-275",
+                  "source": "/uploads/perf-image-275.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-225.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-271.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-226.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-272.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-227.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-273.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-228.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-274.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-229.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-252.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-275.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 394.3999999985099,
+          "visible95Ms": 554.2999999970198,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 511913984,
+              "privateBytes": 321687552
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 734728192,
+              "privateBytes": 651780096
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 832643072,
+              "privateBytes": 767950848
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 849739776,
+              "privateBytes": 840904704
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 868409344,
+              "privateBytes": 892084224
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 859840512,
+              "privateBytes": 890814464
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-210.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-211.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-209.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-255.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-208.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-254.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-207.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-230.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-253.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-228",
+                  "source": "/uploads/perf-image-228.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-229",
+                  "source": "/uploads/perf-image-229.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-274",
+                  "source": "/uploads/perf-image-274.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-275",
+                  "source": "/uploads/perf-image-275.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-225.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-271.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-226.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-272.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-227.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-273.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-228.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-274.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-229.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-252.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-275.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 394.40000000596046,
+          "visible95Ms": 530.9000000059605,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 484659200,
+              "privateBytes": 311390208
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 574648320,
+              "privateBytes": 457203712
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 739237888,
+              "privateBytes": 660287488
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 816979968,
+              "privateBytes": 755851264
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 832323584,
+              "privateBytes": 826908672
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 856457216,
+              "privateBytes": 884609024
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 845066240,
+              "privateBytes": 879554560
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-210.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-211.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-209.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-255.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-208.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-254.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-207.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-230.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-253.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-228",
+                  "source": "/uploads/perf-image-228.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-229",
+                  "source": "/uploads/perf-image-229.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-274",
+                  "source": "/uploads/perf-image-274.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-275",
+                  "source": "/uploads/perf-image-275.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-225.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-271.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-226.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-272.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-227.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-273.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-228.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-274.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-229.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-252.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-275.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 396.1000000014901,
+          "visible95Ms": 522.1000000014901,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 483708928,
+              "privateBytes": 305381376
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 572227584,
+              "privateBytes": 453672960
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 749858816,
+              "privateBytes": 667394048
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 810610688,
+              "privateBytes": 746237952
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 821772288,
+              "privateBytes": 814731264
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 842289152,
+              "privateBytes": 865742848
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 835465216,
+              "privateBytes": 866365440
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-210.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-211.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-209.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-255.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-208.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-254.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-207.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-230.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-253.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-228",
+                  "source": "/uploads/perf-image-228.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-229",
+                  "source": "/uploads/perf-image-229.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-274",
+                  "source": "/uploads/perf-image-274.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-275",
+                  "source": "/uploads/perf-image-275.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-225.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-271.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-226.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-272.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-227.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-273.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-228.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-274.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-229.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-252.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-275.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 396.1000000014901,
+          "visible95Ms": 525.7000000029802,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 489885696,
+              "privateBytes": 313139200
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 574042112,
+              "privateBytes": 455966720
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 732774400,
+              "privateBytes": 653320192
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 836218880,
+              "privateBytes": 770199552
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 851046400,
+              "privateBytes": 844742656
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 874237952,
+              "privateBytes": 897437696
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 862756864,
+              "privateBytes": 892174336
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-210.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-211.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-209.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-255.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-208.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-254.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-207.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-230.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-253.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 15,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-228",
+                  "source": "/uploads/perf-image-228.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-229",
+                  "source": "/uploads/perf-image-229.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-274",
+                  "source": "/uploads/perf-image-274.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-275",
+                  "source": "/uploads/perf-image-275.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:1824/uploads/perf-image-225.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-271.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-226.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-272.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-227.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-273.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-228.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-274.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-229.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-252.webp?thumbnail=1",
+                "http://127.0.0.1:1824/uploads/perf-image-275.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-207",
+                  "source": "/uploads/perf-image-207.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-208",
+                  "source": "/uploads/perf-image-208.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-253",
+                  "source": "/uploads/perf-image-253.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-254",
+                  "source": "/uploads/perf-image-254.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        }
+      ]
+    },
+    "residency": {
+      "build": {
+        "indexSha256": "6e714d14f0bc6b472909501eb90aad60b8674b52d9c10750371eb0eb5627efd3",
+        "assets": [
+          {
+            "file": "AddMemory-DyBlbpDO.js",
+            "bytes": 4630,
+            "sha256": "95b87726a5dff221045360c700ea14383fea0ae7d89d6377bf37a0ab57bf99ce"
+          },
+          {
+            "file": "BackupDialog-DlZg8gKD.js",
+            "bytes": 3717,
+            "sha256": "b5ed304499e73433efa823d35a01dbf7ec3429478b333db9ae1b6b2309ba99ae"
+          },
+          {
+            "file": "BatchItemDelete-DPuPMAA2.js",
+            "bytes": 1756,
+            "sha256": "3c5647a9e5928c8ab3b26ab1c8099e74073000d0e99c2431b7c2fe0f0469e2ca"
+          },
+          {
+            "file": "BatchPhotoEditor-_cBiN_r1.js",
+            "bytes": 795,
+            "sha256": "b597fe363e150627e1c7718cb0c79c4ea0d178bab51c01fcfbceb039aa59df5c"
+          },
+          {
+            "file": "EntryEditor-npwj0j_o.js",
+            "bytes": 19087,
+            "sha256": "136a1963dbed2aaaeece4e6be942f85b11da7c16d95b5f5cac60fbe6875e412e"
+          },
+          {
+            "file": "JournalImage-8fRaxq7q.js",
+            "bytes": 17070,
+            "sha256": "e7a4a64d7784b66295b171638a57a455d8d54fdc46c5e9cc1df20fbe5751d8db"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "JournalPage-f-z0T6_2.js",
+            "bytes": 94694,
+            "sha256": "539ef5174f09c62b7b7a628e1538c2ab9785249dbf9c11d74e4ff624061101b2"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-BYrZKskW.js",
+            "bytes": 3998,
+            "sha256": "7ae94d1b2db1347a54da37bace1822a731acae5fae4e033d2ab9f8393475845f"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookReader-bOAepn78.js",
+            "bytes": 18266,
+            "sha256": "576a5910a9281a7e4fa8007b760a46ca8d3f872911d57a2454bb77aae7169256"
+          },
+          {
+            "file": "NotebookSettings-24gpnBOf.js",
+            "bytes": 6478,
+            "sha256": "c3991cead7ef85fd2e1e4f7577c60c0776773c1e22a689211476bb73e7f0d201"
+          },
+          {
+            "file": "PhotoViewer-Dr7PczCt.js",
+            "bytes": 4119,
+            "sha256": "49853bf0b22a5e7da8dbb4f4abdcc451f9c43d34572a3013855573042048237e"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-Bq53KUWp.js",
+            "bytes": 804437,
+            "sha256": "3a4d1f233331344d542245ccd293a8ff0420ce1ec6cc46eceeeda72c8eea8588"
+          },
+          {
+            "file": "WestLakeScene-CJD0RBqK.js",
+            "bytes": 461559,
+            "sha256": "c69732ebf50605f1c6ed66e52eaf6f67e3b845ef09645fb2735e9ca92e4e6adb"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "index-UcYWxDRy.js",
+            "bytes": 234323,
+            "sha256": "d74a98d29937a3ed6d8c3366a6bf89dc5b7526ca77f9b9655efe199c2acb3b1c"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "317118da76e7168b126a96c41938ae956c1f66001afced09791281e2fbbf093f",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "6085b8efe6d21db45af9e9f63f1026ad15b416c16f2ed4d55542787e2f9506dc"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 398.69999999552965,
+            "worst": 416.59999999403954
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000273
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 521,
+            "worst": 932.6000000014901
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 106,
+            "worst": 106
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 21,
+            "worst": 21
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 42,
+            "worst": 42
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 33446416,
+            "worst": 35403208
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 640577536,
+            "worst": 647176192
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 396.5,
+          "visible95Ms": 485.69999999552965,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 479666176,
+              "privateBytes": 297508864
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 548102144,
+              "privateBytes": 387629056
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 582180864,
+              "privateBytes": 422875136
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 614494208,
+              "privateBytes": 496144384
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 632995840,
+              "privateBytes": 527204352
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 630484992,
+              "privateBytes": 527036416
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 21,
+              "repeatedMediaRequests": 21,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-245.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-244.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-243.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-242.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-241.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-240.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-239.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-238.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-237.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 403.3999999985099,
+          "visible95Ms": 932.6000000014901,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 476971008,
+              "privateBytes": 292929536
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 544448512,
+              "privateBytes": 378060800
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 545845248,
+              "privateBytes": 376471552
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 581980160,
+              "privateBytes": 415965184
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 613990400,
+              "privateBytes": 494071808
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 647176192,
+              "privateBytes": 539701248
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 646778880,
+              "privateBytes": 539443200
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 21,
+              "repeatedMediaRequests": 21,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-245.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-244.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-243.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-242.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-241.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-240.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-239.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-238.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-237.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 397.70000000298023,
+          "visible95Ms": 521,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 475557888,
+              "privateBytes": 285388800
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 545021952,
+              "privateBytes": 376442880
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 578392064,
+              "privateBytes": 412413952
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 607891456,
+              "privateBytes": 485294080
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 640577536,
+              "privateBytes": 530644992
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 636960768,
+              "privateBytes": 530550784
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 21,
+              "repeatedMediaRequests": 21,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-245.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-244.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-243.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-242.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-241.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-240.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-239.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-238.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-237.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 416.59999999403954,
+          "visible95Ms": 521.1999999955297,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 473894912,
+              "privateBytes": 284925952
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 547733504,
+              "privateBytes": 378183680
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 576974848,
+              "privateBytes": 407486464
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 608137216,
+              "privateBytes": 484450304
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 629104640,
+              "privateBytes": 520753152
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 629190656,
+              "privateBytes": 520679424
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 21,
+              "repeatedMediaRequests": 21,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-245.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-244.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-243.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-242.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-241.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-240.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-239.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-238.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-237.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 398.69999999552965,
+          "visible95Ms": 506.19999999552965,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 475406336,
+              "privateBytes": 289980416
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 549134336,
+              "privateBytes": 380571648
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 583364608,
+              "privateBytes": 415899648
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 612880384,
+              "privateBytes": 494297088
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 643563520,
+              "privateBytes": 537718784
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 640987136,
+              "privateBytes": 537067520
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "/uploads/perf-image-251.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "/uploads/perf-image-252.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 21,
+              "repeatedMediaRequests": 21,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "/uploads/perf-image-230.webp?thumbnail=1"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "/uploads/perf-image-231.webp?thumbnail=1"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2162/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-245.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-244.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-243.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-242.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-241.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-240.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-239.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-238.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-237.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2162/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "cached": {
+      "build": {
+        "indexSha256": "93d3911ab1109bb0f313df69e50bed6bc7e2412256fabef0170f4f234c75e2ac",
+        "assets": [
+          {
+            "file": "AddMemory-Cm4Vk9Fx.js",
+            "bytes": 4630,
+            "sha256": "c690e1bdf4ba109575bcdfe2242f26bc462fdf2533daeafd6571fbcac2bf4510"
+          },
+          {
+            "file": "BackupDialog-gC0tb8jI.js",
+            "bytes": 3717,
+            "sha256": "4fecb5de05d41d1584d25d1eee832e0072376936d03371ce8b3ccbf59aaefddd"
+          },
+          {
+            "file": "BatchItemDelete-D0iWHW2C.js",
+            "bytes": 1756,
+            "sha256": "0d76093e380f5aeb69e3bbe5d9416341bea985b970e889f3acdd353d422076b6"
+          },
+          {
+            "file": "BatchPhotoEditor-WYj2_ZoI.js",
+            "bytes": 795,
+            "sha256": "d102d5a688641c8d8d5c784a6a816d5d978012bfe1ad9ef7992122610db3ec41"
+          },
+          {
+            "file": "EntryEditor-CyNWj-dJ.js",
+            "bytes": 19087,
+            "sha256": "9ac26483303434dd63251b21c2dcba00341c9678ec0f0ab2e367f8ca3116609d"
+          },
+          {
+            "file": "JournalImage-wk_3TRsN.js",
+            "bytes": 17070,
+            "sha256": "fa0aab04ed6c63d6701aaa72c28e8fee74fd9c07eff213fdb2a44b7b67e68f54"
+          },
+          {
+            "file": "JournalPage-BXkVpHBm.css",
+            "bytes": 16072,
+            "sha256": "61a6d7a420acbbb948f03fda279acc6febd13b5fa9e97204e0f2cf7f930b6cf1"
+          },
+          {
+            "file": "JournalPage-l82mN7Uv.js",
+            "bytes": 94694,
+            "sha256": "3ac1445facc9373314355772b4fb86072340d015d689da4c1628004f7d7996d4"
+          },
+          {
+            "file": "MarkContent-BwFG16dt.js",
+            "bytes": 3288,
+            "sha256": "4de0f256ea71da61fea00494ccb4c11e6e3be67e63a1d8d86a8b3a7268ef0549"
+          },
+          {
+            "file": "MarkEditor-Cob9L8cB.js",
+            "bytes": 3998,
+            "sha256": "192101cc5ec1f69d18f59d13e59b1dd8e2631eca4e8922b8109a275c39103272"
+          },
+          {
+            "file": "NotebookReader-BKXb36Di.js",
+            "bytes": 18266,
+            "sha256": "b61f763aa033bb85de146e4fe6e6ab8cc2025c8239089ad62ec5a4571a38611b"
+          },
+          {
+            "file": "NotebookReader-DsCsVMmi.css",
+            "bytes": 2408,
+            "sha256": "549af240fcb6f942cbb9af6894e9dc624a5cde7a46ca1fe2cba24aba48402a9e"
+          },
+          {
+            "file": "NotebookSettings-BW-if2-7.js",
+            "bytes": 6478,
+            "sha256": "eac4fe47bae78b703dc9f11623fd6158eb338c1d7a2d9c17fbca58279e1b7c48"
+          },
+          {
+            "file": "PhotoViewer-DPUHK30i.js",
+            "bytes": 4119,
+            "sha256": "e1bdc2c243b8af936bfc9b4f3e71d51f54e7241cae2ab5715fe6d6bd1171b190"
+          },
+          {
+            "file": "PlaceAtlas-BV9TRYIU.css",
+            "bytes": 11659,
+            "sha256": "8ae94fe8c83eba07c0bfffc8b8d9374641628c9fa1b5ddc8a5d6761432259ee4"
+          },
+          {
+            "file": "PlaceAtlas-Dit7mFeL.js",
+            "bytes": 804437,
+            "sha256": "110e4dea40a66ff76acf668fb1e71962ffcc270ef84a36c25a31ccb794f4cfc4"
+          },
+          {
+            "file": "WestLakeScene-CXeEj1-L.js",
+            "bytes": 461559,
+            "sha256": "b7df4b934101a2e6de63297b4341fd39631f18dc31b985afe725755470b9a957"
+          },
+          {
+            "file": "check-VR8byopG.js",
+            "bytes": 119,
+            "sha256": "df09213be88689abe8365f68cf603cf22c40830a21de638e0541d46cae1adebc"
+          },
+          {
+            "file": "heart-fL_0NkrY.js",
+            "bytes": 253,
+            "sha256": "89f9ac133711a18efa97c77fa212a176fb0a2a1ea8b21b2edca42de0032f31f0"
+          },
+          {
+            "file": "index-175bNX4Y.js",
+            "bytes": 234323,
+            "sha256": "a6e62d4160eb56bdc1fad089cae1046cc772b03f2f8f572f0e7a688f6972b56b"
+          },
+          {
+            "file": "index-BK2ov7BE.css",
+            "bytes": 91775,
+            "sha256": "34e794d4afe71a9929a91f053e29b8ff32f941e961a966d5f9ca32f586b0a3e8"
+          },
+          {
+            "file": "journal-marks-CuaXiV5l.js",
+            "bytes": 838,
+            "sha256": "fea672a261da900704d2228e92724df9054464f393efc675b669d5c054742549"
+          },
+          {
+            "file": "jsx-runtime-CTMG53bv.js",
+            "bytes": 9887,
+            "sha256": "6723f4a3671fb0cf4449d749605a6368959c498f0f772c9c8eece9a9aa22b26d"
+          },
+          {
+            "file": "map-pin-BKiQbTYM.js",
+            "bytes": 254,
+            "sha256": "6c1cb6d951190c9ddb7d7627d99e27bcdb40ba7ea8b16dca03f85e264505acd2"
+          },
+          {
+            "file": "model-Ds3eFVPD.js",
+            "bytes": 8205,
+            "sha256": "d14a039a5688fa69d25f3751889bbc67c06664e5fdd6b5614286d3def696ee01"
+          },
+          {
+            "file": "route-BV3HstMh.js",
+            "bytes": 688,
+            "sha256": "f58b55ee8c306e74562596cbf1fed3494d16c7eecb82b8029120356fb740c41a"
+          }
+        ],
+        "runnerSha256": "317118da76e7168b126a96c41938ae956c1f66001afced09791281e2fbbf093f",
+        "fixtureSha256": "f1d0389c0304a2c81376f2518317eb268c19d6853c5a4f5ed9365eaa73b119ed",
+        "statisticsSha256": "6085b8efe6d21db45af9e9f63f1026ad15b416c16f2ed4d55542787e2f9506dc"
+      },
+      "environment": {
+        "platform": "win32",
+        "release": "10.0.19045",
+        "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+        "logicalCpus": 20,
+        "totalMemoryBytes": 16962281472,
+        "node": "v24.21.0",
+        "httpLatencyMs": 20,
+        "bandwidth": "unthrottled loopback; not a physical network",
+        "browser": "156.0.4314.50"
+      },
+      "summary": [
+        {
+          "key": "500/desktop/light",
+          "runs": 5,
+          "editableMs": {
+            "samples": 5,
+            "median": 408.8999999985099,
+            "worst": 415.59999999403954
+          },
+          "overviewImages": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "panFrameP95Ms": {
+            "samples": 5,
+            "median": 6.200000000000273,
+            "worst": 6.200000000000728
+          },
+          "visible95Ms": {
+            "samples": 5,
+            "median": 936.5,
+            "worst": 968
+          },
+          "mediaRequests": {
+            "samples": 5,
+            "median": 70,
+            "worst": 74
+          },
+          "warmRepeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "repeatedMediaRequests": {
+            "samples": 5,
+            "median": 0,
+            "worst": 0
+          },
+          "maxJsHeapBytes": {
+            "samples": 5,
+            "median": 28137656,
+            "worst": 34971176
+          },
+          "maxBrowserWorkingSetBytes": {
+            "samples": 5,
+            "median": 665702400,
+            "worst": 674185216
+          }
+        }
+      ],
+      "samples": [
+        {
+          "run": 1,
+          "editableMs": 408.8999999985099,
+          "visible95Ms": 936.5,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 512888832,
+              "privateBytes": 310444032
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 580190208,
+              "privateBytes": 426500096
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 581648384,
+              "privateBytes": 426999808
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 615669760,
+              "privateBytes": 462172160
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 656412672,
+              "privateBytes": 540844032
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 665653248,
+              "privateBytes": 566583296
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 665702400,
+              "privateBytes": 566484992
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 11,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/239d6838-f33a-45ed-93c3-3420c740b18f"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/d560ec79-a384-48b6-8baa-4d52996c57bf"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-259.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-258.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "blob:http://127.0.0.1:2487/161d8aac-e6a3-4d0f-b697-41b241dabc12"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "blob:http://127.0.0.1:2487/223069bc-19b0-4bf2-b4b8-f718f7ddfb81"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/fd566607-2c76-49e6-b363-2f9be939074f"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/ca7c2c64-c604-4aee-a500-fe41e59f72cb"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "editableMs": 396.29999999701977,
+          "visible95Ms": 504.79999999701977,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 495849472,
+              "privateBytes": 305090560
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 571154432,
+              "privateBytes": 426668032
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 605229056,
+              "privateBytes": 461357056
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 648925184,
+              "privateBytes": 550096896
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 658243584,
+              "privateBytes": 577581056
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 658128896,
+              "privateBytes": 576827392
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 11,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/3d4285ac-d136-4556-8767-8d0007b1a7c6"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/03a1bd9c-abd1-4e36-a359-39e57bbafca8"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-259.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-258.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "blob:http://127.0.0.1:2487/e5b3e45e-faaa-41f1-bb4f-1d8143cbcbf3"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "blob:http://127.0.0.1:2487/62babf36-cc3f-4626-9166-2a0a40396225"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/354d7b8b-b746-4f3e-8602-fb0887ef0247"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/80f3531a-f1b6-4845-82a0-6e605ef95b13"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "editableMs": 415.59999999403954,
+          "visible95Ms": 968,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 510984192,
+              "privateBytes": 313397248
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 577384448,
+              "privateBytes": 426786816
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 578605056,
+              "privateBytes": 427257856
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 612552704,
+              "privateBytes": 461139968
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 654647296,
+              "privateBytes": 545726464
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 666955776,
+              "privateBytes": 569290752
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 661086208,
+              "privateBytes": 569192448
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 11,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/8c9d048b-8616-4fe0-bd49-2b035768f0ed"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/815261f2-8156-4927-a95e-9732c5c210c4"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-259.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-258.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "blob:http://127.0.0.1:2487/49e4a4e5-546b-44db-b5f2-83d638b06efe"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "blob:http://127.0.0.1:2487/081f3f7a-8ef4-41e4-88ad-18b5eb012fb0"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/e293183c-4ad0-43ed-8b2b-296c3f06772a"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/e2f6f729-8240-4d5f-9778-b773f09bfc3f"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "editableMs": 412,
+          "visible95Ms": 945.2999999970198,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 9,
+              "workingSetBytes": 509816832,
+              "privateBytes": 311177216
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 572715008,
+              "privateBytes": 422285312
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 573415424,
+              "privateBytes": 421564416
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 616644608,
+              "privateBytes": 470454272
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 657494016,
+              "privateBytes": 554196992
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 674185216,
+              "privateBytes": 578183168
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 667750400,
+              "privateBytes": 578048000
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 11,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/1c233f3d-75e9-473e-ae5f-dee01acccdd4"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/d1a5a937-552c-453a-aed2-2de012b54cec"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-259.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-258.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "blob:http://127.0.0.1:2487/c886b892-8572-4a42-9c7a-2ebe0c9438f3"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "blob:http://127.0.0.1:2487/b4c32f8b-19ed-4a81-8b47-49e3d2d75479"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/6caad7e5-970b-4ed7-a7ef-9ffbc99e8a50"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/66cfc4cc-6307-4672-9b33-c69f2d58923e"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "editableMs": 399.5,
+          "visible95Ms": 506.79999999701977,
+          "memory": [
+            {
+              "phase": "cold",
+              "processCount": 8,
+              "workingSetBytes": 499490816,
+              "privateBytes": 305201152
+            },
+            {
+              "phase": "warmReturnEnd",
+              "processCount": 8,
+              "workingSetBytes": 575987712,
+              "privateBytes": 424718336
+            },
+            {
+              "phase": "overview",
+              "processCount": 8,
+              "workingSetBytes": 579960832,
+              "privateBytes": 425947136
+            },
+            {
+              "phase": "editFoldEnd",
+              "processCount": 8,
+              "workingSetBytes": 615448576,
+              "privateBytes": 462254080
+            },
+            {
+              "phase": "dragUndoEnd",
+              "processCount": 8,
+              "workingSetBytes": 654565376,
+              "privateBytes": 544006144
+            },
+            {
+              "phase": "conflictRecoveryEnd",
+              "processCount": 8,
+              "workingSetBytes": 660705280,
+              "privateBytes": 567480320
+            },
+            {
+              "phase": "idle",
+              "processCount": 8,
+              "workingSetBytes": 660697088,
+              "privateBytes": 567427072
+            }
+          ],
+          "returnPhases": [
+            {
+              "name": "warmReturnA",
+              "mediaRequests": 11,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnA",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/75939b19-41ce-4a61-adc1-b3a98e04a2ab"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/5d6e1f4a-7eca-4a64-9f61-655f303444ec"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-259.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-236.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-258.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-235.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-257.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-234.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-256.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-233.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-232.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-231.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-230.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturnB",
+              "mediaRequests": 7,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": -8211.46,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturnB",
+                "x": 4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-251",
+                  "source": "blob:http://127.0.0.1:2487/d236af33-bb0c-43a2-bb06-2af3bfd3eb21"
+                },
+                {
+                  "id": "perf-photo-252",
+                  "source": "blob:http://127.0.0.1:2487/9b44ecc6-d96e-4c3e-8701-1b262e0fd63e"
+                }
+              ],
+              "requestedMediaUrls": [
+                "http://127.0.0.1:2487/uploads/perf-image-246.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-247.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-248.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-249.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-250.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-251.webp?thumbnail=1",
+                "http://127.0.0.1:2487/uploads/perf-image-252.webp?thumbnail=1"
+              ]
+            },
+            {
+              "name": "warmReturn",
+              "mediaRequests": 0,
+              "repeatedMediaRequests": 0,
+              "camera": {
+                "x": 8211.45,
+                "y": 414.71900000000005,
+                "scale": 1.65888,
+                "width": 1440,
+                "height": 784
+              },
+              "worldTarget": {
+                "name": "warmReturn",
+                "x": -4950,
+                "y": -250
+              },
+              "photos": [
+                {
+                  "id": "perf-photo-230",
+                  "source": "blob:http://127.0.0.1:2487/cf56c909-6979-4a5b-b266-d1b16ad26568"
+                },
+                {
+                  "id": "perf-photo-231",
+                  "source": "blob:http://127.0.0.1:2487/3a376ebc-ab0e-4e3d-ac1a-a1625d7bef70"
+                }
+              ],
+              "requestedMediaUrls": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

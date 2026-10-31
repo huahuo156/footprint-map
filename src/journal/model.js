@@ -1,8 +1,11 @@
 import { markDimensions } from '../../shared/journal-marks'
 import { hasComponentContent } from '../../shared/journal-components'
 import { expandCanvasGroups } from '../../shared/journal-groups.js'
+export { zoomAt } from './canvas/camera.js'
 
 export const PALETTES = ['sage', 'sand', 'sky', 'rose', 'lavender']
+export const CANVAS_GROUP_METRICS = { padding: 16, header: 48, minWidth: 280, coverWidth: 280, coverHeight: 200 }
+export const PHOTO_COLLISION_SIZE = { width: 280, height: 350 }
 export const SPOTS = [
   { key: 'bridge', name: '断桥 · 湖岸', lat: 30.2596, lng: 120.1517 },
   { key: 'island', name: '三潭印月 · 湖中', lat: 30.2368, lng: 120.1443 },
@@ -32,6 +35,7 @@ export function placeColor(place, fallback = 'sage') {
   return PALETTES[[...place].reduce((sum, c) => sum + c.charCodeAt(0), 0) % PALETTES.length]
 }
 export const intersects = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2
+export const isCanvasSticker = item => item.kind === 'sticker' || item.kind === 'mark' && item.entry?.mark?.kind === 'sticker'
 export function photoDimensions(size, bare = true) {
   const valid = Number.isFinite(size?.width) && Number.isFinite(size?.height) && size.width > 0 && size.height > 0
   const scale = valid ? Math.min(1, 240 / size.width, 240 / size.height) : 1
@@ -39,24 +43,26 @@ export function photoDimensions(size, bare = true) {
   return { imageWidth, imageHeight, width: Math.max(bare ? 0 : 160, imageWidth + 20), height: imageHeight + (bare ? 20 : 86) }
 }
 export function canvasGroupBounds(group, items) {
+  const { padding, header } = CANVAS_GROUP_METRICS
   const ids = new Set(group.photo_ids), boxes = items.filter(item => ids.has(item.id)).map(item => cardBounds(item, 0))
   if (!boxes.length) return null
-  const left = Math.min(...boxes.map(box => box.x - box.w / 2)) - 30
-  const top = Math.min(...boxes.map(box => box.y - box.h / 2)) - 72
-  return { left, top, width: Math.max(...boxes.map(box => box.x + box.w / 2)) + 30 - left, height: Math.max(...boxes.map(box => box.y + box.h / 2)) + 30 - top }
+  const left = Math.min(...boxes.map(box => box.x - box.w / 2)) - padding
+  const top = Math.min(...boxes.map(box => box.y - box.h / 2)) - header
+  return { left, top, width: Math.max(...boxes.map(box => box.x + box.w / 2)) + padding - left, height: Math.max(...boxes.map(box => box.y + box.h / 2)) + padding - top }
 }
 export function layoutCanvasGroups(groups, items) {
+  const { padding, header, minWidth, coverWidth, coverHeight } = CANVAS_GROUP_METRICS
   const liveIds = new Set(items.map(item => item.id))
   const expanded = expandCanvasGroups(groups.map(group => ({ ...group, direct_photo_ids: (group.direct_photo_ids || group.photo_ids || []).filter(id => liveIds.has(id)) }))).sort((a, b) => b.depth - a.depth)
   const bounds = new Map()
   for (const group of expanded) {
     const own = canvasGroupBounds({ photo_ids: group.direct_photo_ids }, items)
     const children = group.child_group_ids.map(id => bounds.get(id)).filter(Boolean)
-    const boxes = [...(own ? [own] : []), ...children.map(box => ({ left: box.left - 30, top: box.top - 72, width: box.width + 60, height: box.height + 102 }))]
+    const boxes = [...(own ? [own] : []), ...children.map(box => ({ left: box.left - padding, top: box.top - header, width: box.width + padding * 2, height: box.height + header + padding }))]
     if (!boxes.length) continue
     const left = Math.min(...boxes.map(box => box.left)), top = Math.min(...boxes.map(box => box.top))
     const members = items.filter(item => group.photo_ids.includes(item.id))
-    group.bounds = group.collapsed ? { left: Math.min(...members.map(item => item.x)) - 160, top: Math.min(...members.map(item => item.y)) - 115, width: 320, height: 230 } : { left, top, width: Math.max(320, Math.max(...boxes.map(box => box.left + box.width)) - left), height: Math.max(...boxes.map(box => box.top + box.height)) - top }
+    group.bounds = group.collapsed ? { left: Math.min(...members.map(item => item.x)) - coverWidth / 2, top: Math.min(...members.map(item => item.y)) - coverHeight / 2, width: coverWidth, height: coverHeight } : { left, top, width: Math.max(minWidth, Math.max(...boxes.map(box => box.left + box.width)) - left), height: Math.max(...boxes.map(box => box.top + box.height)) - top }
     bounds.set(group.id, group.bounds)
   }
   const byId = new Map(expanded.map(group => [group.id, group]))
@@ -73,28 +79,40 @@ export function layoutCanvasGroups(groups, items) {
 export function canvasDropObstacles(items, groups, excludedId) {
   const hidden = new Set(groups.filter(group => group.collapsed).flatMap(group => group.photo_ids))
   return [
-    ...items.filter(item => item.id !== excludedId && !hidden.has(item.id)).map(item => cardBounds(item)),
+    ...items.filter(item => item.id !== excludedId && !hidden.has(item.id) && !isCanvasSticker(item)).map(item => cardBounds(item)),
     ...groups.filter(group => group.collapsed && !group.hidden).map(group => ({ x: group.bounds.left + group.bounds.width / 2, y: group.bounds.top + group.bounds.height / 2, w: group.bounds.width + 18, h: group.bounds.height + 18 })),
   ]
 }
 export function cardBounds(item, margin = 18) {
   const angle = Math.abs(item.rotation || 0) * Math.PI / 180
   const width = item.width || 212, height = item.height || 236
-  return { x: item.x, y: item.y, w: width * Math.cos(angle) + height * Math.sin(angle) + margin, h: height * Math.cos(angle) + width * Math.sin(angle) + margin }
+  const cosine = Math.abs(Math.cos(angle)), sine = Math.abs(Math.sin(angle))
+  return { x: item.x, y: item.y, w: width * cosine + height * sine + margin, h: height * cosine + width * sine + margin }
 }
 export function findFreePosition(item, obstacles) {
-  if (!obstacles.some(box => intersects(cardBounds(item), box))) return { x: item.x, y: item.y }
-  for (let radius = 24; radius <= 4800; radius += 24) {
-    const steps = Math.max(12, Math.ceil(radius / 16))
-    for (let i = 0; i < steps; i++) {
-      const angle = i / steps * Math.PI * 2
-      const candidate = { ...item, x: item.x + Math.cos(angle) * radius, y: item.y + Math.sin(angle) * radius }
-      if (!obstacles.some(box => intersects(cardBounds(candidate), box))) return { x: candidate.x, y: candidate.y }
+  if (isCanvasSticker(item)) return { x: item.x, y: item.y }
+  const box = cardBounds(item), pending = [{ x: item.x, y: item.y }], seen = new Set()
+  // Project onto obstacle edges, visiting nearby candidates first. Unlike a
+  // fixed-radius spiral this also handles very wide groups without teleporting.
+  for (let attempts = 0; pending.length && attempts < 512; attempts++) {
+    pending.sort((a, b) => Math.hypot(a.x - item.x, a.y - item.y) - Math.hypot(b.x - item.x, b.y - item.y))
+    const candidate = pending.shift(), collision = obstacles.find(other => intersects({ ...box, ...candidate }, other))
+    if (!collision) return candidate
+    const dx = (box.w + collision.w) / 2 + .001, dy = (box.h + collision.h) / 2 + .001
+    for (const next of [{ x: collision.x - dx, y: candidate.y }, { x: collision.x + dx, y: candidate.y }, { x: candidate.x, y: collision.y - dy }, { x: candidate.x, y: collision.y + dy }]) {
+      const key = `${next.x.toFixed(3)},${next.y.toFixed(3)}`
+      if (!seen.has(key)) { seen.add(key); pending.push(next) }
     }
   }
-  return { x: item.x + 10000, y: item.y }
+  // All four outer edges are guaranteed clear; choose the closest one.
+  return [
+    { x: Math.max(...obstacles.map(other => other.x + other.w / 2)) + box.w / 2 + .001, y: item.y },
+    { x: Math.min(...obstacles.map(other => other.x - other.w / 2)) - box.w / 2 - .001, y: item.y },
+    { x: item.x, y: Math.max(...obstacles.map(other => other.y + other.h / 2)) + box.h / 2 + .001 },
+    { x: item.x, y: Math.min(...obstacles.map(other => other.y - other.h / 2)) - box.h / 2 - .001 },
+  ].sort((a, b) => Math.hypot(a.x - item.x, a.y - item.y) - Math.hypot(b.x - item.x, b.y - item.y))[0]
 }
-export function buildCanvas(data, imageSizes = {}) {
+export function buildCanvas(data, imageSizes = {}, avoidOverlaps = true) {
   const groups = [], items = [], headers = [], occupiedGroups = []
   const records = data.entries.filter(entry => !entry.mark)
   const known = new Set(data.trips.map(trip => trip.id)), loose = records.filter(entry => !known.has(entry.trip_id))
@@ -121,6 +139,7 @@ export function buildCanvas(data, imageSizes = {}) {
     const mark = entry.mark
     items.push({ ...mark, ...markDimensions(mark), kind: 'mark', entry, anchor: { x: 0, y: 0 }, x: mark.canvas_x, y: mark.canvas_y })
   }
+  if (!avoidOverlaps) return { groups, items, headers }
   const pinned = items.filter(item => item.kind === 'photo' && item.canvas_absolute)
   const headerObstacles = pinned.map(item => cardBounds(item))
   for (const header of headers) {
@@ -129,21 +148,20 @@ export function buildCanvas(data, imageSizes = {}) {
   }
   const obstacles = [...headers, ...pinned.map(item => cardBounds(item))]
   for (const item of items) {
+    if (isCanvasSticker(item)) continue
     if (item.kind === 'photo' && item.canvas_absolute) continue
     Object.assign(item, findFreePosition(item, obstacles))
     obstacles.push(cardBounds(item))
   }
   return { groups, items, headers }
 }
-export function zoomAt(camera, scale, point) {
-  const ratio = scale / camera.scale
-  return { ...camera, scale, x: point.x - (point.x - camera.x) * ratio, y: point.y - (point.y - camera.y) * ratio }
-}
 export function planPhotoImport(count, center, obstacles = [], dimensions = []) {
   const columns = Math.min(24, Math.ceil(Math.sqrt(count))), rows = Math.ceil(count / columns), occupied = [...obstacles]
+  const reservation = cardBounds({ ...PHOTO_COLLISION_SIZE, rotation: 3 })
+  const stepX = Math.ceil(reservation.w / 10) * 10, stepY = Math.ceil(reservation.h / 10) * 10
   return Array.from({ length: count }, (_, index) => {
     // Reserve the caption space too, so later metadata edits fit the initial layout.
-    const item = { ...photoDimensions(dimensions[index], false), x: center.x + (index % columns - (columns - 1) / 2) * 290, y: center.y + (Math.floor(index / columns) - (rows - 1) / 2) * 290, rotation: index % 2 ? 3 : -3 }
+    const item = { ...photoDimensions(dimensions[index], false), ...PHOTO_COLLISION_SIZE, x: center.x + (index % columns - (columns - 1) / 2) * stepX, y: center.y + (Math.floor(index / columns) - (rows - 1) / 2) * stepY, rotation: index % 2 ? 3 : -3 }
     Object.assign(item, findFreePosition(item, occupied)); occupied.push(cardBounds(item))
     return item
   })

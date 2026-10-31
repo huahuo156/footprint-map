@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import NotebookSettings from '../src/journal/NotebookSettings.jsx'
 import { NOTEBOOK_COVERS } from '../shared/notebook-covers.js'
 import { uploadNotebookCover, discardNotebookCover } from '../src/lib/api'
-vi.mock('../src/lib/api', () => ({ uploadNotebookCover: vi.fn(async () => ({ url:'/uploads/cover-custom.jpg' })), discardNotebookCover: vi.fn(async () => ({})) }))
+vi.mock('../src/lib/api', async importOriginal => ({ ...(await importOriginal()), uploadNotebookCover: vi.fn(async () => ({ url:'/uploads/cover-custom.jpg' })), discardNotebookCover: vi.fn(async () => ({})) }))
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -77,8 +77,11 @@ it('discards a newly uploaded file when saving notebook metadata fails', async (
 })
 
 it('retains an existing uploaded cover after visiting the built-in library', async () => {
-  render(<NotebookSettings book={{id:'b',name:'随笔',cover_mode:'photo',cover_url:'/uploads/original.jpg'}} onClose={()=>{}} />)
+  const onSave = vi.fn(async () => {})
+  render(<NotebookSettings book={{id:'b',name:'随笔',cover_mode:'photo',cover_url:'/uploads/original.jpg'}} onSave={onSave} onClose={()=>{}} />)
   fireEvent.click(screen.getByRole('tab',{name:'内置摄影'}))
   fireEvent.click(screen.getByRole('tab',{name:'自定义上传'}))
-  expect(screen.getByLabelText('封面预览').querySelector('img')).toHaveAttribute('src','/uploads/original.jpg')
+  expect(screen.getByLabelText('封面预览').querySelector('img')).toHaveAttribute('src','/uploads/original.jpg?thumbnail=1')
+  fireEvent.click(screen.getByRole('button', { name: '保存手札' }))
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith('b', expect.objectContaining({ cover_url: '/uploads/original.jpg' })))
 })

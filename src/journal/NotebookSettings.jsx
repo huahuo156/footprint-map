@@ -3,7 +3,7 @@ import Modal from './Modal'
 import JournalImage from './JournalImage'
 import NotebookCover from './NotebookCover'
 import { NOTEBOOK_COVERS, COVER_COLORS } from '../../shared/notebook-covers'
-import { uploadNotebookCover, discardNotebookCover } from '../lib/api'
+import { captureApiSession, uploadNotebookCover, discardNotebookCover } from '../lib/api'
 
 const options = [['photo', '内置摄影'], ['upload', '自定义上传'], ['solid', '纯色'], ['text', '纯文字']]
 export default function NotebookSettings({ book, position, onSave, onDelete, onClose }) {
@@ -21,16 +21,18 @@ export default function NotebookSettings({ book, position, onSave, onDelete, onC
   const mode = kind === 'upload' ? 'photo' : kind
   const visibleCover = mode === 'photo' ? kind === 'upload' ? localPreview || uploadedCover : cover : null
   async function save(event) {
+    const guard = captureApiSession()
     event.preventDefault(); setBusy(true); setError('')
     let uploaded
     try {
       let url = visibleCover
       if (kind === 'upload' && file) { uploaded = (await uploadNotebookCover(file)).url; url = uploaded }
       if (mode === 'photo' && !url) throw new Error('请先选择一张封面照片。')
+      guard()
       await onSave(book?.id, { name: name.trim(), cover_url: mode === 'photo' ? url : null, cover_mode: mode, cover_color: color, cover_label: coverLabel.trim(), cover_text: coverText.trim(), ...(book ? {} : { canvas_x: position.x, canvas_y: position.y }) })
       onClose()
     } catch (error) {
-      if (uploaded) await discardNotebookCover(uploaded).catch(() => {})
+      if (uploaded && error.name !== 'AbortError') { guard(); await discardNotebookCover(uploaded).catch(() => {}) }
       setError(error.message)
     } finally { setBusy(false) }
   }

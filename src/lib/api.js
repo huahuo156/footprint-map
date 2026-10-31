@@ -1,17 +1,68 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
-async function request(path, options = {}) {
-  const response = await fetch(API_BASE + path, {
-    ...options,
-    headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers },
-  })
-  const data = await response.json().catch(() => ({ error: '暂时连不上手帐，请检查后端服务是否已启动。' }))
+export const journalBackupUrl = API_BASE + '/journal/backup'
+let csrfToken = null
+let generation = 0
+const requests = new Set()
+const sessionResetListeners = new Set()
+export const getApiSessionEpoch = () => generation
+export function subscribeApiSessionReset(listener) {
+  sessionResetListeners.add(listener)
+  return () => sessionResetListeners.delete(listener)
+}
+export function clearApiSession() {
+  generation += 1
+  csrfToken = null
+  for (const controller of requests) controller.abort()
+  requests.clear()
+  // Snapshot delivery: listeners may unsubscribe or subscribe during a reset.
+  // eslint-disable-next-line unicorn/no-useless-spread
+  for (const listener of [...sessionResetListeners]) {
+    try { listener(generation) } catch (error) { console.error('Session reset listener failed', error) }
+  }
+}
+export function setApiSession(session) { clearApiSession(); csrfToken = session?.csrfToken || null }
+export function captureApiSession() { const version = generation; return () => { if (version !== generation) throw aborted() } }
+const aborted = () => new DOMException('账号已切换，请重新操作。', 'AbortError')
+export async function apiFetch(path, options = {}) {
+  const controller = new AbortController(), version = generation
+  const cancel = () => controller.abort()
+  options.signal?.addEventListener('abort', cancel, { once: true })
+  if (options.signal?.aborted) controller.abort()
+  requests.add(controller)
+  const cleanup = () => { requests.delete(controller); options.signal?.removeEventListener('abort', cancel) }
+  const check = () => { if (controller.signal.aborted || version !== generation) throw aborted() }
+  try {
+    const response = await fetch(API_BASE + path, {
+      ...options, credentials: 'same-origin', signal: controller.signal,
+      headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(!/^(GET|HEAD|OPTIONS)$/i.test(options.method || 'GET') && csrfToken ? { 'X-CSRF-Token': csrfToken } : {}), ...options.headers },
+    })
+    check()
+    if (response.status === 401 && !path.startsWith('/auth/')) {
+      clearApiSession()
+      window.dispatchEvent(new Event('shitu-session-expired'))
+      throw Object.assign(new Error('登录已过期，请重新登录。'), { status: 401 })
+    }
+    // Check after body decoding as well: abort alone cannot reject an already resolved body.
+    return new Proxy(response, { get(target, property) {
+      if (['json', 'blob', 'text', 'arrayBuffer'].includes(property)) return async (...args) => { try { check(); const data = await target[property](...args); check(); return data } finally { cleanup() } }
+      const value = Reflect.get(target, property, target)
+      return typeof value === 'function' ? value.bind(target) : value
+    } })
+  } catch (error) { cleanup(); throw error }
+}
+export async function request(path, options = {}) {
+  const response = await apiFetch(path, options)
+  const data = await response.json().catch(error => { if (error.name === 'AbortError') throw error; return { error: '暂时连不上手札，请检查后端服务是否已启动。' } })
   if (!response.ok) throw Object.assign(new Error(data.error || '请求失败'), { status: response.status, code: data.code, invalidFiles: data.invalidFiles })
   return data
 }
+export const fetchSession = () => request('/auth/session')
+export const authRequest = (action, values = {}, options = {}) => request('/auth/' + action, { method: 'POST', body: JSON.stringify(values), ...options })
 function queryString(params) {
   return new URLSearchParams(Object.entries(params).filter(([, value]) => value != null && value !== '')).toString()
 }
 export const fetchLandmarks = () => request('/landmarks')
+export const searchPlaces = (query, signal) => request('/places?' + queryString({ q: query }), { signal })
 export const fetchCheckins = (params = {}) => request('/checkins?' + queryString(params))
 export const fetchMyCheckins = province => fetchCheckins({ province, all: true })
 export const fetchGuides = (params = {}) => request('/guides?' + queryString(params))

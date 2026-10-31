@@ -11,8 +11,9 @@ export default defineConfig({
     },
   },
   test: {
+    pool: 'threads',
     include: ['tests/**/*.{test,spec}.{js,jsx}'],
-    exclude: ['tests/e2e/**'],
+    exclude: ['tests/e2e/**', 'tests/e2e-real/**'],
     maxWorkers: 1,
     globals: true,
     environment: 'jsdom',

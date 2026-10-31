@@ -11,6 +11,7 @@ export function createDatabasePool() { return mysql.createPool({
   charset: 'utf8mb4',
   timezone: 'Z',
   connectionLimit: 10,
+  ...(process.env.MYSQL_SSL_CA ? { ssl: { ca: process.env.MYSQL_SSL_CA.replace(/\\n/g, '\n'), rejectUnauthorized: true } } : {}),
 }) }
 export const pool = createDatabasePool()
 
